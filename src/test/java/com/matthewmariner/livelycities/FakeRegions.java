@@ -97,6 +97,72 @@ final class FakeRegions extends RegionDataLoader
 	}
 
 	/**
+	 * One citizen with something to say.
+	 *
+	 * <p>Separate from {@link #citizen} rather than an extra argument to it, because
+	 * "a citizen with remarks" and "a citizen with none" are two fixtures the chatter
+	 * tests need side by side in the same scene: 96 of the 129 shipped citizens have
+	 * nothing authored, so a fixture where everybody talks would not be able to tell
+	 * "the chatter skipped the silent ones" from "the chatter iterated everybody".
+	 *
+	 * <p>{@code examineText} is filled in as well. Every shipped citizen has one, and
+	 * a fixture without it could not distinguish the Examine line's two halves.
+	 */
+	EntityDefinition talker(int fileRegionId, int x, int y, String... remarks)
+	{
+		EntityRecord record = new EntityRecord();
+		record.entityType = "StationaryCitizen";
+		record.name = "Talker " + (++uuids);
+		record.uuid = String.format("00000000-0000-4000-8000-%012d", uuids);
+		record.examineText = "A talkative citizen.";
+		record.remarks = remarks;
+		record.worldLocation = point(x, y, 0);
+		record.modelIds = new int[]{100};
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, fileRegionId);
+		assertNotNull("the fake built an unusable talker", definition);
+		return definition;
+	}
+
+	/**
+	 * A row of talkers on consecutive tiles, every one saying the same thing.
+	 *
+	 * <p>The remark is uniform on purpose here and only here: these fixtures exist to
+	 * test the <i>cap</i> and the <i>radius</i>, where what is being said is not the
+	 * variable. Their tiles are not uniform, which is the axis those tests read.
+	 */
+	List<EntityDefinition> talkingCrowd(int fileRegionId, int x, int y, int count)
+	{
+		List<EntityDefinition> out = new ArrayList<>(count);
+		for (int i = 0; i < count; i++)
+		{
+			out.add(talker(fileRegionId, x + (i % 6), y + (i / 6), "Busy today."));
+		}
+		return out;
+	}
+
+	/**
+	 * One piece of scenery — which the dataset gives no name, examine or remarks.
+	 *
+	 * <p>{@code remarks} is settable anyway, so that "scenery is silenced at the
+	 * validation gate" is a test about {@link EntityDefinition} rather than a test
+	 * about the shipped files happening not to contain the case.
+	 */
+	EntityDefinition scenery(int fileRegionId, int x, int y, String... remarks)
+	{
+		EntityRecord record = new EntityRecord();
+		record.entityType = "Scenery";
+		record.uuid = String.format("00000000-0000-4000-8000-%012d", ++uuids);
+		record.remarks = remarks;
+		record.worldLocation = point(x, y, 0);
+		record.modelIds = new int[]{100};
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, fileRegionId);
+		assertNotNull("the fake built unusable scenery", definition);
+		return definition;
+	}
+
+	/**
 	 * One wandering citizen, filed under {@code fileRegionId}, standing on
 	 * {@code base} and pacing the inclusive box {@code bl}..{@code tr}.
 	 *

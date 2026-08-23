@@ -12,8 +12,11 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.BeforeRender;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.MenuOpened;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.ui.overlay.Overlay;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -79,6 +82,7 @@ public class LivelyCitiesPluginLifecycleTest
 	private FakeWorldView view;
 	private FakePlayer player;
 	private InlineClientThread clientThread;
+	private RecordingOverlays overlays;
 
 	@Before
 	public void setUp()
@@ -87,6 +91,7 @@ public class LivelyCitiesPluginLifecycleTest
 		view = FakeWorldView.around(PLAYER, REGION);
 		player = new FakePlayer(PLAYER);
 		clientThread = new InlineClientThread();
+		overlays = new RecordingOverlays();
 
 		client.setLocalPlayer(player);
 		client.setTopLevelWorldView(view);
@@ -358,7 +363,8 @@ public class LivelyCitiesPluginLifecycleTest
 			500);
 		regions.file(REGION, walker);
 
-		EntityScene scene = new EntityScene(client, regions, new FakeConfig());
+		FakeConfig defaults = new FakeConfig();
+		EntityScene scene = new EntityScene(client, regions, defaults, defaults.overrides());
 		LivelyCitiesPlugin plugin = plugin(scene);
 
 		// Get the citizen spawned and actually walking.
@@ -431,7 +437,7 @@ public class LivelyCitiesPluginLifecycleTest
 		regions.file(REGION, regions.crowd(REGION, 3220, 3355, 4));
 
 		FakeConfig config = new FakeConfig();
-		EntityScene scene = new EntityScene(client, regions, config);
+		EntityScene scene = new EntityScene(client, regions, config, config.overrides());
 		LivelyCitiesPlugin plugin = plugin(scene);
 
 		plugin.onGameTick(new GameTick());
@@ -480,6 +486,204 @@ public class LivelyCitiesPluginLifecycleTest
 	}
 
 	/**
+	 * The overhead-text overlay is registered on startup and gone after shutdown.
+	 *
+	 * <p>Same class of leak as a {@code RuneLiteObject} left active: an overlay left
+	 * in the {@code OverlayManager} keeps drawing, and it would be drawing from a
+	 * scene that has just been emptied underneath it. The whole reason
+	 * {@link OverlayRegistry} is an interface is so this is an assertion rather than
+	 * a reading of the source.
+	 */
+	@Test
+	public void theOverlayIsRegisteredOnStartUpAndGoneAfterShutDown()
+	{
+		RecordingScene scene = new RecordingScene();
+		client.setGameState(GameState.LOGIN_SCREEN);
+		LivelyCitiesPlugin plugin = plugin(scene);
+
+		plugin.startUp();
+		assertEquals("exactly one overlay, and it is the chatter one",
+			1, overlays.live().size());
+		assertTrue(overlays.live().contains(plugin.chatterOverlay));
+
+		plugin.shutDown();
+		assertTrue("shutdown must leave nothing registered", overlays.live().isEmpty());
+	}
+
+	// --- the interaction handlers -------------------------------------------
+
+	/**
+	 * Both menu events reach {@link CitizenMenu}, and neither is deferred.
+	 *
+	 * <p>Not deferred is the load-bearing half. {@code Menu.createMenuEntry} asserts
+	 * {@code isClientThread()} and the menu has already been built by the time
+	 * {@code MenuOpened} is posted, so a handler that queued its work through
+	 * {@link ClientThread} would add its entries to the next menu or to none.
+	 * {@link InlineClientThread} runs inline, so the way this test proves the
+	 * handlers are synchronous is by counting: the {@code ClientThread} must not have
+	 * been used at all.
+	 */
+	@Test
+	public void bothMenuEventsAreHandledSynchronously()
+	{
+		FakeConfig config = new FakeConfig();
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene, config);
+		CountingMenu counting = new CountingMenu(client, scene, config.overrides());
+		plugin.citizenMenu = counting;
+
+		int invocationsBefore = clientThread.invocations;
+
+		plugin.onMenuOpened(new MenuOpened());
+		plugin.onMenuOptionClicked(new MenuOptionClicked(new FakeMenuEntry()));
+
+		assertEquals(1, counting.opened);
+		assertEquals(1, counting.clicked);
+		assertEquals("neither handler may go through the ClientThread",
+			invocationsBefore, clientThread.invocations);
+	}
+
+	/**
+	 * Every state that invalidates the scene also drops the menu's remembered
+	 * target.
+	 *
+	 * <p>The target is a {@link LivelyEntity}, and every one of those holds a lit
+	 * {@code Model}. Left set, it keeps a wrapper the scene has already forgotten
+	 * alive through this one field — which is the leak the teardown contract exists
+	 * to prevent, arriving by a different door.
+	 */
+	@Test
+	public void everyInvalidatingStateAlsoForgetsTheMenusTarget()
+	{
+		for (GameState state : MUST_INVALIDATE)
+		{
+			FakeConfig config = new FakeConfig();
+			RecordingScene scene = new RecordingScene();
+			LivelyCitiesPlugin plugin = plugin(scene, config);
+			CountingMenu counting = new CountingMenu(client, scene, config.overrides());
+			plugin.citizenMenu = counting;
+
+			GameStateChanged event = new GameStateChanged();
+			event.setGameState(state);
+			plugin.onGameStateChanged(event);
+
+			assertEquals(state + " must drop the remembered right-click target",
+				1, counting.forgotten);
+		}
+	}
+
+	/** And shutdown does the same, for the same reason. */
+	@Test
+	public void shutDownForgetsTheMenusTarget()
+	{
+		FakeConfig config = new FakeConfig();
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene, config);
+		CountingMenu counting = new CountingMenu(client, scene, config.overrides());
+		plugin.citizenMenu = counting;
+
+		plugin.shutDown();
+
+		assertEquals(1, counting.forgotten);
+	}
+
+	// --- the two self-unticking reset buttons -------------------------------
+
+	/**
+	 * "Unhide all" clears the list, unticks itself, and does not run a second
+	 * visibility pass on top of the one its own write will cause.
+	 *
+	 * <p>1.12.36 has no {@code Button} config type, so a control meaning "do this
+	 * now" has to be a boolean that is turned back off once it has been acted on.
+	 */
+	@Test
+	public void unhideAllClearsTheListAndUnticksItself()
+	{
+		FakeConfig config = new FakeConfig();
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene, config);
+
+		EntityDefinition someone = new FakeRegions().citizen(REGION, 3225, 3360, 0);
+		config.overrides().hide(someone);
+		assertEquals(1, config.overrides().hiddenUuids().size());
+
+		int writesBefore = config.writes().size();
+		plugin.onConfigChanged(configChanged(
+			LivelyCitiesConfig.GROUP, CitizenOverrides.UNHIDE_ALL_KEY, "true"));
+
+		assertTrue("the list has to be empty", config.overrides().hiddenUuids().isEmpty());
+		assertEquals("two writes: the cleared list, and the button unticking itself",
+			writesBefore + 2, config.writes().size());
+		assertEquals(CitizenOverrides.UNHIDE_ALL_KEY + "=null",
+			config.writes().get(config.writes().size() - 1));
+		assertEquals("the press itself must not also run a visibility pass — its own "
+				+ "write posts a ConfigChanged that will",
+			0, scene.settingsChanges);
+	}
+
+	/**
+	 * The self-unset echo is not a second press.
+	 *
+	 * <p>This is what makes the button terminate: unsetting the key posts one more
+	 * {@code ConfigChanged} for the same key, and if that were treated as a press the
+	 * plugin would write again forever.
+	 */
+	@Test
+	public void theButtonsOwnEchoIsNotAnotherPress()
+	{
+		FakeConfig config = new FakeConfig();
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene, config);
+
+		int writesBefore = config.writes().size();
+		plugin.onConfigChanged(configChanged(
+			LivelyCitiesConfig.GROUP, CitizenOverrides.UNHIDE_ALL_KEY, null));
+
+		assertEquals("an untick writes nothing", writesBefore, config.writes().size());
+		assertEquals("and falls through to an ordinary visibility pass", 1, scene.settingsChanges);
+	}
+
+	/** The mute list has its own button, and it is not the hide one. */
+	@Test
+	public void unmuteAllClearsTheMuteListAndNotTheHideList()
+	{
+		FakeConfig config = new FakeConfig();
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene, config);
+
+		FakeRegions regions = new FakeRegions();
+		EntityDefinition hidden = regions.citizen(REGION, 3225, 3360, 0);
+		EntityDefinition muted = regions.talker(REGION, 3226, 3360, "Busy today.");
+		config.overrides().hide(hidden);
+		config.overrides().mute(muted);
+
+		plugin.onConfigChanged(configChanged(
+			LivelyCitiesConfig.GROUP, CitizenOverrides.UNMUTE_ALL_KEY, "true"));
+
+		assertTrue("the mute list goes", config.overrides().mutedUuids().isEmpty());
+		assertEquals("the hide list does not", 1, config.overrides().hiddenUuids().size());
+	}
+
+	/** A press on a key in another plugin's group is not ours to act on. */
+	@Test
+	public void anotherPluginsResetKeyIsIgnored()
+	{
+		FakeConfig config = new FakeConfig();
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene, config);
+
+		EntityDefinition someone = new FakeRegions().citizen(REGION, 3225, 3360, 0);
+		config.overrides().hide(someone);
+
+		plugin.onConfigChanged(configChanged(
+			"someotherplugin", CitizenOverrides.UNHIDE_ALL_KEY, "true"));
+
+		assertEquals("another group's key must not clear our list",
+			1, config.overrides().hiddenUuids().size());
+		assertEquals("nor run our visibility pass", 0, scene.settingsChanges);
+	}
+
+	/**
 	 * {@code LOGGED_IN} fires before the world is usable, so both halves of
 	 * "where is the player" can be absent. Neither may reach the scene, and
 	 * neither may restart the interpolation clock — a tick that did no work must
@@ -522,10 +726,29 @@ public class LivelyCitiesPluginLifecycleTest
 
 	private LivelyCitiesPlugin plugin(EntityScene scene)
 	{
+		return plugin(scene, new FakeConfig());
+	}
+
+	/**
+	 * The plugin with every injected collaborator wired to a fake.
+	 *
+	 * <p>{@code overlayRegistry} and {@code configWriter} exist as interfaces
+	 * precisely so this method can exist: {@code OverlayManager} and
+	 * {@code ConfigManager} both have private constructors in 1.12.36, so a plugin
+	 * holding either directly is a plugin no test can construct — and this file
+	 * exists because that is exactly what happened once already.
+	 */
+	private LivelyCitiesPlugin plugin(EntityScene scene, FakeConfig config)
+	{
 		LivelyCitiesPlugin plugin = new LivelyCitiesPlugin();
 		plugin.client = client;
 		plugin.clientThread = clientThread;
 		plugin.scene = scene;
+		plugin.overlayRegistry = overlays;
+		plugin.chatterOverlay = new ChatterOverlay(plugin, client, scene, config);
+		plugin.citizenMenu = new CitizenMenu(client, scene, config.overrides());
+		plugin.overrides = config.overrides();
+		plugin.configWriter = config.writer();
 		return plugin;
 	}
 
@@ -554,11 +777,93 @@ public class LivelyCitiesPluginLifecycleTest
 		return event;
 	}
 
+	private static ConfigChanged configChanged(String group, String key, @Nullable String newValue)
+	{
+		ConfigChanged event = configChanged(group, key);
+		event.setNewValue(newValue);
+		return event;
+	}
+
+	/**
+	 * {@link CitizenMenu} with its three entry points counted and none of them doing
+	 * anything.
+	 *
+	 * <p>Same shape as {@link RecordingScene}, and for the same reason: the question
+	 * here is whether the plugin routes the events, not what the menu does with them
+	 * — {@code CitizenMenuTest} answers that against the real one.
+	 */
+	private static final class CountingMenu extends CitizenMenu
+	{
+		private int opened;
+		private int clicked;
+		private int forgotten;
+
+		private CountingMenu(net.runelite.api.Client client, EntityScene scene, CitizenOverrides overrides)
+		{
+			super(client, scene, overrides);
+		}
+
+		@Override
+		void onMenuOpened(MenuOpened event)
+		{
+			assertNotNull(event);
+			opened++;
+		}
+
+		@Override
+		void onMenuOptionClicked(MenuOptionClicked event)
+		{
+			assertNotNull(event);
+			clicked++;
+		}
+
+		@Override
+		void forget()
+		{
+			forgotten++;
+		}
+	}
+
 	/**
 	 * The real {@link ClientThread}, minus the thread. {@code invoke(Runnable)}
 	 * runs inline on the real one whenever the caller is already on the client
 	 * thread, which is every path the plugin uses it for.
 	 */
+	/**
+	 * The overlay manager, as two lists.
+	 *
+	 * <p>Registered rather than counted, so "shutDown removes the same overlay
+	 * startUp added" is answerable — an overlay left registered draws forever, which
+	 * is the overlay-shaped version of the leaked-active-object bug this plugin
+	 * already guards against.
+	 */
+	private static final class RecordingOverlays implements OverlayRegistry
+	{
+		private final List<Overlay> added = new ArrayList<>();
+		private final List<Overlay> removed = new ArrayList<>();
+
+		@Override
+		public void add(Overlay overlay)
+		{
+			assertNotNull("the plugin must never register a null overlay", overlay);
+			added.add(overlay);
+		}
+
+		@Override
+		public void remove(Overlay overlay)
+		{
+			removed.add(overlay);
+		}
+
+		/** @return what is registered now: everything added and not removed */
+		List<Overlay> live()
+		{
+			List<Overlay> out = new ArrayList<>(added);
+			out.removeAll(removed);
+			return out;
+		}
+	}
+
 	private static final class InlineClientThread extends ClientThread
 	{
 		private int invocations;
@@ -590,7 +895,7 @@ public class LivelyCitiesPluginLifecycleTest
 
 		RecordingScene()
 		{
-			super(null, null, null);
+			super(null, null, null, null);
 		}
 
 		@Override

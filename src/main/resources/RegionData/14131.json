@@ -3,8 +3,8 @@
     "regionId": 14131,
     "citizenRoster": [
         {
-            "name": "Dharok the Wretched",
-            "examineText": "The ghost of Dharok the Wretched.",
+            "name": "Barrow wight",
+            "examineText": "A restless spirit, bound to the barrows.",
             "remarks": [],
             "moveAnimation": "HumanWalk",
             "wanderBoxBL": {
@@ -39,8 +39,8 @@
             "idleAnimation": "HumanIdle"
         },
         {
-            "name": "Ahrim the Blighted",
-            "examineText": "The ghost of Ahrim the Blighted.",
+            "name": "Barrow wight",
+            "examineText": "A restless spirit, bound to the barrows.",
             "remarks": [],
             "moveAnimation": "HumanWalk",
             "wanderBoxBL": {
@@ -70,8 +70,8 @@
             "idleAnimation": "HumanIdle"
         },
         {
-            "name": "Torag the Corrupted",
-            "examineText": "The ghost of Torag the Corrupted.",
+            "name": "Barrow wight",
+            "examineText": "A restless spirit, bound to the barrows.",
             "remarks": [],
             "moveAnimation": "HumanWalk",
             "wanderBoxBL": {
@@ -106,8 +106,8 @@
             "idleAnimation": "HumanIdle"
         },
         {
-            "name": "Verac the Defiled",
-            "examineText": "The ghost of Verac the Defiled.",
+            "name": "Barrow wight",
+            "examineText": "A restless spirit, bound to the barrows.",
             "moveAnimation": "HumanWalk",
             "wanderBoxBL": {
                 "x": 3555,
@@ -137,8 +137,8 @@
             "idleAnimation": "HumanIdle"
         },
         {
-            "name": "Karil the Tainted",
-            "examineText": "The ghost of Karil the Tainted.",
+            "name": "Barrow wight",
+            "examineText": "A restless spirit, bound to the barrows.",
             "moveAnimation": "HumanWalk",
             "wanderBoxBL": {
                 "x": 3563,
@@ -167,8 +167,8 @@
             "idleAnimation": "HumanIdle"
         },
         {
-            "name": "Guthan the Infested",
-            "examineText": "The ghost of Guthan the Infested.",
+            "name": "Barrow wight",
+            "examineText": "A restless spirit, bound to the barrows.",
             "moveAnimation": "HumanWalk",
             "wanderBoxBL": {
                 "x": 3575,

@@ -144,6 +144,17 @@ final class LivelyEntity
 	/** The walk, for a wandering citizen; {@code null} for everything else. */
 	private final CitizenWalk walk;
 
+	/**
+	 * What this citizen can say and what it is saying; {@code null} for the 142 of
+	 * 175 shipped entities with nothing authored.
+	 *
+	 * <p>Owned here, on the wrapper, rather than in the overlay — see
+	 * {@link CitizenRemarks}. The consequence that matters is one line down in
+	 * {@link #despawn()}: a citizen that leaves the screen stops talking as part of
+	 * leaving, so there is no list an orphaned bubble could survive in.
+	 */
+	private final CitizenRemarks remarks;
+
 	private RuneLiteObject object;
 	private Model model;
 	private boolean broken;
@@ -212,6 +223,7 @@ final class LivelyEntity
 		this.client = client;
 		this.definition = definition;
 		this.walk = CitizenWalk.forDefinition(definition);
+		this.remarks = CitizenRemarks.forDefinition(definition);
 	}
 
 	EntityDefinition getDefinition()
@@ -229,6 +241,16 @@ final class LivelyEntity
 	CitizenWalk getWalk()
 	{
 		return walk;
+	}
+
+	/**
+	 * @return this citizen's remarks, or {@code null} if it has nothing authored to
+	 * say — which is every {@code Scenery} record and 96 of the 129 citizens
+	 */
+	@Nullable
+	CitizenRemarks getRemarks()
+	{
+		return remarks;
 	}
 
 	boolean isWanted()
@@ -255,6 +277,23 @@ final class LivelyEntity
 	{
 		broken = true;
 		wanted = false;
+		silence();
+	}
+
+	/**
+	 * Stops this citizen talking, now.
+	 *
+	 * <p>Called from every path that takes it off the screen. A remark is text
+	 * hanging in the air above a model, so the moment the model is not being drawn
+	 * the text must not be either — and the only way to guarantee that is for the
+	 * thing that removes the model to be the thing that removes the text.
+	 */
+	private void silence()
+	{
+		if (remarks != null)
+		{
+			remarks.clear();
+		}
 	}
 
 	/**
@@ -317,6 +356,12 @@ final class LivelyEntity
 	{
 		try
 		{
+			// Unconditionally, and before the isActive() check: this method is called
+			// for every unwanted entity on every visibility pass, so "silence
+			// anything that is not on screen" costs one null check and holds even for
+			// an entity that was never active.
+			silence();
+
 			if (!isActive())
 			{
 				return false;
@@ -498,6 +543,65 @@ final class LivelyEntity
 	AnimationController getInstalledController()
 	{
 		return installed;
+	}
+
+	// --- What the client is about to draw ------------------------------------
+	//
+	// Four read-only accessors for the two things that have to project this entity
+	// into screen space: CitizenMenu's clickbox and ChatterOverlay's text position.
+	// Deliberately four narrow getters rather than handing out the RuneLiteObject:
+	// this class is the only writer of the object's state, and a caller that could
+	// reach setActive or setLocation would be a second definition of the lifecycle
+	// and of how fast a citizen walks.
+	//
+	// They read the object rather than the definition on purpose. The definition
+	// holds the authored tile, which is where a wandering citizen is not; the object
+	// holds the position the frame pass last put it at, which is where the client
+	// will draw it this frame. Text that used the authored tile would sit still
+	// while its citizen walked away from it — one of the two bugs the overlay exists
+	// to make impossible.
+
+	/**
+	 * @return the lit model, or {@code null} before it has been built (a cold model
+	 * cache) or if the build failed
+	 */
+	@Nullable
+	Model getRenderedModel()
+	{
+		return model;
+	}
+
+	/**
+	 * @return the local position the object currently holds, or {@code null} if it
+	 * has never been placed. {@code RuneLiteObjectController.getLocation()} builds
+	 * this from the x/y/worldView it was last given, so it is the frame pass's own
+	 * answer rather than a second computation of it.
+	 */
+	@Nullable
+	LocalPoint getRenderLocation()
+	{
+		return object == null ? null : object.getLocation();
+	}
+
+	/**
+	 * @return the height the client fixed up when the object was placed. Set by
+	 * {@code RuneLiteObject.setLocation}, which runs
+	 * {@code Perspective.getTileHeight} — this plugin never writes it.
+	 */
+	int getRenderZ()
+	{
+		return object == null ? 0 : object.getZ();
+	}
+
+	/**
+	 * @return the orientation the object is drawn at, in 0..2047 — the direction of
+	 * travel for a walking citizen, the authored {@code baseOrientation} otherwise.
+	 * Falls back to the authored value when there is no object yet, so a clickbox
+	 * computed a frame too early is wrong by nothing worse than a facing.
+	 */
+	int getRenderOrientation()
+	{
+		return object == null ? definition.getOrientation() : object.getOrientation();
 	}
 
 	/**

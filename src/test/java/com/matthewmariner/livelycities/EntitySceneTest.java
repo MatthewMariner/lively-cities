@@ -43,7 +43,7 @@ public class EntitySceneTest
 		client = new FakeClient();
 		regions = new FakeRegions();
 		config = new FakeConfig();
-		scene = new EntityScene(client, regions, config);
+		scene = new EntityScene(client, regions, config, config.overrides());
 	}
 
 	@Test

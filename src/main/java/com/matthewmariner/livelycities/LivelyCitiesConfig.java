@@ -5,6 +5,7 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
+import net.runelite.client.config.Units;
 
 /**
  * The plugin's dials.
@@ -47,12 +48,39 @@ import net.runelite.client.config.Range;
  *   <li><b>A density <i>count</i>.</b> The dataset has no density field, so
  *       {@link CrowdDensity} thins proportionally instead of pretending to know
  *       how crowded a street was meant to be.</li>
+ *   <li><b>The "this is fake" colour.</b> RuneLite supports {@code Color} config
+ *       items, so exposing it would be cheap — and it is deliberately not exposed.
+ *       Its whole job is to be a colour the game never uses for a real menu
+ *       target, and a user-settable one can be set to the yellow real NPCs use.
+ *       See {@link CitizenLabel}.</li>
+ *   <li><b>A "mute everyone" switch.</b> {@link #overheadText()} already is one.
+ *       Two global switches spelled differently would be the same setting twice,
+ *       and no test could tell them apart. The second granularity is per citizen,
+ *       through its own right-click menu — see {@link CitizenOverrides}.</li>
+ *   <li><b>A remark-chance dial.</b> {@link CitizenChatter#REMARK_CHANCE_PERCENT}
+ *       is fixed. The two things worth controlling are how often a citizen gets a
+ *       chance and how many can be on screen at once; a third multiplier
+ *       interacting with both would make neither predictable.</li>
  * </ul>
  */
 @ConfigGroup(LivelyCitiesConfig.GROUP)
 public interface LivelyCitiesConfig extends Config
 {
 	String GROUP = "livelycities";
+
+	@ConfigSection(
+		name = "Chatter",
+		description = "What citizens say over their heads, how often, and how to make them stop.",
+		position = 10
+	)
+	String chatterSection = "chatter";
+
+	@ConfigSection(
+		name = "Individuals",
+		description = "Citizens you have hidden or muted with their own right-click menu.",
+		position = 15
+	)
+	String individualsSection = "individuals";
 
 	@ConfigSection(
 		name = "Cities",
@@ -91,6 +119,158 @@ public interface LivelyCitiesConfig extends Config
 	default CrowdDensity crowdDensity()
 	{
 		return CrowdDensity.FULL;
+	}
+
+	// --- Chatter -------------------------------------------------------------
+	//
+	// These are here first, and they exist before the feature they control, for a
+	// documented reason. Overhead-text spam was the predecessor's single loudest
+	// complaint — 144 upvotes on "please add an option to shut them up" — its author
+	// promised a mute toggle and never shipped one, and upstream issue #35 has been
+	// open since release day. So this is not a settings page for a feature; the
+	// feature is what is left of CitizenChatter once these are all satisfied.
+
+	@ConfigItem(
+		keyName = "overheadText",
+		name = "Overhead chatter",
+		description = "Whether citizens say anything at all over their heads. "
+			+ "Unticking this is the hard off switch: nothing is drawn, nothing is "
+			+ "rolled, and anything already on screen goes away on the click rather "
+			+ "than when it would have expired.",
+		position = 1,
+		section = chatterSection
+	)
+	default boolean overheadText()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "remarkIntervalTicks",
+		name = "Chance every",
+		description = "How often each citizen gets a chance to say something. It is a chance, "
+			+ "not a turn — roughly one in four — so at the default a citizen with something "
+			+ "to say speaks about once every two and a half minutes. Higher means quieter.",
+		position = 2,
+		section = chatterSection
+	)
+	@Range(min = CitizenChatter.MIN_ROLL_INTERVAL_TICKS, max = CitizenChatter.MAX_ROLL_INTERVAL_TICKS)
+	@Units(Units.TICKS)
+	default int remarkIntervalTicks()
+	{
+		return CitizenChatter.DEFAULT_ROLL_INTERVAL_TICKS;
+	}
+
+	@ConfigItem(
+		keyName = "remarkDwellTicks",
+		name = "Stays up for",
+		description = "How long a remark stays on screen once it appears.",
+		position = 3,
+		section = chatterSection
+	)
+	@Range(min = CitizenChatter.MIN_DWELL_TICKS, max = CitizenChatter.MAX_DWELL_TICKS)
+	@Units(Units.TICKS)
+	default int remarkDwellTicks()
+	{
+		return CitizenChatter.DEFAULT_DWELL_TICKS;
+	}
+
+	@ConfigItem(
+		keyName = "chatterRadius",
+		name = "Chatter distance",
+		description = "How close a citizen has to be, in tiles, before it will start talking. "
+			+ "Deliberately tighter than the render distance: a citizen twenty tiles away "
+			+ "is scenery.",
+		position = 4,
+		section = chatterSection
+	)
+	@Range(min = CitizenChatter.MIN_RADIUS_TILES, max = RenderPolicy.MAX_CULL_RADIUS)
+	default int chatterRadius()
+	{
+		return CitizenChatter.DEFAULT_RADIUS_TILES;
+	}
+
+	@ConfigItem(
+		keyName = "maxConcurrentRemarks",
+		name = "At most on screen",
+		description = "How many remarks may be on screen at once. This is the setting that stops "
+			+ "a crowd becoming a wall of text — Varrock square holds forty citizens, and "
+			+ "without a cap roughly twenty of them would be talking at any moment.",
+		position = 5,
+		section = chatterSection
+	)
+	@Range(min = CitizenChatter.MIN_MAX_CONCURRENT, max = CitizenChatter.MAX_MAX_CONCURRENT)
+	default int maxConcurrentRemarks()
+	{
+		return CitizenChatter.DEFAULT_MAX_CONCURRENT;
+	}
+
+	// --- Individual citizens -------------------------------------------------
+	//
+	// Two hidden strings and two buttons. RuneLite has no dynamic checkbox list —
+	// @ConfigItem is an annotation on an interface method, fixed at compile time —
+	// so a per-citizen opt-out cannot be a checkbox per citizen, let alone one per
+	// uuid in a data file. The established shape is a hidden string that a RUNELITE
+	// menu entry appends to, plus a visible control for the way back. See
+	// CitizenOverrides.
+	//
+	// The two "clear the list" items are checkboxes that untick themselves: 1.12.36
+	// has no Button config type (verified — there is no net.runelite.client.config
+	// .Button class in the client jar), so the plugin answers the ConfigChanged,
+	// empties the list, and unsets the key again. Ticking it is therefore a press
+	// rather than a state.
+
+	@ConfigItem(
+		keyName = CitizenOverrides.UNHIDE_ALL_KEY,
+		name = "Unhide all citizens",
+		description = "Tick to bring back every citizen you have hidden with its right-click "
+			+ "\"Hide\" option. It unticks itself.",
+		position = 1,
+		section = individualsSection
+	)
+	default boolean unhideAll()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = CitizenOverrides.UNMUTE_ALL_KEY,
+		name = "Unmute all citizens",
+		description = "Tick to let every citizen you have muted with its right-click \"Mute\" "
+			+ "option talk again. It unticks itself.",
+		position = 2,
+		section = individualsSection
+	)
+	default boolean unmuteAll()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = CitizenOverrides.HIDDEN_KEY,
+		name = "Hidden citizens",
+		description = "The uuids of citizens hidden from their own right-click menu. "
+			+ "Not shown: there is no dynamic list control to show it in.",
+		position = 3,
+		section = individualsSection,
+		hidden = true
+	)
+	default String hiddenCitizens()
+	{
+		return "";
+	}
+
+	@ConfigItem(
+		keyName = CitizenOverrides.MUTED_KEY,
+		name = "Muted citizens",
+		description = "The uuids of citizens muted from their own right-click menu.",
+		position = 4,
+		section = individualsSection,
+		hidden = true
+	)
+	default String mutedCitizens()
+	{
+		return "";
 	}
 
 	// --- One checkbox per city. Order matches City's declaration order. -------

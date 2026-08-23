@@ -361,4 +361,99 @@ final class FakeClient extends StubClient
 		registerCalls = 0;
 		removeCalls = 0;
 	}
+
+	// --- The interaction surface. --------------------------------------------
+	//
+	// Four methods, and the list is deliberately this short: every other way of
+	// reaching the game — menuAction(..) above all — stays on StubClient and throws.
+	// That is how CitizenMenuTest can assert "the click handler sends nothing to the
+	// server" as a fact about the code rather than as an intention. A permissive
+	// client would have made the claim unprovable.
+
+	private final FakeMenu menu = new FakeMenu();
+
+	private final List<String> chatMessages = new ArrayList<>();
+
+	private boolean widgetSelected;
+
+	@Nullable
+	private net.runelite.api.Point mouseCanvasPosition;
+
+	@Override
+	public net.runelite.api.Menu getMenu()
+	{
+		return menu;
+	}
+
+	FakeMenu menu()
+	{
+		return menu;
+	}
+
+	/**
+	 * The {@code MenuOpened} the client would post for the menu as it stands now.
+	 *
+	 * <p>A snapshot, exactly like the real event: {@code Menu.createMenuEntry}
+	 * mutates the live menu, so entries added by a handler do not appear in the array
+	 * the handler was given.
+	 */
+	net.runelite.api.events.MenuOpened menuOpened()
+	{
+		net.runelite.api.events.MenuOpened event = new net.runelite.api.events.MenuOpened();
+		event.setMenuEntries(menu.getMenuEntries());
+		return event;
+	}
+
+	/**
+	 * "Is a widget in target mode?" — the client's own javadoc. True while an item
+	 * or a spell is on the cursor, which is the state
+	 * {@link CitizenMenu#onMenuOpened} must produce no clickbox in.
+	 */
+	@Override
+	public boolean isWidgetSelected()
+	{
+		return widgetSelected;
+	}
+
+	/**
+	 * {@code Client.setWidgetSelected} is a real API method, so this implements it
+	 * rather than shadowing it under another name — the same treatment as
+	 * {@code setGameState} above. This plugin never calls it; the tests do, to put
+	 * an item on the cursor.
+	 */
+	@Override
+	public void setWidgetSelected(boolean widgetSelected)
+	{
+		this.widgetSelected = widgetSelected;
+	}
+
+	@Override
+	@Nullable
+	public net.runelite.api.Point getMouseCanvasPosition()
+	{
+		return mouseCanvasPosition;
+	}
+
+	void setMouseCanvasPosition(@Nullable net.runelite.api.Point position)
+	{
+		this.mouseCanvasPosition = position;
+	}
+
+	/**
+	 * The local chat buffer. Returns null rather than a {@code MessageNode} because
+	 * nothing in this plugin reads the result — it prints a line and forgets it.
+	 */
+	@Override
+	@Nullable
+	public net.runelite.api.MessageNode addChatMessage(
+		net.runelite.api.ChatMessageType type, String name, String message, String sender)
+	{
+		chatMessages.add(message);
+		return null;
+	}
+
+	List<String> chatMessages()
+	{
+		return chatMessages;
+	}
 }

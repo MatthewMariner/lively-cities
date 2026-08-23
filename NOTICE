@@ -14,6 +14,12 @@ The files under src/main/resources/RegionData/ are derived from that project's
 region data (format version 0.8). Redistribution of those files retains the
 copyright notice above as the BSD 2-Clause License requires.
 
+They are no longer byte-identical to upstream. The six citizens in 14131.json
+were named after the Barrows Brothers, with matching examine text, and are now
+generic "Barrow wight"s; their placements, models and animations are unchanged,
+only the identities. BSD-2 permits the modification — this note exists so nobody
+assumes the vendored data still matches the source it came from.
+
 The animation name -> id table in
 src/main/java/com/matthewmariner/livelycities/LivelyAnimation.java is likewise
 derived from that project (its AnimationID enum), because the region data

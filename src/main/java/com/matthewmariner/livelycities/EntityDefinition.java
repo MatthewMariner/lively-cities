@@ -36,12 +36,16 @@ public final class EntityDefinition
 	private static final int JAU_FULL_ROTATION = 2048;
 	private static final int MAX_PLANE = 3;
 
+	/** Shared, so 142 of the 175 entities do not each allocate an empty array. */
+	private static final String[] NO_REMARKS = new String[0];
+
 	private final UUID uuid;
 	private final int regionId;
 	private final int tileRegionId;
 	private final EntityType type;
 	private final String name;
 	private final String examineText;
+	private final String[] remarks;
 	private final WorldPoint worldLocation;
 	private final int orientation;
 	private final int[] modelIds;
@@ -61,6 +65,7 @@ public final class EntityDefinition
 		EntityType type,
 		@Nullable String name,
 		@Nullable String examineText,
+		String[] remarks,
 		WorldPoint worldLocation,
 		int orientation,
 		int[] modelIds,
@@ -79,6 +84,7 @@ public final class EntityDefinition
 		this.type = type;
 		this.name = name;
 		this.examineText = examineText;
+		this.remarks = remarks;
 		this.worldLocation = worldLocation;
 		this.orientation = orientation;
 		this.modelIds = modelIds;
@@ -177,6 +183,7 @@ public final class EntityDefinition
 			type,
 			record.name,
 			record.examineText,
+			usableRemarks(record.remarks, type, label),
 			location,
 			orientation,
 			modelIds,
@@ -329,6 +336,72 @@ public final class EntityDefinition
 		}
 
 		int[] trimmed = new int[n];
+		System.arraycopy(kept, 0, trimmed, 0, n);
+		return trimmed;
+	}
+
+	/**
+	 * The one-liners this entity may say, with the four ways of having nothing to
+	 * say flattened into one empty array.
+	 *
+	 * <p>All four occur in the shipped data: 33 citizens carry remarks, 54 carry
+	 * {@code "remarks": []}, 42 carry no {@code remarks} field at all, and all 46
+	 * scenery records omit it. {@link CitizenRemarks#forDefinition} then has one
+	 * condition to check rather than four, and {@link CitizenChatter} never has to
+	 * ask what kind of silence it is looking at.
+	 *
+	 * <p><b>Scenery is silenced here rather than downstream.</b> A talking crate is
+	 * an authoring mistake, and the place to refuse it is the validation gate — the
+	 * alternative is every later reader remembering to ask
+	 * {@code getType().isCitizen()} first, and one of them eventually not.
+	 *
+	 * <p>Degrades rather than skipping, like every other soft failure in this class:
+	 * a blank or null entry is dropped and the rest are kept, because a citizen with
+	 * two of its three lines is a working citizen.
+	 */
+	private static String[] usableRemarks(@Nullable String[] raw, EntityType type, String label)
+	{
+		if (raw == null || raw.length == 0)
+		{
+			return NO_REMARKS;
+		}
+
+		if (!type.isCitizen())
+		{
+			log.debug("{}: {} is not a citizen but carries {} remark(s) — ignoring them",
+				label, type, raw.length);
+			return NO_REMARKS;
+		}
+
+		String[] kept = new String[raw.length];
+		int n = 0;
+		for (String remark : raw)
+		{
+			if (remark == null || remark.trim().isEmpty())
+			{
+				continue;
+			}
+			kept[n++] = remark.trim();
+		}
+
+		if (n == 0)
+		{
+			log.warn("{}: every one of its {} remark(s) was blank — it will not talk",
+				label, raw.length);
+			return NO_REMARKS;
+		}
+
+		if (n < raw.length)
+		{
+			log.warn("{}: dropped {} blank remark(s), keeping {}", label, raw.length - n, n);
+		}
+
+		if (n == raw.length)
+		{
+			return kept;
+		}
+
+		String[] trimmed = new String[n];
 		System.arraycopy(kept, 0, trimmed, 0, n);
 		return trimmed;
 	}
@@ -497,6 +570,20 @@ public final class EntityDefinition
 	public String getExamineText()
 	{
 		return examineText;
+	}
+
+	/**
+	 * @return the one-liners this entity may say, never null and never containing a
+	 * blank. Empty for scenery and for the 96 shipped citizens with nothing
+	 * authored.
+	 *
+	 * <p>The array itself, not a copy — the same call this class already makes for
+	 * {@link #getModelIds()}. Its only reader is
+	 * {@link CitizenRemarks#forDefinition}, which indexes it and never writes to it.
+	 */
+	public String[] getRemarks()
+	{
+		return remarks;
 	}
 
 	public WorldPoint getWorldLocation()

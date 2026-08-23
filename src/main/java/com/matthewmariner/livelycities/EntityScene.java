@@ -1,6 +1,7 @@
 package com.matthewmariner.livelycities;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -9,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -108,6 +110,18 @@ class EntityScene
 	private final Client client;
 	private final RegionDataLoader loader;
 	private final LivelyCitiesConfig config;
+	private final CitizenOverrides overrides;
+
+	/**
+	 * Who is saying what.
+	 *
+	 * <p>A field rather than an injected collaborator because it has no dependency
+	 * the scene does not already hold, and because it is driven from exactly one
+	 * place: {@link #onGameTick}. Its clock is the game tick, so a second caller
+	 * would be a second definition of how often citizens talk — the same rule that
+	 * keeps {@link #stepWalkers()} private.
+	 */
+	private final CitizenChatter chatter;
 
 	/** Parsed region files, keyed by region id. */
 	private final Map<Integer, RegionDefinition> parsed = new HashMap<>();
@@ -126,6 +140,20 @@ class EntityScene
 
 	/** Wrappers whose tile is in a region the currently loaded scene covers. */
 	private final List<LivelyEntity> inScope = new ArrayList<>();
+
+	/**
+	 * {@link #inScope}, read-only, for the two things that have to walk the live set
+	 * from outside: the overhead-text overlay (once a frame) and the right-click hit
+	 * test (once a right-click).
+	 *
+	 * <p>Wrapped once here rather than per call. {@code unmodifiableList} allocates,
+	 * and a frame handler that allocates is a frame handler that shows up in a
+	 * profile — the same reasoning as the maintained {@link #walkers} list. It is a
+	 * <i>view</i>, not a copy, which is the whole point: a caller that walks it
+	 * cannot be looking at a stale set, so a despawned entity's text cannot survive
+	 * into the next frame.
+	 */
+	private final List<LivelyEntity> inScopeView = Collections.unmodifiableList(inScope);
 
 	/** The region ids the current scope was built from, in the client's order. */
 	private final List<Integer> scopeRegions = new ArrayList<>();
@@ -152,11 +180,17 @@ class EntityScene
 	private long totalDespawns;
 
 	@Inject
-	EntityScene(Client client, RegionDataLoader loader, LivelyCitiesConfig config)
+	EntityScene(
+		Client client,
+		RegionDataLoader loader,
+		LivelyCitiesConfig config,
+		CitizenOverrides overrides)
 	{
 		this.client = client;
 		this.loader = loader;
 		this.config = config;
+		this.overrides = overrides;
+		this.chatter = new CitizenChatter(config, overrides);
 	}
 
 	/**
@@ -278,6 +312,11 @@ class EntityScene
 	{
 		updateVisibility(playerLocation, worldView);
 		stepWalkers();
+
+		// Last, and after the walk: the visibility pass has decided who is on screen,
+		// so a citizen deactivated this tick cannot start talking on it, and one that
+		// has just spawned is asked from the position the player can already see.
+		chatter.onGameTick(inScope, playerLocation);
 	}
 
 	/**
@@ -301,6 +340,14 @@ class EntityScene
 	void onSettingsChanged(WorldPoint playerLocation, WorldView worldView)
 	{
 		updateVisibility(playerLocation, worldView);
+
+		// The hard off switch, re-applied without advancing the chatter clock. The
+		// same distinction as the walkers: unticking "Overhead chatter" has to empty
+		// the screen on the click, but a settings change is not a game tick and must
+		// never be able to start a remark — RuneLite posts one ConfigChanged per key,
+		// so switching profiles would otherwise run the cadence two dozen ticks
+		// forward for a change the user made to a checkbox.
+		chatter.onSettingsChanged(inScope);
 	}
 
 	/**
@@ -355,6 +402,10 @@ class EntityScene
 			density = CrowdDensity.FULL;
 		}
 
+		// Same rule, and it is the reason UuidSetting caches its parse: this is one
+		// config read and at most one parse per pass, not one per entity.
+		Set<UUID> hiddenUuids = overrides.hiddenUuids();
+
 		List<LivelyEntity> candidates = new ArrayList<>();
 		int offByConfig = 0;
 		for (LivelyEntity entity : inScope)
@@ -364,7 +415,7 @@ class EntityScene
 			{
 				continue;
 			}
-			if (!allowedByConfig(entity.getDefinition(), density))
+			if (!allowedByConfig(entity.getDefinition(), density, hiddenUuids))
 			{
 				// Not a candidate, so the deactivate pass below despawns it. That
 				// is the whole mechanism behind "unticking a city takes effect
@@ -523,6 +574,11 @@ class EntityScene
 		walkers.clear();
 		instanceReported = false;
 
+		// A fresh scene gets a fresh cadence phase rather than inheriting one from
+		// the world the player just left. deactivateAll() has already silenced
+		// everybody; this is the clock.
+		chatter.reset();
+
 		if (cleared > 0)
 		{
 			log.debug("invalidated on {}: deactivated {} entity(ies)", reason, cleared);
@@ -558,11 +614,49 @@ class EntityScene
 		inScope.clear();
 		walkers.clear();
 		unmappedReported.clear();
+		chatter.reset();
 		scopeGeneration = 0;
 		reportNextPass = false;
 		instanceReported = false;
 		firstReportDone = false;
 		return cleared;
+	}
+
+	/**
+	 * The in-scope wrappers, live and read-only.
+	 *
+	 * <p>Handed out for the two readers that have to see the set as it is
+	 * <i>right now</i>: {@code ChatterOverlay}, once a frame, and
+	 * {@link CitizenMenu}, once a right-click. It is the live list rather than a
+	 * snapshot on purpose — see {@link #inScopeView}.
+	 */
+	List<LivelyEntity> inScopeEntities()
+	{
+		return inScopeView;
+	}
+
+	/**
+	 * @return how many citizens currently have a remark on screen. For the tests and
+	 * for the log line; the overlay counts nothing and asks nobody.
+	 */
+	int countTalking()
+	{
+		int n = 0;
+		for (LivelyEntity entity : inScope)
+		{
+			CitizenRemarks remarks = entity.getRemarks();
+			if (remarks != null && remarks.isTalking())
+			{
+				n++;
+			}
+		}
+		return n;
+	}
+
+	/** @return the chatter clock, so a test can assert what does and does not advance it */
+	int getChatterTick()
+	{
+		return chatter.getTick();
 	}
 
 	/**
@@ -644,8 +738,18 @@ class EntityScene
 	 * question about where it stands — the same reason scope membership is keyed
 	 * on the tile.
 	 */
-	private boolean allowedByConfig(EntityDefinition definition, CrowdDensity density)
+	private boolean allowedByConfig(
+		EntityDefinition definition,
+		CrowdDensity density,
+		Set<UUID> hiddenUuids)
 	{
+		// Hidden first, and cheapest: it is a hash lookup, and it is the only one of
+		// the three the user chose for this specific citizen. Upstream issue #40.
+		if (hiddenUuids.contains(definition.getUuid()))
+		{
+			return false;
+		}
+
 		int regionId = definition.getTileRegionId();
 		if (City.of(regionId) == null && unmappedReported.add(regionId))
 		{

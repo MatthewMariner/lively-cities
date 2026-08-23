@@ -2,6 +2,7 @@ package com.matthewmariner.livelycities;
 
 import net.runelite.api.GameState;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.ui.overlay.Overlay;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -106,6 +107,22 @@ public class LivelyCitiesPluginCacheAuditTest
 		CountingPlugin plugin = new CountingPlugin();
 		plugin.client = client;
 		plugin.clientThread = clientThread;
+
+		// startUp() also registers the overhead-text overlay. Nothing in this file
+		// is about that, but a null registry would make every test here fail for a
+		// reason that has nothing to do with the gate under test.
+		plugin.overlayRegistry = new OverlayRegistry()
+		{
+			@Override
+			public void add(Overlay overlay)
+			{
+			}
+
+			@Override
+			public void remove(Overlay overlay)
+			{
+			}
+		};
 		return plugin;
 	}
 

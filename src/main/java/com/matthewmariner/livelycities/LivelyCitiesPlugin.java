@@ -17,6 +17,8 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.BeforeRender;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.MenuOpened;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -24,6 +26,8 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayManager;
 
 /**
  * Cosmetic townsfolk and scenery, spawned from the vendored region dataset.
@@ -46,6 +50,10 @@ import net.runelite.client.plugins.PluginDescriptor;
  *       happens per frame: the animations are advanced by the client, which calls
  *       {@code RuneLiteObject.tick(ticksSinceLastFrame)} on every registered
  *       object as it draws it.</li>
+ *   <li><b>The two interaction handlers are not deferred.</b>
+ *       {@code MenuOpened} and {@code MenuOptionClicked} are posted from the
+ *       client's own menu code and have to be answered inside it — see
+ *       {@link #onMenuOpened} and {@link CitizenMenu}.</li>
  *   <li><b>Everything reaches {@link EntityScene} on the client thread.</b>
  *       {@code @Subscribe} runs on the posting thread, so the handlers wrap their
  *       calls in {@link ClientThread#invoke} — which runs inline when we are
@@ -105,6 +113,21 @@ public class LivelyCitiesPlugin extends Plugin
 	@Inject
 	RegionDataLoader regionDataLoader;
 
+	@Inject
+	OverlayRegistry overlayRegistry;
+
+	@Inject
+	ChatterOverlay chatterOverlay;
+
+	@Inject
+	CitizenMenu citizenMenu;
+
+	@Inject
+	CitizenOverrides overrides;
+
+	@Inject
+	ConfigWriter configWriter;
+
 	/**
 	 * True when the client was launched with {@code --developer-mode} — the same
 	 * {@code RuneLiteProperties} launcher flag {@code ./gradlew run} already
@@ -142,6 +165,8 @@ public class LivelyCitiesPlugin extends Plugin
 	{
 		log.info("Lively Cities starting (cull {} tiles, max {}, cap {} objects)",
 			RenderPolicy.DEFAULT_CULL_RADIUS, RenderPolicy.MAX_CULL_RADIUS, RenderPolicy.MAX_ACTIVE_OBJECTS);
+
+		overlayRegistry.add(chatterOverlay);
 
 		// Enabling the plugin mid-session is the common case in dev. Nothing to
 		// do here beyond letting the next game tick find the scene — but if we
@@ -217,6 +242,16 @@ public class LivelyCitiesPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
+		// Removed before the scene is torn down, and synchronously: an overlay left
+		// in the OverlayManager keeps drawing, and it would be drawing from a scene
+		// that is being emptied underneath it.
+		overlayRegistry.remove(chatterOverlay);
+
+		// The menu holds a reference to whichever citizen the last right-click was
+		// on. Left set, it would keep that wrapper — and its lit model — alive past
+		// the teardown whose whole job is to leave nothing behind.
+		citizenMenu.forget();
+
 		// Not blocking: invoke() runs inline on the client thread and defers
 		// otherwise. The count lands in the log either way.
 		clientThread.invoke(scene::shutdown);
@@ -237,6 +272,9 @@ public class LivelyCitiesPlugin extends Plugin
 			case LOGIN_SCREEN:
 			case LOGIN_SCREEN_AUTHENTICATOR:
 			case CONNECTION_LOST:
+				// The remembered right-click target is about to be a wrapper the
+				// scene has forgotten.
+				citizenMenu.forget();
 				clientThread.invoke(() -> scene.invalidate(state.name()));
 				break;
 
@@ -278,8 +316,89 @@ public class LivelyCitiesPlugin extends Plugin
 			return;
 		}
 
+		if (handleResetButton(event))
+		{
+			// The clear wrote another setting, which posts another ConfigChanged, and
+			// that one runs the visibility pass. Running it here as well would run it
+			// twice for one click.
+			return;
+		}
+
 		log.debug("config changed ({}), re-running the visibility pass", event.getKey());
 		clientThread.invoke(this::refreshVisibility);
+	}
+
+	/**
+	 * The two "clear the list" checkboxes, which untick themselves.
+	 *
+	 * <p>1.12.36 has no {@code Button} config type — there is no
+	 * {@code net.runelite.client.config.Button} in the client jar — so a control
+	 * whose meaning is "do this now" has to be a boolean that is turned back off
+	 * once it has been acted on. Unset rather than written false: a key left in the
+	 * profile reads as a user override forever, and "the user has no setting here"
+	 * is the honest end state for a button.
+	 *
+	 * <p><b>It terminates.</b> Unsetting posts one more {@code ConfigChanged} for the
+	 * same key with a new value of {@code null}, which fails the {@code "true"} test
+	 * below and falls through to an ordinary visibility pass. There is no second
+	 * write and so no loop.
+	 *
+	 * @return true if this event was a button press that has now been handled
+	 */
+	private boolean handleResetButton(ConfigChanged event)
+	{
+		final String key = event.getKey();
+		if (!CitizenOverrides.UNHIDE_ALL_KEY.equals(key) && !CitizenOverrides.UNMUTE_ALL_KEY.equals(key))
+		{
+			return false;
+		}
+
+		if (!"true".equals(event.getNewValue()))
+		{
+			// The self-unset echo, or somebody unticking a box that was somehow left
+			// ticked. Not a press.
+			return false;
+		}
+
+		int cleared = CitizenOverrides.UNHIDE_ALL_KEY.equals(key)
+			? overrides.unhideAll()
+			: overrides.unmuteAll();
+
+		log.debug("'{}' pressed, {} citizen(s) restored", key, cleared);
+
+		// Whether or not anything was cleared: the box has to come back up either
+		// way, or it stays ticked and can never be pressed again.
+		configWriter.write(key, null);
+		return true;
+	}
+
+	/**
+	 * Adds this plugin's right-click entries.
+	 *
+	 * <p><b>Not wrapped in {@link ClientThread#invoke}, and that is not an
+	 * oversight.</b> {@code MenuOpened} is posted from the client's own menu code,
+	 * so this is already on the client thread — and {@code Menu.createMenuEntry}
+	 * asserts as much. Deferring would be actively wrong rather than merely
+	 * unnecessary: the entries would be added after the menu had been built and
+	 * drawn, i.e. into the next menu or into none.
+	 */
+	@Subscribe
+	public void onMenuOpened(MenuOpened event)
+	{
+		citizenMenu.onMenuOpened(event);
+	}
+
+	/**
+	 * Handles a click on one of them, locally.
+	 *
+	 * <p>Same threading as {@link #onMenuOpened}: posted from the client's menu
+	 * dispatch, and it has to consume the event before that dispatch continues, so
+	 * it cannot be deferred.
+	 */
+	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		citizenMenu.onMenuOptionClicked(event);
 	}
 
 	/**
@@ -391,5 +510,51 @@ public class LivelyCitiesPlugin extends Plugin
 	LivelyCitiesConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(LivelyCitiesConfig.class);
+	}
+
+	/**
+	 * The plugin's only write path into its own settings.
+	 *
+	 * <p>This method is the whole reason {@link ConfigWriter} exists — see its
+	 * javadoc. {@code ConfigManager}'s constructor is private, so anything that took
+	 * one directly could not be constructed by a test; behind this one lambda,
+	 * everything that decides <i>what</i> to write is testable against a map.
+	 */
+	/**
+	 * The plugin's only overlay registration path — see {@link OverlayRegistry}.
+	 */
+	@Provides
+	OverlayRegistry provideOverlayRegistry(OverlayManager overlayManager)
+	{
+		return new OverlayRegistry()
+		{
+			@Override
+			public void add(Overlay overlay)
+			{
+				overlayManager.add(overlay);
+			}
+
+			@Override
+			public void remove(Overlay overlay)
+			{
+				overlayManager.remove(overlay);
+			}
+		};
+	}
+
+	@Provides
+	ConfigWriter provideConfigWriter(ConfigManager configManager)
+	{
+		return (key, value) ->
+		{
+			if (value == null)
+			{
+				configManager.unsetConfiguration(LivelyCitiesConfig.GROUP, key);
+			}
+			else
+			{
+				configManager.setConfiguration(LivelyCitiesConfig.GROUP, key, value);
+			}
+		};
 	}
 }
