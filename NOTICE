@@ -1,0 +1,19 @@
+Lively Cities
+Copyright (c) 2026, Matthew Mariner
+
+------------------------------------------------------------------------------
+This product includes the citizen and scenery placement dataset from the
+"Citizens" RuneLite plugin, used under the BSD 2-Clause License.
+
+    Citizens — https://github.com/gc/citizens
+    Copyright (c) 2023, Magnaboy(https://github.com/gc), skeldoor, jebscape,
+    Diabolickal
+    All rights reserved.
+
+The files under src/main/resources/RegionData/ are derived from that project's
+region data (format version 0.8). Redistribution of those files retains the
+copyright notice above as the BSD 2-Clause License requires. The Java source in
+this repository is an independent implementation and is not derived from theirs.
+
+Full BSD 2-Clause text: see LICENSE.
+------------------------------------------------------------------------------
