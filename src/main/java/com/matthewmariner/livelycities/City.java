@@ -76,6 +76,25 @@ public enum City
 				return config.cityBarrows();
 			}
 		},
+	/**
+	 * Region 11062, and it really is Camelot rather than Seers' Village.
+	 *
+	 * <p>The wiki puts Camelot's map centre at (2758, 3507), which computes to
+	 * 11062; Seers' Village proper is centred at (2710, 3485), which is region
+	 * 10806 — not in this dataset at all. An earlier pass shipped this as
+	 * {@code citySeersVillage}, the same mistake as the retired
+	 * {@code cityDigsite}: naming a region after the famous place next door
+	 * instead of what stands inside the square. Both keys are retired rather
+	 * than renamed, for the reason given on {@link LivelyCitiesConfig}.
+	 */
+	CAMELOT("Camelot", 11062)
+		{
+			@Override
+			boolean enabledIn(LivelyCitiesConfig config)
+			{
+				return config.cityCamelot();
+			}
+		},
 	CANIFIS("Canifis", 13878)
 		{
 			@Override
@@ -230,14 +249,6 @@ public enum City
 			boolean enabledIn(LivelyCitiesConfig config)
 			{
 				return config.cityRimmington();
-			}
-		},
-	SEERS_VILLAGE("Seers' Village", 11062)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.citySeersVillage();
 			}
 		},
 	TAVERLEY("Taverley", 11573, 11318)

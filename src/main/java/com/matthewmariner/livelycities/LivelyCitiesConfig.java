@@ -23,7 +23,9 @@ import net.runelite.client.config.Range;
  * {@code cityLumberYard}, {@code cityPaterdomus} — and the old key is left to rot
  * in whichever profiles already hold it. RuneLite ignores a key with no
  * {@code @ConfigItem}, so a stale {@code livelycities.cityDigsite=false} is inert;
- * reusing the name for some other place is what would silently switch that place
+ * the same goes for the equally-retired {@code citySeersVillage}, which named
+ * region 11062 after the village next door when the square is Camelot. Reusing
+ * either name for some other place is what would silently switch that place
  * off for those users.
  *
  * <p><b>Why 24 hand-written city checkboxes.</b> {@code @ConfigItem} is an
@@ -34,11 +36,12 @@ import net.runelite.client.config.Range;
  *
  * <p><b>What is deliberately absent.</b>
  * <ul>
- *   <li><b>The object cap.</b> {@link RenderPolicy#MAX_ACTIVE_OBJECTS} is 80 and
- *       three separate field runs peaked at 16 active. A dial that has never
- *       been the constraint is a dial that only lets a user break something —
- *       and the cap is the guard that stops a future region file asking the
- *       client to build hundreds of models in one tick. It stays a constant.</li>
+ *   <li><b>The object cap.</b> {@link RenderPolicy#MAX_ACTIVE_OBJECTS} is 80. It
+ *       is not exposed because its job is to stop a future region file asking the
+ *       client to build hundreds of models in one tick — a guard, not a
+ *       preference. The margin is thinner than it looks: the densest
+ *       neighbourhood in the shipped data holds 76 entities at the widest render
+ *       distance, four slots spare.</li>
  *   <li><b>A master on/off.</b> That is the plugin's own toggle in the
  *       plugin list. A second one would only be a way for the two to disagree.</li>
  *   <li><b>A density <i>count</i>.</b> The dataset has no density field, so
@@ -235,9 +238,11 @@ public interface LivelyCitiesConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "citySeersVillage", name = "Seers' Village", description = "Populate Seers' Village",
+	@ConfigItem(keyName = "cityCamelot", name = "Camelot",
+		description = "Populate Camelot. Region 11062 is Camelot, not Seers' Village — the "
+			+ "village proper is region 10806 and carries no citizens.",
 		position = 120, section = citiesSection)
-	default boolean citySeersVillage()
+	default boolean cityCamelot()
 	{
 		return true;
 	}

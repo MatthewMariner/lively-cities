@@ -396,7 +396,7 @@ public class LivelyCitiesPluginLifecycleTest
 			"cityCatherby", "cityDraynor", "cityEdgeville", "cityFalador", "cityFarmingGuild",
 			"cityGrandExchange", "cityLumberYard", "cityLumbridge", "cityMotherlodeMine",
 			"cityMusaPoint", "cityOttosGrotto", "cityPaterdomus", "cityPiscatoris",
-			"cityRangingGuild", "cityRimmington", "citySeersVillage", "cityTaverley",
+			"cityRangingGuild", "cityRimmington", "cityCamelot", "cityTaverley",
 			"cityTrollheim", "cityVarrock",
 		};
 		assertEquals("one key per city plus the two dials", City.values().length + 2, keys.length);

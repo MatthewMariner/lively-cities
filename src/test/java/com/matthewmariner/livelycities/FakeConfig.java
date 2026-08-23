@@ -203,9 +203,9 @@ final class FakeConfig implements LivelyCitiesConfig
 	}
 
 	@Override
-	public boolean citySeersVillage()
+	public boolean cityCamelot()
 	{
-		return on(City.SEERS_VILLAGE);
+		return on(City.CAMELOT);
 	}
 
 	@Override

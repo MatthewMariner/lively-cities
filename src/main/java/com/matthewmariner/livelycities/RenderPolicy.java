@@ -23,9 +23,13 @@ public final class RenderPolicy
 	 * {@code RenderPolicyTest} recomputes that density from the shipped files
 	 * rather than trusting the numbers in this sentence.
 	 *
-	 * <p>Not a config dial. Three separate field runs peaked at 16 active objects
-	 * against this 80, so exposing it would only give a user a way to cull content
-	 * that was never being capped in the first place.
+	 * <p>Not a config dial: its job is to stop a future region file asking the
+	 * client to build hundreds of models in one tick, which is a guard rather than
+	 * a preference. Do not mistake it for slack — the densest neighbourhood in the
+	 * shipped data holds 76 entities at {@link #MAX_CULL_RADIUS}, four short of
+	 * this. An earlier version of this comment justified the constant by claiming
+	 * field runs "peaked at 16 active"; that figure was never recorded and is not
+	 * evidence of anything.
 	 */
 	public static final int MAX_ACTIVE_OBJECTS = 80;
 
