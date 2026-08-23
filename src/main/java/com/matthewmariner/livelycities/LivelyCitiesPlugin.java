@@ -1,8 +1,12 @@
 package com.matthewmariner.livelycities;
 
 import com.google.inject.Provides;
+import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import javax.inject.Named;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Constants;
@@ -13,6 +17,7 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.BeforeRender;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -69,6 +74,20 @@ public class LivelyCitiesPlugin extends Plugin
 	private static final int CLIENT_TICKS_PER_GAME_TICK =
 		Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
 
+	/**
+	 * Set on {@code ./gradlew auditCacheIds} (never on {@code ./gradlew run} or
+	 * {@code ./gradlew test}) to ask {@link #runDeveloperCacheAudit()} to run
+	 * once at startup. Read with {@link Boolean#getBoolean}, a plain JVM system
+	 * property — no new argument parsing, no reflection.
+	 *
+	 * <p>Checked in addition to {@link #developerMode}, not instead of it: this
+	 * is what stops the one-off validation pass from running on every ordinary
+	 * {@code ./gradlew run} session — it is a real client-cache walk over every
+	 * id the dataset references, which is exactly the kind of work a developer
+	 * wants on demand, not on every restart.
+	 */
+	static final String CACHE_AUDIT_SYSTEM_PROPERTY = "livelycities.validateCacheIds";
+
 	// Package-private rather than private so the tests in this package can wire
 	// their own fakes in. Guice injects a package-private field exactly as it
 	// injects a private one, so this costs the runtime nothing — and the
@@ -82,6 +101,25 @@ public class LivelyCitiesPlugin extends Plugin
 
 	@Inject
 	EntityScene scene;
+
+	@Inject
+	RegionDataLoader regionDataLoader;
+
+	/**
+	 * True when the client was launched with {@code --developer-mode} — the same
+	 * {@code RuneLiteProperties} launcher flag {@code ./gradlew run} already
+	 * passes for this project (see {@code build.gradle}). Bound by
+	 * {@code RuneLiteModule} for every launch, developer or not, so this is
+	 * always resolvable and defaults to {@code false} when a test constructs the
+	 * plugin directly instead of through Guice.
+	 *
+	 * <p>Gates {@link #runDeveloperCacheAudit()} the same way the plan's L4.3
+	 * authoring mode is gated: a dev-only capability compiled into the shipped
+	 * jar is fine, a dev-only capability that a normal user can trigger is not.
+	 */
+	@Inject
+	@Named("developerMode")
+	boolean developerMode;
 
 	/**
 	 * {@code getGameCycle()} at the last game tick we processed.
@@ -112,6 +150,67 @@ public class LivelyCitiesPlugin extends Plugin
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
 			clientThread.invoke(this::tick);
+		}
+
+		// Both flags, deliberately: developerMode alone is true for every
+		// ordinary `./gradlew run`, and the cache id audit is a deliberate,
+		// on-demand action, not something a normal dev session should pay for.
+		if (developerMode && Boolean.getBoolean(CACHE_AUDIT_SYSTEM_PROPERTY))
+		{
+			clientThread.invoke(this::runDeveloperCacheAudit);
+		}
+	}
+
+	/**
+	 * The cache-backed half of the durability tooling: walks every distinct
+	 * model id, merged-object id and animation id
+	 * {@code RegionData/*.json} references and asks the live client whether each
+	 * one still resolves — see {@code CacheIdAudit}'s javadoc for why this
+	 * cannot run in the normal test suite.
+	 *
+	 * <p>Runs once, from the client thread (required — every model/animation
+	 * load in this plugin goes through the client), and only ever on demand: see
+	 * {@link #CACHE_AUDIT_SYSTEM_PROPERTY}.
+	 *
+	 * <p>Package-private and non-final so a test can override it the same way
+	 * {@code LivelyCitiesPluginLifecycleTest} overrides {@code EntityScene}'s
+	 * entry points — the developer-mode gate above is what is under test there,
+	 * not the audit's own logic, which {@code CacheIdAuditTest} covers directly
+	 * against {@code FakeClient}.
+	 */
+	void runDeveloperCacheAudit()
+	{
+		log.info("Lively Cities: {} is set, running the cache id audit", CACHE_AUDIT_SYSTEM_PROPERTY);
+
+		CacheIdAudit.DatasetIds dataset = CacheIdAudit.collect(regionDataLoader);
+		CacheIdAudit.Report report = CacheIdAudit.run(client, dataset);
+
+		log.info("Lively Cities cache id audit: {} model id(s) checked ({} failing), "
+				+ "{} merged-object id(s) checked ({} failing), {} animation id(s) checked "
+				+ "({} failing, {} known permanently null)",
+			dataset.modelIds.size(), report.failingModelIds.size(),
+			dataset.mergedObjectIds.size(), report.failingMergedObjectIds.size(),
+			dataset.animationIdsByName.size(), report.failingAnimations.size(),
+			report.knownPermanentNullAnimations.size());
+
+		// Disk I/O never happens on the client thread. The report itself is
+		// already finished plain data by this point, so handing it to a
+		// background thread costs nothing the client thread would otherwise wait
+		// on.
+		File outputDir = new File(RuneLite.RUNELITE_DIR, "lively-cities");
+		CompletableFuture.runAsync(() -> writeReport(outputDir, report));
+	}
+
+	private static void writeReport(File outputDir, CacheIdAudit.Report report)
+	{
+		try
+		{
+			File file = CacheAuditReportWriter.write(outputDir, report);
+			log.info("Lively Cities cache id audit report written to {}", file);
+		}
+		catch (IOException e)
+		{
+			log.warn("Lively Cities cache id audit: could not write the report under {}", outputDir, e);
 		}
 	}
 

@@ -51,6 +51,22 @@ tasks.register('run', JavaExec) {
 	args "--developer-mode", "--debug"
 }
 
+// Same dev client as `run`, plus one system property. LivelyCitiesPlugin only
+// runs the cache id audit (a real walk of every model/animation id in the
+// dataset against the live cache) when this is set — see
+// CACHE_AUDIT_SYSTEM_PROPERTY. Kept as a separate task rather than folded into
+// `run` so an ordinary dev session never pays for it, and kept out of `test`
+// entirely: it needs a live, cache-loaded client, which the unit test suite
+// deliberately never has. Report lands in ~/.runelite/lively-cities/.
+tasks.register('auditCacheIds', JavaExec) {
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = pluginMainClass
+
+	jvmArgs "-ea"
+	systemProperty 'livelycities.validateCacheIds', 'true'
+	args "--developer-mode", "--debug"
+}
+
 tasks.register('shadowJar', Jar) {
 	dependsOn configurations.testRuntimeClasspath
 	manifest {
