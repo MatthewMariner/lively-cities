@@ -1,0 +1,109 @@
+{
+  "version": 0.8,
+  "regionId": 1002,
+  "citizenRoster": [
+    {
+      "name": "Survivor",
+      "examineText": "A perfectly ordinary record.",
+      "uuid": "aaaaaaaa-0000-4000-8000-000000000001",
+      "regionId": 1002,
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 3200, "y": 3200, "plane": 0},
+      "modelIds": [100],
+      "baseOrientation": 0,
+      "modelRecolorFind": [],
+      "modelRecolorReplace": [],
+      "idleAnimation": "Think"
+    },
+    {
+      "name": "Skip: unknown type",
+      "uuid": "aaaaaaaa-0000-4000-8000-000000000002",
+      "entityType": "MaintenanceRobot",
+      "worldLocation": {"x": 3201, "y": 3201, "plane": 0},
+      "modelIds": [101],
+      "idleAnimation": "Think"
+    },
+    {
+      "name": "Skip: no location",
+      "uuid": "aaaaaaaa-0000-4000-8000-000000000003",
+      "entityType": "StationaryCitizen",
+      "modelIds": [102],
+      "idleAnimation": "Think"
+    },
+    {
+      "name": "Skip: empty models",
+      "uuid": "aaaaaaaa-0000-4000-8000-000000000004",
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 3203, "y": 3203, "plane": 0},
+      "modelIds": [],
+      "idleAnimation": "Think"
+    },
+    {
+      "name": "Skip: all model ids unusable",
+      "uuid": "aaaaaaaa-0000-4000-8000-000000000005",
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 3204, "y": 3204, "plane": 0},
+      "modelIds": [0, -5],
+      "idleAnimation": "Think"
+    },
+    {
+      "name": "Skip: type absent",
+      "uuid": "aaaaaaaa-0000-4000-8000-000000000006",
+      "worldLocation": {"x": 3205, "y": 3205, "plane": 0},
+      "modelIds": [106],
+      "idleAnimation": "Think"
+    },
+    {
+      "name": "Skip: plane missing from location",
+      "uuid": "aaaaaaaa-0000-4000-8000-000000000007",
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 3206, "y": 3206},
+      "modelIds": [107],
+      "idleAnimation": "Think"
+    },
+    {
+      "name": "Degraded animation",
+      "uuid": "aaaaaaaa-0000-4000-8000-000000000008",
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 3207, "y": 3207, "plane": 0},
+      "modelIds": [108],
+      "idleAnimation": "PolishingTheBrasswork"
+    },
+    {
+      "name": "Lopsided recolours",
+      "uuid": "aaaaaaaa-0000-4000-8000-000000000009",
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 3208, "y": 3208, "plane": 0},
+      "modelIds": [109],
+      "modelRecolorFind": [11, 22, 33],
+      "modelRecolorReplace": [99],
+      "idleAnimation": "Mining"
+    },
+    {
+      "name": "Over-spun",
+      "uuid": "aaaaaaaa-0000-4000-8000-00000000000a",
+      "entityType": "ScriptedCitizen",
+      "worldLocation": {"x": 3209, "y": 3209, "plane": 0},
+      "modelIds": [110],
+      "baseOrientation": 2560,
+      "idleAnimation": "Crying"
+    },
+    {
+      "name": "Mixed model ids",
+      "uuid": "aaaaaaaa-0000-4000-8000-00000000000b",
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 3210, "y": 3210, "plane": 0},
+      "modelIds": [0, 42, -1],
+      "idleAnimation": "Woodcutting"
+    }
+  ],
+  "sceneryRoster": [
+    {
+      "uuid": "bbbbbbbb-0000-4000-8000-000000000001",
+      "entityType": "Scenery",
+      "worldLocation": {"x": 3220, "y": 3220, "plane": 0},
+      "modelIds": [200],
+      "translate": [0.5, 0.5]
+    }
+  ]
+}

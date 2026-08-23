@@ -1,0 +1,712 @@
+package com.matthewmariner.livelycities;
+
+import com.matthewmariner.livelycities.data.EntityRecord;
+import com.matthewmariner.livelycities.data.MergedObjectRecord;
+import com.matthewmariner.livelycities.data.PointRecord;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.coords.WorldPoint;
+
+/**
+ * A validated, render-ready entity — everything the spawner needs and nothing
+ * that still has to be checked.
+ *
+ * <p>{@link #fromRecord(EntityRecord, int)} is the only gate between the JSON
+ * and the scene, and it is deliberately fail-soft in two different ways:
+ *
+ * <ul>
+ *   <li><b>Skip</b> (returns null + warn) only when the record cannot possibly
+ *       render: no known type, no location, no usable model.</li>
+ *   <li><b>Degrade</b> (keeps the entity + warn) for everything else: an unknown
+ *       animation name becomes a static model, a lopsided recolour pair list is
+ *       truncated to the matched pairs, a malformed scale/translate is dropped.</li>
+ * </ul>
+ *
+ * <p>What it never does is reject the whole region. The predecessor gated on
+ * {@code version != 0.8f} and returned null for the entire file, so one bumped
+ * version number silently emptied a city.
+ */
+@Slf4j
+public final class EntityDefinition
+{
+	private static final int JAU_FULL_ROTATION = 2048;
+	private static final int MAX_PLANE = 3;
+
+	private final UUID uuid;
+	private final int regionId;
+	private final int tileRegionId;
+	private final EntityType type;
+	private final String name;
+	private final String examineText;
+	private final WorldPoint worldLocation;
+	private final int orientation;
+	private final int[] modelIds;
+	private final short[] recolorFind;
+	private final short[] recolorReplace;
+	private final float[] scale;
+	private final float[] translate;
+	private final List<MergedObject> mergedObjects;
+	private final LivelyAnimation idleAnimation;
+	private final LivelyAnimation moveAnimation;
+	private final WanderBox wanderBox;
+
+	private EntityDefinition(
+		UUID uuid,
+		int regionId,
+		int tileRegionId,
+		EntityType type,
+		@Nullable String name,
+		@Nullable String examineText,
+		WorldPoint worldLocation,
+		int orientation,
+		int[] modelIds,
+		short[] recolorFind,
+		short[] recolorReplace,
+		@Nullable float[] scale,
+		@Nullable float[] translate,
+		List<MergedObject> mergedObjects,
+		@Nullable LivelyAnimation idleAnimation,
+		@Nullable LivelyAnimation moveAnimation,
+		@Nullable WanderBox wanderBox)
+	{
+		this.uuid = uuid;
+		this.regionId = regionId;
+		this.tileRegionId = tileRegionId;
+		this.type = type;
+		this.name = name;
+		this.examineText = examineText;
+		this.worldLocation = worldLocation;
+		this.orientation = orientation;
+		this.modelIds = modelIds;
+		this.recolorFind = recolorFind;
+		this.recolorReplace = recolorReplace;
+		this.scale = scale;
+		this.translate = translate;
+		this.mergedObjects = mergedObjects;
+		this.idleAnimation = idleAnimation;
+		this.moveAnimation = moveAnimation;
+		this.wanderBox = wanderBox;
+	}
+
+	/**
+	 * Validates one parsed roster entry.
+	 *
+	 * @param record       the parsed record, may be null
+	 * @param fileRegionId the region id the containing file is named after —
+	 *                     authoritative for identity, because the file name is
+	 *                     what the loader keys on. Where the entity actually
+	 *                     stands is a separate question, answered by
+	 *                     {@link #getTileRegionId()}
+	 * @return a render-ready definition, or {@code null} if the record is
+	 * unusable. Never throws.
+	 */
+	@Nullable
+	public static EntityDefinition fromRecord(@Nullable EntityRecord record, int fileRegionId)
+	{
+		if (record == null)
+		{
+			log.warn("region {}: null roster entry skipped", fileRegionId);
+			return null;
+		}
+
+		String label = describe(record, fileRegionId);
+
+		EntityType type = EntityType.fromName(record.entityType);
+		if (type == null)
+		{
+			log.warn("{}: unknown entityType '{}', skipped", label, record.entityType);
+			return null;
+		}
+
+		WorldPoint location = toWorldPoint(record.worldLocation);
+		if (location == null)
+		{
+			log.warn("{}: missing or invalid worldLocation, skipped", label);
+			return null;
+		}
+
+		int[] modelIds = usableModelIds(record.modelIds, label);
+		if (modelIds.length == 0)
+		{
+			log.warn("{}: no usable modelIds, skipped", label);
+			return null;
+		}
+
+		if (record.regionId != null && record.regionId != fileRegionId)
+		{
+			log.warn("{}: record claims regionId {} but lives in {}.json — using {}",
+				label, record.regionId, fileRegionId, fileRegionId);
+		}
+
+		// The record's own regionId field is a claim; the tile is the fact. The
+		// two disagree in the shipped data — "Dark wizard" is filed under 12853
+		// and stands in 12852 — and it is the tile that decides whether the
+		// client has the region loaded, so the scene keys visibility on this and
+		// not on the file name.
+		int tileRegionId = RenderPolicy.regionIdOf(location.getX(), location.getY());
+		if (tileRegionId != fileRegionId)
+		{
+			log.warn("{}: tile {},{} is in region {}, not the {} its file is named after — "
+					+ "it can only be found while region {} is in the scene too",
+				label, location.getX(), location.getY(), tileRegionId, fileRegionId, fileRegionId);
+		}
+
+		UUID uuid = parseUuid(record.uuid, label);
+		int orientation = orientation(record.baseOrientation, label);
+
+		int pairs = recolorPairCount(record, label);
+		short[] find = new short[pairs];
+		short[] replace = new short[pairs];
+		for (int i = 0; i < pairs; i++)
+		{
+			find[i] = (short) record.modelRecolorFind[i];
+			replace[i] = (short) record.modelRecolorReplace[i];
+		}
+
+		LivelyAnimation idle = animation(record.idleAnimation, "idleAnimation", label);
+		LivelyAnimation move = animation(record.moveAnimation, "moveAnimation", label);
+
+		return new EntityDefinition(
+			uuid,
+			fileRegionId,
+			tileRegionId,
+			type,
+			record.name,
+			record.examineText,
+			location,
+			orientation,
+			modelIds,
+			find,
+			replace,
+			vector3(record.scale, "scale", label),
+			vector3(record.translate, "translate", label),
+			mergedObjects(record.mergedObjects, label),
+			idle,
+			move,
+			wanderBox(record, type, location, label));
+	}
+
+	/**
+	 * Validates a wandering citizen's patrol box.
+	 *
+	 * <p>Degrades to {@code null} — i.e. the citizen spawns and stands still —
+	 * rather than skipping the record, for every failure. Same reasoning as the
+	 * unknown-animation case: a citizen standing in the right place beats no
+	 * citizen.
+	 *
+	 * <p>The clamp at the end is the only place that enforces
+	 * {@link RenderPolicy#DATASET_OVERHANG_ALLOWANCE}. The cull check measures
+	 * from {@code base}, so a box that reached much further would let a citizen
+	 * wander an unbounded distance from the tile the crowd cap and the render
+	 * distance were both computed about. Clamping bounds that disagreement for any
+	 * dataset rather than merely for this one. It does <b>not</b> keep the citizen
+	 * inside the loaded scene — nothing can, see
+	 * {@link RenderPolicy#SUSTAINED_SCENE_RADIUS} — and a step onto unloaded ground
+	 * is handled where it happens: {@code LocalPoint.fromWorld} returns null and
+	 * {@link CitizenWalk#localPoint} leaves the citizen where it was.
+	 *
+	 * @return the box, or {@code null} for a non-wanderer or an unusable box
+	 */
+	@Nullable
+	private static WanderBox wanderBox(
+		EntityRecord record,
+		EntityType type,
+		WorldPoint base,
+		String label)
+	{
+		if (type != EntityType.WanderingCitizen)
+		{
+			// ScriptedCitizens carry a startScript, not a box, and L3 leaves them
+			// stationary — see the comment in CitizenWalk.
+			return null;
+		}
+
+		PointRecord bl = record.wanderBoxBL;
+		PointRecord tr = record.wanderBoxTR;
+		if (bl == null || tr == null
+			|| bl.x == null || bl.y == null || tr.x == null || tr.y == null
+			|| bl.x <= 0 || bl.y <= 0 || tr.x <= 0 || tr.y <= 0)
+		{
+			log.warn("{}: WanderingCitizen with no usable wanderBox — spawning it stationary", label);
+			return null;
+		}
+
+		if (!samePlane(bl, base) || !samePlane(tr, base))
+		{
+			// A box on another storey is not a walk, it is a fall.
+			log.warn("{}: wanderBox is on plane {}/{} but the citizen stands on {} — spawning it stationary",
+				label, bl.plane, tr.plane, base.getPlane());
+			return null;
+		}
+
+		int minX = Math.min(bl.x, tr.x);
+		int maxX = Math.max(bl.x, tr.x);
+		int minY = Math.min(bl.y, tr.y);
+		int maxY = Math.max(bl.y, tr.y);
+
+		if (base.getX() < minX || base.getX() > maxX || base.getY() < minY || base.getY() > maxY)
+		{
+			// Growing the box to swallow the start tile would quietly widen the
+			// authored patrol, and walking the citizen to the nearest corner first
+			// would teleport it. Neither is worth it for a case the shipped data
+			// does not contain.
+			log.warn("{}: stands outside its own wanderBox {},{}..{},{} — spawning it stationary",
+				label, minX, minY, maxX, maxY);
+			return null;
+		}
+
+		int allowance = RenderPolicy.DATASET_OVERHANG_ALLOWANCE;
+		int clampedMinX = Math.max(minX, base.getX() - allowance);
+		int clampedMaxX = Math.min(maxX, base.getX() + allowance);
+		int clampedMinY = Math.max(minY, base.getY() - allowance);
+		int clampedMaxY = Math.min(maxY, base.getY() + allowance);
+
+		if (clampedMinX != minX || clampedMaxX != maxX || clampedMinY != minY || clampedMaxY != maxY)
+		{
+			log.warn("{}: wanderBox {},{}..{},{} reaches further than {} tiles from the tile its cull "
+					+ "check is measured from — clamped to {},{}..{},{} to keep the walk near the tile "
+					+ "the render distance was measured about",
+				label, minX, minY, maxX, maxY, allowance,
+				clampedMinX, clampedMinY, clampedMaxX, clampedMaxY);
+		}
+
+		if (clampedMinX == clampedMaxX && clampedMinY == clampedMaxY)
+		{
+			log.debug("{}: wanderBox is a single tile — spawning it stationary", label);
+			return null;
+		}
+
+		return new WanderBox(clampedMinX, clampedMinY, clampedMaxX, clampedMaxY, base.getPlane());
+	}
+
+	private static boolean samePlane(PointRecord corner, WorldPoint base)
+	{
+		return corner.plane != null && corner.plane == base.getPlane();
+	}
+
+	@Nullable
+	private static WorldPoint toWorldPoint(@Nullable PointRecord point)
+	{
+		if (point == null || point.x == null || point.y == null || point.plane == null)
+		{
+			return null;
+		}
+
+		if (point.x <= 0 || point.y <= 0 || point.plane < 0 || point.plane > MAX_PLANE)
+		{
+			return null;
+		}
+
+		return new WorldPoint(point.x, point.y, point.plane);
+	}
+
+	private static int[] usableModelIds(@Nullable int[] ids, String label)
+	{
+		if (ids == null || ids.length == 0)
+		{
+			return new int[0];
+		}
+
+		int[] kept = new int[ids.length];
+		int n = 0;
+		for (int id : ids)
+		{
+			if (id <= 0)
+			{
+				log.warn("{}: dropping non-positive model id {}", label, id);
+				continue;
+			}
+			kept[n++] = id;
+		}
+
+		if (n == ids.length)
+		{
+			return ids;
+		}
+
+		int[] trimmed = new int[n];
+		System.arraycopy(kept, 0, trimmed, 0, n);
+		return trimmed;
+	}
+
+	private static int recolorPairCount(EntityRecord record, String label)
+	{
+		int findLen = record.modelRecolorFind == null ? 0 : record.modelRecolorFind.length;
+		int replaceLen = record.modelRecolorReplace == null ? 0 : record.modelRecolorReplace.length;
+
+		if (findLen != replaceLen)
+		{
+			log.warn("{}: recolour arrays are {} find vs {} replace — using the first {} pair(s)",
+				label, findLen, replaceLen, Math.min(findLen, replaceLen));
+		}
+
+		return Math.min(findLen, replaceLen);
+	}
+
+	private static UUID parseUuid(@Nullable String raw, String label)
+	{
+		if (raw != null && !raw.trim().isEmpty())
+		{
+			try
+			{
+				return UUID.fromString(raw.trim());
+			}
+			catch (IllegalArgumentException e)
+			{
+				log.warn("{}: uuid '{}' is not a UUID, generating one", label, raw);
+			}
+		}
+		else
+		{
+			log.warn("{}: no uuid, generating one", label);
+		}
+
+		return UUID.randomUUID();
+	}
+
+	private static int orientation(@Nullable Integer raw, String label)
+	{
+		if (raw == null)
+		{
+			return 0;
+		}
+
+		int wrapped = ((raw % JAU_FULL_ROTATION) + JAU_FULL_ROTATION) % JAU_FULL_ROTATION;
+		if (wrapped != raw)
+		{
+			log.warn("{}: baseOrientation {} is outside 0..{}, wrapped to {}",
+				label, raw, JAU_FULL_ROTATION - 1, wrapped);
+		}
+
+		return wrapped;
+	}
+
+	@Nullable
+	private static LivelyAnimation animation(@Nullable String raw, String field, String label)
+	{
+		if (raw == null || raw.trim().isEmpty())
+		{
+			return null;
+		}
+
+		LivelyAnimation resolved = LivelyAnimation.fromName(raw);
+		if (resolved == null)
+		{
+			log.warn("{}: unknown {} '{}' — spawning without it", label, field, raw);
+		}
+
+		return resolved;
+	}
+
+	@Nullable
+	private static float[] vector3(@Nullable float[] raw, String field, String label)
+	{
+		if (raw == null)
+		{
+			return null;
+		}
+
+		if (raw.length != 3)
+		{
+			log.warn("{}: {} has {} components, expected 3 — ignoring it", label, field, raw.length);
+			return null;
+		}
+
+		return new float[]{raw[0], raw[1], raw[2]};
+	}
+
+	private static List<MergedObject> mergedObjects(@Nullable List<MergedObjectRecord> raw, String label)
+	{
+		if (raw == null || raw.isEmpty())
+		{
+			return Collections.emptyList();
+		}
+
+		List<MergedObject> out = new ArrayList<>(raw.size());
+		for (MergedObjectRecord entry : raw)
+		{
+			if (entry == null || entry.objectId == null || entry.objectId <= 0)
+			{
+				log.warn("{}: dropping mergedObject with no usable objectID", label);
+				continue;
+			}
+
+			int rotations = entry.count90CCWRotations == null ? 0 : entry.count90CCWRotations;
+			if (rotations < 0)
+			{
+				log.warn("{}: mergedObject {} has {} rotations, treating as 0",
+					label, entry.objectId, rotations);
+				rotations = 0;
+			}
+
+			out.add(new MergedObject(entry.objectId, rotations % 4));
+		}
+
+		return Collections.unmodifiableList(out);
+	}
+
+	private static String describe(EntityRecord record, int fileRegionId)
+	{
+		String who = record.name != null && !record.name.isEmpty()
+			? record.name
+			: (record.entityType != null ? record.entityType : "entity");
+		return "region " + fileRegionId + " '" + who + "'";
+	}
+
+	public UUID getUuid()
+	{
+		return uuid;
+	}
+
+	/**
+	 * @return the region id of the file this entity was loaded from — which is
+	 * how it was found, and not necessarily where it stands
+	 */
+	public int getRegionId()
+	{
+		return regionId;
+	}
+
+	/**
+	 * @return the region the entity's own tile is in. Equal to
+	 * {@link #getRegionId()} for all but one shipped entity, and the one the
+	 * scene keys visibility on: it is the region the client has to have loaded
+	 * for this entity to be placeable.
+	 */
+	public int getTileRegionId()
+	{
+		return tileRegionId;
+	}
+
+	public EntityType getType()
+	{
+		return type;
+	}
+
+	@Nullable
+	public String getName()
+	{
+		return name;
+	}
+
+	@Nullable
+	public String getExamineText()
+	{
+		return examineText;
+	}
+
+	public WorldPoint getWorldLocation()
+	{
+		return worldLocation;
+	}
+
+	public int getPlane()
+	{
+		return worldLocation.getPlane();
+	}
+
+	public int getOrientation()
+	{
+		return orientation;
+	}
+
+	public int[] getModelIds()
+	{
+		return modelIds;
+	}
+
+	public short[] getRecolorFind()
+	{
+		return recolorFind;
+	}
+
+	public short[] getRecolorReplace()
+	{
+		return recolorReplace;
+	}
+
+	@Nullable
+	public float[] getScale()
+	{
+		return scale;
+	}
+
+	@Nullable
+	public float[] getTranslate()
+	{
+		return translate;
+	}
+
+	public List<MergedObject> getMergedObjects()
+	{
+		return mergedObjects;
+	}
+
+	@Nullable
+	public LivelyAnimation getIdleAnimation()
+	{
+		return idleAnimation;
+	}
+
+	@Nullable
+	public LivelyAnimation getMoveAnimation()
+	{
+		return moveAnimation;
+	}
+
+	/**
+	 * @return the patrol box for a wandering citizen, or {@code null} for anything
+	 * that stands still — which includes a {@code WanderingCitizen} whose box did
+	 * not validate
+	 */
+	@Nullable
+	public WanderBox getWanderBox()
+	{
+		return wanderBox;
+	}
+
+	/**
+	 * A stable 64-bit hash of this entity's identity.
+	 *
+	 * <p>Derived from the record's uuid and nothing else, so it is the same value
+	 * on every login, in every session, whatever order the region files were read
+	 * in and however many times the wrapper cache has been evicted and rebuilt.
+	 * That is what {@link CrowdDensity} needs to thin a crowd without the crowd
+	 * changing membership between logins, and what {@link CitizenWalk} needs to
+	 * give a citizen the same route each session.
+	 *
+	 * <p>{@code UUID.hashCode()} would nearly do, but it is a 32-bit fold that
+	 * leaves sequential uuids sequential — and the low bits are exactly what a
+	 * modulo looks at. This runs the two halves through the SplitMix64 finaliser
+	 * instead, which is a handful of arithmetic ops and spreads a one-bit input
+	 * change across the whole word. It is written out rather than delegated so the
+	 * value can never change underneath a saved setting.
+	 */
+	public long stableHash()
+	{
+		long bits = uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits();
+		bits ^= bits >>> 33;
+		bits *= 0xff51afd7ed558ccdL;
+		bits ^= bits >>> 33;
+		bits *= 0xc4ceb9fe1a85ec53L;
+		bits ^= bits >>> 33;
+		return bits;
+	}
+
+	/**
+	 * @return a short, human-readable label for log lines.
+	 */
+	public String label()
+	{
+		return (name != null && !name.isEmpty() ? name : type.name())
+			+ "@" + worldLocation.getX() + "," + worldLocation.getY() + "," + worldLocation.getPlane();
+	}
+
+	@Override
+	public String toString()
+	{
+		return "EntityDefinition{" + label() + ", region=" + regionId + ", type=" + type + '}';
+	}
+
+	/**
+	 * A wandering citizen's patrol box: an inclusive rectangle of tiles on one
+	 * plane, already normalised (min ≤ max), already known to contain the
+	 * citizen's start tile, and already clamped to
+	 * {@link RenderPolicy#DATASET_OVERHANG_ALLOWANCE} around it.
+	 *
+	 * <p>Those four guarantees are why {@link CitizenWalk} has no validation in
+	 * it: by the time a box exists, every question about it has been answered.
+	 */
+	public static final class WanderBox
+	{
+		private final int minX;
+		private final int minY;
+		private final int maxX;
+		private final int maxY;
+		private final int plane;
+
+		WanderBox(int minX, int minY, int maxX, int maxY, int plane)
+		{
+			this.minX = minX;
+			this.minY = minY;
+			this.maxX = maxX;
+			this.maxY = maxY;
+			this.plane = plane;
+		}
+
+		public int getMinX()
+		{
+			return minX;
+		}
+
+		public int getMinY()
+		{
+			return minY;
+		}
+
+		public int getMaxX()
+		{
+			return maxX;
+		}
+
+		public int getMaxY()
+		{
+			return maxY;
+		}
+
+		public int getPlane()
+		{
+			return plane;
+		}
+
+		public int getWidth()
+		{
+			return maxX - minX + 1;
+		}
+
+		public int getHeight()
+		{
+			return maxY - minY + 1;
+		}
+
+		public boolean contains(int x, int y)
+		{
+			return x >= minX && x <= maxX && y >= minY && y <= maxY;
+		}
+
+		@Override
+		public String toString()
+		{
+			return "WanderBox{" + minX + "," + minY + ".." + maxX + "," + maxY + " plane " + plane + '}';
+		}
+	}
+
+	/**
+	 * An extra model merged into the entity's own, with its pre-rotation.
+	 */
+	public static final class MergedObject
+	{
+		private final int objectId;
+		private final int rotations;
+
+		MergedObject(int objectId, int rotations)
+		{
+			this.objectId = objectId;
+			this.rotations = rotations;
+		}
+
+		public int getObjectId()
+		{
+			return objectId;
+		}
+
+		public int getRotations()
+		{
+			return rotations;
+		}
+	}
+}

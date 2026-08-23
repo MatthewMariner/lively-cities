@@ -34,6 +34,15 @@ tasks.withType(JavaCompile).configureEach {
 	options.release.set(11)
 }
 
+// A green bar with no names is not a report. Name every test that ran.
+tasks.named('test') {
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		showStandardStreams = false
+		exceptionFormat = 'full'
+	}
+}
+
 tasks.register('run', JavaExec) {
 	classpath = sourceSets.test.runtimeClasspath
 	mainClass = pluginMainClass

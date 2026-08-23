@@ -1,0 +1,51 @@
+{
+  "version": 0.8,
+  "regionId": 1001,
+  "citizenRoster": [
+    {
+      "name": "Alder the fletcher",
+      "examineText": "Whittling a bow stave.",
+      "remarks": ["Ah, oak. Good for practicing."],
+      "uuid": "11111111-1111-4111-8111-111111111111",
+      "regionId": 1001,
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 3238, "y": 3425, "plane": 0},
+      "modelIds": [235, 248],
+      "baseOrientation": 512,
+      "modelRecolorFind": [54397, 8741],
+      "modelRecolorReplace": [33694, 8493],
+      "idleAnimation": "Fletching"
+    },
+    {
+      "name": "Bryn the wanderer",
+      "examineText": "Never in one place for long.",
+      "uuid": "22222222-2222-4222-8222-222222222222",
+      "regionId": 1001,
+      "entityType": "WanderingCitizen",
+      "worldLocation": {"x": 3111, "y": 3222, "plane": 1},
+      "modelIds": [7744],
+      "baseOrientation": 1536,
+      "modelRecolorFind": [],
+      "modelRecolorReplace": [],
+      "idleAnimation": "HumanIdle",
+      "moveAnimation": "HumanWalk",
+      "wanderBoxBL": {"x": 3109, "y": 3220, "plane": 1},
+      "wanderBoxTR": {"x": 3115, "y": 3226, "plane": 1},
+      "scale": [-0.8, -0.7, -0.6]
+    }
+  ],
+  "sceneryRoster": [
+    {
+      "uuid": "33333333-3333-4333-8333-333333333333",
+      "regionId": 1001,
+      "entityType": "Scenery",
+      "worldLocation": {"x": 3300, "y": 3399, "plane": 2},
+      "modelIds": [1569, 2491, 2468],
+      "baseOrientation": 1024,
+      "modelRecolorFind": [4550],
+      "modelRecolorReplace": [3408],
+      "translate": [0.1, 0.7, -0.25],
+      "mergedObjects": [{"objectID": 7719, "count90CCWRotations": 2}]
+    }
+  ]
+}

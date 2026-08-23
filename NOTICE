@@ -12,8 +12,22 @@ This product includes the citizen and scenery placement dataset from the
 
 The files under src/main/resources/RegionData/ are derived from that project's
 region data (format version 0.8). Redistribution of those files retains the
-copyright notice above as the BSD 2-Clause License requires. The Java source in
-this repository is an independent implementation and is not derived from theirs.
+copyright notice above as the BSD 2-Clause License requires.
+
+The animation name -> id table in
+src/main/java/com/matthewmariner/livelycities/LivelyAnimation.java is likewise
+derived from that project (its AnimationID enum), because the region data
+addresses animations by those exact names — the names are part of the data
+format, not an implementation choice.
+
+The model lighting parameters in LivelyEntity (ambient 64, contrast 850,
+x -30, y -50, z -30, passed to Model#light) are also taken from that project.
+Unlike the vertex scale/translate convention around them — which follows
+RuneLite's own 128-units-per-tile geometry and is not theirs to own — those five
+values are a look, chosen by its authors, and reproducing a look is derivation.
+
+Apart from the three items above, the Java source in this repository is an
+independent implementation and is not derived from theirs.
 
 Full BSD 2-Clause text: see LICENSE.
 ------------------------------------------------------------------------------

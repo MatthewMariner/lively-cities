@@ -1,0 +1,27 @@
+{
+  "version": 9.9,
+  "regionId": 1003,
+  "citizenRoster": [
+    {
+      "name": "Loaded despite the version",
+      "examineText": "The version number is not a gate.",
+      "uuid": "cccccccc-0000-4000-8000-000000000001",
+      "regionId": 1003,
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 2900, "y": 3500, "plane": 0},
+      "modelIds": [301],
+      "baseOrientation": 256,
+      "idleAnimation": "Sitting"
+    }
+  ],
+  "sceneryRoster": [
+    {
+      "uuid": "cccccccc-0000-4000-8000-000000000002",
+      "regionId": 1003,
+      "entityType": "Scenery",
+      "worldLocation": {"x": 2901, "y": 3501, "plane": 0},
+      "modelIds": [302, 303],
+      "baseOrientation": 768
+    }
+  ]
+}

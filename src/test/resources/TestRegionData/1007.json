@@ -1,0 +1,23 @@
+{
+  "version": 0.8,
+  "regionId": 1007,
+  "citizenRoster": [
+    {
+      "name": "Unbindable models",
+      "uuid": "dddddddd-0000-4000-8000-000000000001",
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 3400, "y": 3400, "plane": 0},
+      "modelIds": "definitely not an array",
+      "idleAnimation": "Think"
+    },
+    {
+      "name": "Neighbour survives",
+      "uuid": "dddddddd-0000-4000-8000-000000000002",
+      "entityType": "StationaryCitizen",
+      "worldLocation": {"x": 3401, "y": 3402, "plane": 0},
+      "modelIds": [7],
+      "idleAnimation": "Think"
+    }
+  ],
+  "sceneryRoster": []
+}
