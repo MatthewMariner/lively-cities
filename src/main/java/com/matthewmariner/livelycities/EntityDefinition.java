@@ -20,7 +20,8 @@ import net.runelite.api.coords.WorldPoint;
  *
  * <ul>
  *   <li><b>Skip</b> (returns null + warn) only when the record cannot possibly
- *       render: no known type, no location, no usable model.</li>
+ *       render: no known type, no location, or neither a usable model nor a
+ *       plausible {@code npcAppearanceId}.</li>
  *   <li><b>Degrade</b> (keeps the entity + warn) for everything else: an unknown
  *       animation name becomes a static model, a lopsided recolour pair list is
  *       truncated to the matched pairs, a malformed scale/translate is dropped.</li>
@@ -36,7 +37,7 @@ public final class EntityDefinition
 	private static final int JAU_FULL_ROTATION = 2048;
 	private static final int MAX_PLANE = 3;
 
-	/** Shared, so 142 of the 175 entities do not each allocate an empty array. */
+	/** Shared, so 142 of the 181 entities do not each allocate an empty array. */
 	private static final String[] NO_REMARKS = new String[0];
 
 	private final UUID uuid;
@@ -50,6 +51,20 @@ public final class EntityDefinition
 	private final WorldPoint worldLocation;
 	private final int orientation;
 	private final int[] modelIds;
+
+	/**
+	 * The NPC whose appearance this entity wears, or {@code 0} for one dressed from
+	 * {@link #modelIds}.
+	 *
+	 * <p>Resolved at spawn time rather than here — it needs a {@link net.runelite.api.Client},
+	 * and this class is deliberately client-free so the whole dataset can be
+	 * validated without a game running. See {@link NpcAppearance}.
+	 */
+	private final int npcAppearanceId;
+
+	/** See {@link #isCameo()}. */
+	private final boolean cameo;
+
 	private final short[] recolorFind;
 	private final short[] recolorReplace;
 	private final float[] scale;
@@ -92,6 +107,8 @@ public final class EntityDefinition
 		WorldPoint worldLocation,
 		int orientation,
 		int[] modelIds,
+		int npcAppearanceId,
+		boolean cameo,
 		short[] recolorFind,
 		short[] recolorReplace,
 		@Nullable float[] scale,
@@ -116,6 +133,8 @@ public final class EntityDefinition
 		this.worldLocation = worldLocation;
 		this.orientation = orientation;
 		this.modelIds = modelIds;
+		this.npcAppearanceId = npcAppearanceId;
+		this.cameo = cameo;
 		this.recolorFind = recolorFind;
 		this.recolorReplace = recolorReplace;
 		this.scale = scale;
@@ -163,11 +182,28 @@ public final class EntityDefinition
 			return null;
 		}
 
+		// Two ways of being dressed, and exactly one of them has to work out. The
+		// NPC id is only a *claim* here — whether it resolves is a question for a
+		// live cache, and LivelyEntity asks it — so what this gate checks is that
+		// the record named a plausible one, the same standard the offline audit
+		// holds a modelId to.
+		int npcAppearanceId = npcAppearanceId(record.npcAppearanceId, label);
 		int[] modelIds = usableModelIds(record.modelIds, label);
-		if (modelIds.length == 0)
+		if (npcAppearanceId == 0 && modelIds.length == 0)
 		{
-			log.warn("{}: no usable modelIds, skipped", label);
+			log.warn("{}: no usable modelIds and no npcAppearanceId, skipped", label);
 			return null;
+		}
+
+		if (npcAppearanceId != 0 && modelIds.length > 0)
+		{
+			// Both. The NPC appearance wins, models and recolours alike — see
+			// EntityRecord.npcAppearanceId. Loud rather than silent: carrying both is
+			// an authoring mistake, and the half that is ignored is the half a human
+			// typed.
+			log.warn("{}: carries both npcAppearanceId {} and {} modelIds — the NPC appearance wins, "
+					+ "the modelIds and any modelRecolor* are ignored",
+				label, npcAppearanceId, modelIds.length);
 		}
 
 		if (record.regionId != null && record.regionId != fileRegionId)
@@ -218,6 +254,8 @@ public final class EntityDefinition
 			location,
 			orientation,
 			modelIds,
+			npcAppearanceId,
+			cameo(record, type, label),
 			find,
 			replace,
 			vector3(record.scale, "scale", label),
@@ -290,6 +328,16 @@ public final class EntityDefinition
 			tile,
 			orientation,
 			source.modelIds,
+			source.npcAppearanceId,
+			// Never a cameo, however it was derived. An echo carries none of its
+			// source's identity (see CitizenEcho), so it cannot be a likeness of
+			// anybody — and inheriting the flag would put an extra body next to a
+			// cameo whenever the cameos checkbox happened to be on. The stronger half
+			// of the same guarantee is that CitizenEcho refuses to derive anything
+			// from a cameo at all, so this line is unreachable for a cameo source;
+			// it is written down because "an echo is not a cameo" is a property of
+			// being an echo, and a future second derivation path would need it too.
+			false,
 			recolorFind,
 			recolorReplace,
 			source.scale == null ? null : source.scale.clone(),
@@ -416,6 +464,63 @@ public final class EntityDefinition
 		return new WorldPoint(point.x, point.y, point.plane);
 	}
 
+	/**
+	 * Validates the optional {@code npcAppearanceId}.
+	 *
+	 * <p>Degrades to {@code 0} ("not set") rather than skipping the record, so a
+	 * record carrying both a junk NPC id and a usable {@code modelIds} array still
+	 * spawns from its models. A record carrying only the junk id is skipped by the
+	 * caller's gate, which is the same outcome as a record with no models.
+	 *
+	 * <p>Bounded by {@link CacheIdPlausibility}, the same ceiling the offline audit
+	 * holds a model id to — and it is a real bound here rather than a formality:
+	 * {@code gameval.NpcID}'s highest constant in 1.12.36 is 16346, so a pasted
+	 * hashcode in this field is caught before the client is ever asked about it.
+	 *
+	 * @return the id, or {@code 0} for absent/unusable
+	 */
+	private static int npcAppearanceId(@Nullable Integer raw, String label)
+	{
+		if (raw == null)
+		{
+			return 0;
+		}
+
+		if (!CacheIdPlausibility.isPlausible(raw))
+		{
+			log.warn("{}: npcAppearanceId {} is not a plausible cache id — ignoring it", label, raw);
+			return 0;
+		}
+
+		return raw;
+	}
+
+	/**
+	 * Whether this record is a cameo — see {@link EntityRecord#cameo} and
+	 * {@link #isCameo()}.
+	 *
+	 * <p>Refused for scenery, and loudly. The flag's whole job is to keep
+	 * player-shaped named likenesses behind an opt-in, and a crate is neither; a
+	 * crate carrying it would be a crate a checkbox nobody expects switches off.
+	 * Same reasoning, and the same place, as {@link #usableRemarks} silencing a
+	 * talking crate.
+	 */
+	private static boolean cameo(EntityRecord record, EntityType type, String label)
+	{
+		if (record.cameo == null || !record.cameo)
+		{
+			return false;
+		}
+
+		if (!type.isCitizen())
+		{
+			log.warn("{}: {} is not a citizen but is flagged as a cameo — ignoring the flag", label, type);
+			return false;
+		}
+
+		return true;
+	}
+
 	private static int[] usableModelIds(@Nullable int[] ids, String label)
 	{
 		if (ids == null || ids.length == 0)
@@ -449,7 +554,7 @@ public final class EntityDefinition
 	 * The one-liners this entity may say, with the four ways of having nothing to
 	 * say flattened into one empty array.
 	 *
-	 * <p>All four occur in the shipped data: 33 citizens carry remarks, 54 carry
+	 * <p>All four occur in the shipped data: 39 citizens carry remarks, 54 carry
 	 * {@code "remarks": []}, 42 carry no {@code remarks} field at all, and all 46
 	 * scenery records omit it. {@link CitizenRemarks#forDefinition} then has one
 	 * condition to check rather than four, and {@link CitizenChatter} never has to
@@ -729,9 +834,50 @@ public final class EntityDefinition
 		return orientation;
 	}
 
+	/**
+	 * @return the raw model ids to build, which is <b>empty</b> for an entity dressed
+	 * from an NPC id — see {@link #getNpcAppearanceId()}. Never null. Not a copy: the
+	 * only readers iterate it.
+	 */
 	public int[] getModelIds()
 	{
 		return modelIds;
+	}
+
+	/**
+	 * @return the NPC whose appearance this entity wears, or {@code 0} for one built
+	 * from {@link #getModelIds()}.
+	 *
+	 * <p>Read in two places, and each is a rule rather than a convenience:
+	 * {@link LivelyEntity#loadParts()} sources the model parts and the recolours from
+	 * it instead of from this record when it is set, and {@link CacheIdAudit} walks it
+	 * so an NPC id that stops resolving after a game update is reported like any other
+	 * cache id. The second is the whole reason for preferring it over raw model ids —
+	 * a mechanism that could not be audited would be a new way to die quietly.
+	 */
+	public int getNpcAppearanceId()
+	{
+		return npcAppearanceId;
+	}
+
+	/**
+	 * @return true if this is a <b>cameo</b>: a named, player-shaped likeness of a
+	 * real person, which the {@code cameos} config item switches on and which is off
+	 * by default.
+	 *
+	 * <p>Read in three places, and each is load-bearing:
+	 * {@code EntityScene.allowedByConfig} refuses it unless {@code cameos} <i>and</i>
+	 * its city's checkbox are both on, {@code EntityScene}'s ground gate makes the
+	 * collision map vouch for its tile (a cameo's tile was chosen off a wiki map, not
+	 * by somebody standing on it), and {@link CitizenEcho} refuses to derive anything
+	 * from one — so the "Crowded" dial can never add a body the {@code cameos}
+	 * checkbox does not govern.
+	 *
+	 * <p>Always false for an echo and for scenery, by construction.
+	 */
+	public boolean isCameo()
+	{
+		return cameo;
 	}
 
 	public short[] getRecolorFind()

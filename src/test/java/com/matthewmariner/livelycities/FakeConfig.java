@@ -47,6 +47,13 @@ final class FakeConfig implements LivelyCitiesConfig
 	private int cullRadius = RenderPolicy.DEFAULT_CULL_RADIUS;
 	private CrowdDensity crowdDensity = CrowdDensity.FULL;
 
+	/**
+	 * Starts at the real default, which is <b>off</b>. Deliberately not flipped to
+	 * true for convenience: a fixture that opted every test in would make "a fresh
+	 * install shows no cameos" a claim no test could check.
+	 */
+	private boolean cameos = LivelyCitiesConfig.super.cameos();
+
 	private boolean overheadText = true;
 	private int remarkIntervalTicks = CitizenChatter.DEFAULT_ROLL_INTERVAL_TICKS;
 	private int remarkDwellTicks = CitizenChatter.DEFAULT_DWELL_TICKS;
@@ -90,6 +97,12 @@ final class FakeConfig implements LivelyCitiesConfig
 	FakeConfig setCrowdDensity(CrowdDensity crowdDensity)
 	{
 		this.crowdDensity = crowdDensity;
+		return this;
+	}
+
+	FakeConfig setCameos(boolean cameos)
+	{
+		this.cameos = cameos;
 		return this;
 	}
 
@@ -201,6 +214,12 @@ final class FakeConfig implements LivelyCitiesConfig
 	public CrowdDensity crowdDensity()
 	{
 		return crowdDensity;
+	}
+
+	@Override
+	public boolean cameos()
+	{
+		return cameos;
 	}
 
 	@Override

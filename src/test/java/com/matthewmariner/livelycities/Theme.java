@@ -44,6 +44,29 @@ enum Theme
 	MORYTANIA_UNDEAD,
 
 	/**
+	 * A <b>cameo</b>: a named, player-shaped likeness of one of the plugin
+	 * author's friends.
+	 *
+	 * <p>Mapped to exactly one city in {@code CityTheme} — the Grand Exchange —
+	 * and that is the point of giving it a theme at all rather than leaving the
+	 * six of them {@link #GENERIC}. {@code GENERIC} is compatible with
+	 * everywhere, so a generic cameo could be copied into Varrock square, into
+	 * Canifis, into the Barrows, and the lint would have nothing to say. This
+	 * theme is compatible with the Grand Exchange and nowhere else, so the
+	 * question "may a named human likeness stand here?" has exactly one answer
+	 * and the lint is the thing that gives it.
+	 *
+	 * <p>It is the inverse of {@link #UNIQUE_BOSS} rather than a copy of it.
+	 * {@code UNIQUE_BOSS} is mapped to no region because a boss impersonator has
+	 * no correct home; a cameo has exactly one, chosen deliberately and behind an
+	 * opt-in checkbox, and spreading them would turn six in-joke figures into the
+	 * "fake players" the project's content rules forbid.
+	 * {@code PlacementLintTest.theCameoThemeMapsToExactlyOneCity} is the poison
+	 * property that keeps that true.
+	 */
+	CAMEO,
+
+	/**
 	 * A specific, named, canonically-unique character — a boss or
 	 * boss-adjacent figure with a real in-game identity of their own.
 	 *

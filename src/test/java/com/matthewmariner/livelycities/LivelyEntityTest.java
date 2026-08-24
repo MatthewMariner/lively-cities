@@ -132,6 +132,240 @@ public class LivelyEntityTest
 		}
 	}
 
+	// --- npcAppearanceId: the body comes from a composition -------------------
+
+	private static final int WHITE_KNIGHT = 1798;
+
+	private LivelyEntity npcDressed(int npcId)
+	{
+		return new LivelyEntity(client, definitions.npcDressed(REGION, 3225, 3358, npcId));
+	}
+
+	/**
+	 * The whole mechanism, end to end: the composition's model ids are the ones
+	 * loaded, and its palette is the one applied.
+	 */
+	@Test
+	public void anNpcDressedEntityBuildsTheCompositionsModelsAndWearsItsPalette()
+	{
+		client.withNpc(WHITE_KNIGHT, FakeNpcComposition.recoloured(
+			"White Knight",
+			new int[]{217, 305, 246},
+			new short[]{(short) 54397, 20},
+			new short[]{(short) 33694, 21}));
+
+		LivelyEntity entity = npcDressed(WHITE_KNIGHT);
+
+		assertTrue(entity.spawn(view));
+		assertEquals("one composition lookup", 1, client.npcDefinitionsRequested().size());
+		assertEquals("three model parts, from the NPC", 3, client.loadModelDataCalls());
+		assertEquals(3, client.lastMergePartCount());
+
+		List<String> calls = client.lastMerged().calls();
+		assertTrue("the NPC's palette has to be applied: " + calls,
+			calls.contains("recolor " + (short) 54397 + "->" + (short) 33694));
+		assertTrue("and the second pair too: " + calls, calls.contains("recolor 20->21"));
+		assertTrue("cloneColors() must still come first, or the client's cached model is repainted",
+			calls.indexOf("cloneColors") >= 0
+				&& calls.indexOf("cloneColors") < calls.indexOf("recolor 20->21"));
+
+		NpcAppearance appearance = entity.getAppearance();
+		assertNotNull(appearance);
+		assertEquals(WHITE_KNIGHT, appearance.getNpcId());
+	}
+
+	/**
+	 * Precedence, at the only place it is observable.
+	 *
+	 * <p>{@code EntityDefinitionTest} asserts the record keeps both fields; this
+	 * asserts which one is actually built. Written with a record rather than a
+	 * {@link FakeRegions} fixture because the shipped data deliberately never carries
+	 * both, so there is no fixture for it and there should not be.
+	 */
+	@Test
+	public void whenARecordCarriesBothTheNpcAppearanceIsWhatGetsBuilt()
+	{
+		client.withNpc(WHITE_KNIGHT, FakeNpcComposition.of("White Knight", 900, 901));
+
+		EntityRecord record = new EntityRecord();
+		record.entityType = "StationaryCitizen";
+		record.uuid = "55555555-5555-4555-8555-555555555555";
+		record.name = "Wearing both";
+		PointRecord tile = new PointRecord();
+		tile.x = 3225;
+		tile.y = 3358;
+		tile.plane = 0;
+		record.worldLocation = tile;
+		record.modelIds = new int[]{217, 305};
+		record.modelRecolorFind = new int[]{1};
+		record.modelRecolorReplace = new int[]{2};
+		record.npcAppearanceId = WHITE_KNIGHT;
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, REGION);
+		assertNotNull(definition);
+		LivelyEntity entity = new LivelyEntity(client, definition);
+
+		assertTrue(entity.spawn(view));
+		assertEquals("the NPC's two models, not the record's two", 2, client.loadModelDataCalls());
+		assertFalse("the record's own palette must not be applied to somebody else's model: "
+				+ client.lastMerged().calls(),
+			client.lastMerged().calls().contains("recolor 1->2"));
+		assertFalse("nor may the record's colours be cloned for nothing",
+			client.lastMerged().calls().contains("cloneColors"));
+	}
+
+	/**
+	 * An NPC id that will not resolve is transient, not structural — the same verdict
+	 * a missing model gets, and for the same reason: the composition comes out of the
+	 * same cache archives, so a cold-cache miss must not cost the entity the session.
+	 *
+	 * <p>The budget is shared with the model loads rather than being a second one, so
+	 * the total number of client calls a broken entity can make per scene load stays
+	 * bounded at {@link LivelyEntity#MAX_MODEL_ATTEMPTS} however it is broken.
+	 */
+	@Test
+	public void anUnresolvableNpcIdIsRetriedOnTheModelBudgetAndNeverLatched()
+	{
+		// Nothing registered for this id, so FakeClient throws — the real 1.12.36
+		// behaviour for an id whose archive entry is gone.
+		LivelyEntity entity = npcDressed(4242);
+
+		assertFalse(entity.spawn(view));
+		assertFalse("a composition miss is not a verdict on the entity", entity.isBroken());
+		assertEquals("the first attempt is immediate", 1, client.npcDefinitionsRequested().size());
+		assertEquals("and nothing may be built from nothing", 0, client.loadModelDataCalls());
+		assertEquals(0, client.mergeCalls());
+
+		for (int pass = 1; pass < LivelyEntity.RETRY_BACKOFF_PASSES; pass++)
+		{
+			assertFalse(entity.spawn(view));
+		}
+		assertEquals("a retry must not be spent on the very next pass",
+			1, client.npcDefinitionsRequested().size());
+
+		for (int attempt = 2; attempt <= LivelyEntity.MAX_MODEL_ATTEMPTS; attempt++)
+		{
+			passesUntilRetry(entity);
+			assertEquals("one composition lookup per attempt",
+				attempt, client.npcDefinitionsRequested().size());
+		}
+
+		passesUntilRetry(entity);
+		passesUntilRetry(entity);
+		assertEquals("the budget bounds it",
+			LivelyEntity.MAX_MODEL_ATTEMPTS, client.npcDefinitionsRequested().size());
+		assertFalse(entity.isBroken());
+
+		// A scene load hands the budget back, and by then the NPC is available.
+		client.withNpc(4242, FakeNpcComposition.of("Late arrival", 217));
+		entity.onScopeEntered();
+		assertTrue(entity.spawn(view));
+		assertNotNull(entity.getAppearance());
+	}
+
+	/**
+	 * A composition that resolves to nothing drawable fails the same way, and it has
+	 * to be tested separately from the throwing id: they are different branches in
+	 * {@link NpcAppearance} and only one of them involves an exception.
+	 */
+	@Test
+	public void aCompositionWithNoModelsDoesNotSpawnAndDoesNotHalfBuild()
+	{
+		client.withNpc(WHITE_KNIGHT, FakeNpcComposition.withoutModels("Bodyless", new int[0]));
+
+		LivelyEntity entity = npcDressed(WHITE_KNIGHT);
+
+		assertFalse(entity.spawn(view));
+		assertFalse(entity.isActive());
+		assertEquals("no part may be loaded from an empty composition", 0, client.loadModelDataCalls());
+		assertEquals("and nothing may be merged", 0, client.mergeCalls());
+		assertFalse(entity.isBroken());
+		assertNull(entity.getAppearance());
+	}
+
+	/**
+	 * The composition is asked for once and then kept.
+	 *
+	 * <p><b>Exercised through a partial model load, which is the only path that can
+	 * see it.</b> Once the model is built, {@code trySpawn} never calls
+	 * {@code loadParts()} again — so walking out of a region and back in cannot tell a
+	 * cached appearance from an uncached one, and a test written that way is green
+	 * whatever the cache does. (Mutation testing found exactly that: deleting the
+	 * cache check left the whole suite green.) The reachable case is a composition that
+	 * resolves while one of the models it names does not: the appearance is kept, the
+	 * model is not, and the next retry has to re-ask the <i>model</i> cache without
+	 * re-asking for the composition.
+	 */
+	@Test
+	public void theCompositionIsResolvedOnceAndKeptAcrossAModelRetry()
+	{
+		client.withNpc(WHITE_KNIGHT, FakeNpcComposition.of("White Knight", 217, 305, 246));
+		client.setUnloadable(246);
+
+		LivelyEntity entity = npcDressed(WHITE_KNIGHT);
+
+		assertFalse("a part is missing, so nothing spawns", entity.spawn(view));
+		assertEquals(1, client.npcDefinitionsRequested().size());
+		assertNotNull("but the appearance resolved and must be kept", entity.getAppearance());
+		assertEquals("all three ids came from the composition", 3, client.loadModelDataCalls());
+
+		passesUntilRetry(entity);
+
+		assertEquals("the composition must not be looked up again",
+			1, client.npcDefinitionsRequested().size());
+		assertEquals("while the model cache is asked again", 6, client.loadModelDataCalls());
+
+		// And when the part turns up, it builds from the composition's full list.
+		FakeClient warm = new FakeClient();
+		warm.withNpc(WHITE_KNIGHT, FakeNpcComposition.of("White Knight", 217, 305, 246));
+		LivelyEntity healed = new LivelyEntity(warm, entity.getDefinition());
+		assertTrue(healed.spawn(view));
+		assertEquals(3, warm.lastMergePartCount());
+	}
+
+	/**
+	 * The built model is cached across a despawn/respawn, exactly as it is for an
+	 * entity dressed from raw model ids — so an NPC-dressed citizen costs an activate
+	 * rather than a rebuild when the player walks back.
+	 */
+	@Test
+	public void anNpcDressedEntitysModelIsCachedAcrossADespawn()
+	{
+		client.withNpc(WHITE_KNIGHT, FakeNpcComposition.of("White Knight", 217, 305));
+
+		LivelyEntity entity = npcDressed(WHITE_KNIGHT);
+		assertTrue(entity.spawn(view));
+
+		assertTrue(entity.despawn());
+		client.resetCounters();
+		entity.onScopeEntered();
+		assertTrue(entity.spawn(view));
+
+		assertEquals("the model is cached", 0, client.loadModelDataCalls());
+		assertEquals(0, client.mergeCalls());
+	}
+
+	/**
+	 * A model part the composition names but the cache will not produce is still a
+	 * partial build, and still refused.
+	 *
+	 * <p>Sourcing the ids from an NPC changes where the list came from, not what a
+	 * missing part means — "no legs" is the failure that got the predecessor plugin
+	 * disabled, and it must not come back through the new door.
+	 */
+	@Test
+	public void aPartialBuildFromACompositionIsStillRefused()
+	{
+		client.withNpc(WHITE_KNIGHT, FakeNpcComposition.of("White Knight", 217, 305, 246));
+		client.setUnloadable(246);
+
+		LivelyEntity entity = npcDressed(WHITE_KNIGHT);
+
+		assertFalse("two thirds of a knight is not a knight", entity.spawn(view));
+		assertEquals("nothing may be merged from a partial resolve", 0, client.mergeCalls());
+		assertFalse(entity.isBroken());
+	}
+
 	@Test
 	public void aStructuralFailureIsLatchedAndNeverRetried()
 	{

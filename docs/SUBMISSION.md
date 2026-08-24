@@ -2,7 +2,7 @@
 
 Everything needed to file the submission, prepared in advance. **Deliberately not filed yet** —
 the decision (2026-08-23) is to wait until the content pass is done, because a first impression
-at 129 citizens is a first impression at 129 citizens.
+at 135 citizens is a first impression at 135 citizens.
 
 Nothing below requires new work. When the content lands, re-run the checks and file it.
 
@@ -17,7 +17,7 @@ Nothing below requires new work. When the content lands, re-run the checks and f
 | Cache ids still resolve | `./gradlew auditCacheIds` | no failing ids outside the known-permanent-null section |
 | Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight ~/Workspaces/osrs/lively-cities` | `Result: PASS` |
 | Compiles under the hub's own build | see [Verifying the hub build](#verifying-the-hub-build) | `BUILD SUCCESSFUL` |
-| Screenshots in the README | — | four images present, not placeholders |
+| Screenshots in the README | — | *deliberately deferred (2026-08-24) — the page ships with placeholders* |
 | Jagex third-party client guidelines | read them in a browser | unchanged from your last read |
 
 That last row is not ceremony. The guidelines page was revised once without changing its

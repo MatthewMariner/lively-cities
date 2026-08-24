@@ -15,9 +15,9 @@ import javax.annotation.Nullable;
  * only ever asks "which theme does this already-resolved city expect", so a
  * region can only be misfiled once, in {@link City}.
  *
- * <p>Only the four cities with a real, defensible identity are listed; every
- * other city defaults to {@link Theme#GENERIC} — see {@link Theme} for why the
- * set stops here rather than reaching for Fremennik/snow, elven, or dwarven.
+ * <p>Only the cities with a real, defensible identity are listed; every other
+ * city defaults to {@link Theme#GENERIC} — see {@link Theme} for why the set
+ * stops here rather than reaching for Fremennik/snow, elven, or dwarven.
  */
 final class CityTheme
 {
@@ -62,6 +62,14 @@ final class CityTheme
 		// generic, unnamed undead citizen (a "barrow wight", say), which the
 		// dataset does not currently ship.
 		byCity.put(City.BARROWS, Theme.MORYTANIA_UNDEAD);
+
+		// The Grand Exchange, and the only city that may hold a cameo. Note what
+		// this does *not* do: Theme.GENERIC is compatible with every region, so
+		// tagging the GE this way does not stop an ordinary townsperson standing
+		// there — Richard the cook and the squirrel in 12598.json are both GENERIC
+		// and both still pass. What it does is make Theme.CAMEO compatible with
+		// here and nowhere else. See Theme.CAMEO.
+		byCity.put(City.GRAND_EXCHANGE, Theme.CAMEO);
 
 		return byCity;
 	}

@@ -465,6 +465,145 @@ public class EntityDefinitionTest
 		assertNull("and must not produce a box", definition.getWanderBox());
 	}
 
+	// --- npcAppearanceId and the cameo flag ----------------------------------
+
+	/**
+	 * A record with no {@code modelIds} but a plausible {@code npcAppearanceId}
+	 * survives the gate, which used to skip anything with no models.
+	 */
+	@Test
+	public void anNpcAppearanceIdIsEnoughOnItsOwnWithNoModelIds()
+	{
+		EntityRecord record = record("StationaryCitizen");
+		record.modelIds = null;
+		record.npcAppearanceId = 1798;
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, REGION);
+
+		assertNotNull("an NPC appearance is a body", definition);
+		assertEquals(1798, definition.getNpcAppearanceId());
+		assertEquals("and it carries no raw model ids", 0, definition.getModelIds().length);
+	}
+
+	/**
+	 * Neither is still a skip — and this is the case the old
+	 * "no entity has an empty modelIds array" rule could not distinguish from the one
+	 * above.
+	 */
+	@Test
+	public void neitherModelIdsNorAnNpcAppearanceIdIsStillASkip()
+	{
+		EntityRecord empty = record("StationaryCitizen");
+		empty.modelIds = new int[0];
+		assertNull(EntityDefinition.fromRecord(empty, REGION));
+
+		EntityRecord nulled = record("StationaryCitizen");
+		nulled.modelIds = null;
+		assertNull(EntityDefinition.fromRecord(nulled, REGION));
+
+		// Non-positive ids are dropped first, so this is "no usable models" too.
+		EntityRecord sentinels = record("StationaryCitizen");
+		sentinels.modelIds = new int[]{0, -1};
+		assertNull(EntityDefinition.fromRecord(sentinels, REGION));
+	}
+
+	/**
+	 * An implausible {@code npcAppearanceId} is dropped rather than trusted — a
+	 * pasted hashcode in that field must not reach {@code client.getNpcDefinition}.
+	 *
+	 * <p>Dropping it <i>degrades</i> rather than skipping, so a record that also has
+	 * models still spawns from them; a record with nothing else left is skipped by the
+	 * gate above, which is the same outcome as a record with no models at all.
+	 */
+	@Test
+	public void anImplausibleNpcAppearanceIdIsDroppedAndTheModelIdsSurvive()
+	{
+		EntityRecord withModels = record("StationaryCitizen");
+		withModels.npcAppearanceId = CacheIdPlausibility.MAX_PLAUSIBLE_ID + 1;
+		EntityDefinition degraded = EntityDefinition.fromRecord(withModels, REGION);
+		assertNotNull("a junk NPC id must not cost the record its models", degraded);
+		assertEquals(0, degraded.getNpcAppearanceId());
+		assertEquals(2, degraded.getModelIds().length);
+
+		EntityRecord negative = record("StationaryCitizen");
+		negative.npcAppearanceId = -1798;
+		EntityDefinition alsoDegraded = EntityDefinition.fromRecord(negative, REGION);
+		assertNotNull(alsoDegraded);
+		assertEquals(0, alsoDegraded.getNpcAppearanceId());
+
+		// Nothing left to build from, so it is skipped.
+		EntityRecord only = record("StationaryCitizen");
+		only.modelIds = null;
+		only.npcAppearanceId = 0;
+		assertNull(EntityDefinition.fromRecord(only, REGION));
+	}
+
+	/**
+	 * When a record carries both, the NPC appearance wins — models and palette alike.
+	 *
+	 * <p>Documented on {@code EntityRecord.npcAppearanceId} and pinned here. The
+	 * {@code modelIds} survive on the definition (nothing gains from erasing them)
+	 * but {@code LivelyEntity} never builds them; {@code LivelyEntityTest} asserts
+	 * that half, because "which field wins" is only observable at render time.
+	 */
+	@Test
+	public void bothPresentMeansTheNpcAppearanceWinsAndTheRecordKeepsItsModelIds()
+	{
+		EntityRecord record = record("StationaryCitizen");
+		record.modelIds = new int[]{235, 248};
+		record.npcAppearanceId = 1798;
+		record.modelRecolorFind = new int[]{1};
+		record.modelRecolorReplace = new int[]{2};
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, REGION);
+
+		assertNotNull(definition);
+		assertEquals("the NPC id is what the renderer will use", 1798, definition.getNpcAppearanceId());
+		assertEquals("the ignored modelIds are still readable, for the log line",
+			2, definition.getModelIds().length);
+	}
+
+	@Test
+	public void anAbsentCameoFlagMeansNotACameo()
+	{
+		EntityRecord absent = record("StationaryCitizen");
+		assertFalse(EntityDefinition.fromRecord(absent, REGION).isCameo());
+
+		EntityRecord explicitlyFalse = record("StationaryCitizen");
+		explicitlyFalse.cameo = Boolean.FALSE;
+		assertFalse(EntityDefinition.fromRecord(explicitlyFalse, REGION).isCameo());
+
+		EntityRecord flagged = record("StationaryCitizen");
+		flagged.cameo = Boolean.TRUE;
+		assertTrue(EntityDefinition.fromRecord(flagged, REGION).isCameo());
+	}
+
+	/**
+	 * Scenery cannot be a cameo. The flag's job is to keep player-shaped named
+	 * likenesses behind an opt-in, and a crate is neither — a crate carrying it would
+	 * be a crate that a checkbox nobody expects switches off. Same rule, and the same
+	 * place, as a talking crate being silenced.
+	 */
+	@Test
+	public void sceneryCannotBeACameoHoweverItIsFlagged()
+	{
+		EntityRecord crate = record("Scenery");
+		crate.cameo = Boolean.TRUE;
+
+		EntityDefinition definition = EntityDefinition.fromRecord(crate, REGION);
+
+		assertNotNull("the flag is ignored, not fatal", definition);
+		assertFalse(definition.isCameo());
+
+		// All three citizen flavours may be.
+		for (String type : new String[]{"StationaryCitizen", "WanderingCitizen", "ScriptedCitizen"})
+		{
+			EntityRecord citizen = record(type);
+			citizen.cameo = Boolean.TRUE;
+			assertTrue(type + " may be a cameo", EntityDefinition.fromRecord(citizen, REGION).isCameo());
+		}
+	}
+
 	@Test
 	public void aMissingOrBrokenUuidGetsOneGeneratedRatherThanSkipping()
 	{

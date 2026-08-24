@@ -94,6 +94,27 @@ final class EntityTheme
 		byUuid.put("ce292e57-cdc3-4132-9a8f-01c139903a50", Theme.MORYTANIA_UNDEAD);
 		byUuid.put("976bfe11-b438-412a-ad26-57615c673017", Theme.MORYTANIA_UNDEAD);
 
+		// --- Cameos ---------------------------------------------------------------
+		// The six named likenesses of the plugin author's friends, region 12598
+		// (the Grand Exchange), behind the `cameos` config item which is off by
+		// default. Certain, in the way the Barrows six were certain: the name *is*
+		// the character, and there is no reading of these that is a generic
+		// townsperson.
+		//
+		// Theme.CAMEO is compatible with the Grand Exchange and nowhere else, so
+		// this table is what stops a future edit copying one into Varrock square —
+		// which is exactly the "fake players at a classic bank spot" the project's
+		// content rules forbid, and which tagging them GENERIC would allow silently.
+		// CameoPlacementTest cross-checks this list against the dataset's own
+		// `cameo: true` flag, so a seventh cameo that nobody tagged is a red test
+		// rather than a cameo the lint cannot see.
+		byUuid.put("0ca20001-9f4e-4b17-8d63-1e5a7c2b40d1", Theme.CAMEO); // "Cazh", 12598
+		byUuid.put("0ca20002-3b8d-4f52-9a71-6c0e4d19b8f3", Theme.CAMEO); // "Gunnar", 12598
+		byUuid.put("0ca20003-7d16-4a9c-8b45-2f80e6c31a97", Theme.CAMEO); // "Peter", 12598
+		byUuid.put("0ca20004-5e2f-4c81-9d38-4a7b0916e5c2", Theme.CAMEO); // "Sludgellama", 12598
+		byUuid.put("0ca20005-1a6b-4d73-8f92-b30c58e2417d", Theme.CAMEO); // "MrCream", 12598
+		byUuid.put("0ca20006-8c47-4e29-9b05-7d16a4f9302e", Theme.CAMEO); // "Rob", 12598
+
 		return byUuid;
 	}
 }

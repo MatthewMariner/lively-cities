@@ -46,27 +46,90 @@ public class ModelIdAuditTest
 	}
 
 	/**
-	 * An entity with no models cannot render anything. {@code EntityDefinition}
-	 * already skips such a record at load time (and
-	 * {@code RegionDataLoaderTest.loadsTheWholeShippedDatasetWithoutSkippingAnything}
-	 * asserts nothing in the shipped data is skipped at all), but this checks the
-	 * raw JSON directly so the claim does not depend on that filtering staying in
-	 * place, or on skip-counting logic that has other jobs too.
+	 * An entity with nothing to build cannot render anything — and there are now two
+	 * ways to have something to build, so this is the qualified form of what used to
+	 * be "no entity ships an empty {@code modelIds} array".
+	 *
+	 * <p>The six cameo records in {@code 12598.json} deliberately carry no
+	 * {@code modelIds} at all: they are dressed from an {@code npcAppearanceId}
+	 * instead (see {@code EntityRecord.npcAppearanceId}). So the invariant is
+	 * <b>exactly one of the two</b> has to be present, which is a stronger statement
+	 * than the old one rather than a relaxation of it — the old test could not have
+	 * caught a record with neither, because a record with neither also has an empty
+	 * {@code modelIds} array and would have been reported as the same violation.
+	 *
+	 * <p>{@code EntityDefinition} already skips a record with neither at load time
+	 * (and {@code RegionDataLoaderTest.loadsTheWholeShippedDatasetWithoutSkippingAnything}
+	 * asserts nothing in the shipped data is skipped at all), but this checks the raw
+	 * JSON directly so the claim does not depend on that filtering staying in place,
+	 * or on skip-counting logic that has other jobs too.
 	 */
 	@Test
-	public void noEntityReferencesAnEmptyModelIdsArray()
+	public void everyEntityHasEitherModelIdsOrAnNpcAppearanceIdAndNeverNeither()
+	{
+		List<String> violations = new ArrayList<>();
+		int fromModelIds = 0;
+		int fromNpcAppearance = 0;
+
+		for (ShippedModelIds.Entry entry : ShippedModelIds.perEntity())
+		{
+			boolean hasModels = entry.modelIds.length > 0;
+			boolean hasNpc = entry.npcAppearanceId != 0;
+
+			if (!hasModels && !hasNpc)
+			{
+				violations.add(entry + ": neither modelIds nor npcAppearanceId");
+			}
+			else if (hasModels && hasNpc)
+			{
+				// Legal — the NPC appearance wins and EntityDefinition warns — but
+				// nothing in the shipped data does it, and it is worth knowing if
+				// that changes, because the ignored half is the half a human typed.
+				violations.add(entry + ": carries both modelIds and npcAppearanceId "
+					+ entry.npcAppearanceId + ", so the modelIds are dead weight");
+			}
+
+			if (hasNpc)
+			{
+				fromNpcAppearance++;
+			}
+			else
+			{
+				fromModelIds++;
+			}
+		}
+
+		assertTrue("entities with nothing to build, or with two ways to build: " + violations,
+			violations.isEmpty());
+
+		// Both halves have to be non-empty or this test is only checking one rule.
+		assertEquals("entities dressed from raw model ids", 175, fromModelIds);
+		assertEquals("entities dressed from an NPC appearance", 6, fromNpcAppearance);
+	}
+
+	/**
+	 * The {@code npcAppearanceId}s get the same offline bound as the model ids, and
+	 * it bites harder here: {@code gameval.NpcID}'s highest constant in 1.12.36 is
+	 * 16346, so a transposed digit or a pasted hashcode in this field is caught
+	 * before a client is ever asked about it.
+	 */
+	@Test
+	public void everyNpcAppearanceIdIsPositiveAndWithinThePlausibleCacheRange()
 	{
 		List<String> violations = new ArrayList<>();
 
 		for (ShippedModelIds.Entry entry : ShippedModelIds.perEntity())
 		{
-			if (entry.modelIds.length == 0)
+			if (entry.npcAppearanceId != 0 && !CacheIdPlausibility.isPlausible(entry.npcAppearanceId))
 			{
-				violations.add(entry.toString());
+				violations.add(entry + ": npcAppearanceId " + entry.npcAppearanceId);
 			}
 		}
 
-		assertTrue("entities with an empty modelIds array: " + violations, violations.isEmpty());
+		assertTrue("implausible npcAppearanceId(s) in the shipped dataset: " + violations,
+			violations.isEmpty());
+		assertEquals("the dataset has to actually use the mechanism for this to mean anything",
+			6, ShippedModelIds.distinctNpcAppearanceIds().size());
 	}
 
 	/**

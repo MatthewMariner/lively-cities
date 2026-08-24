@@ -1,9 +1,11 @@
 package com.matthewmariner.livelycities;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 import net.runelite.api.Animation;
@@ -33,6 +35,9 @@ import net.runelite.api.WorldView;
  *
  * <p>Everything the render core does not call is inherited from
  * {@link StubClient} and throws.
+ *
+ * <p>{@link #getNpcDefinition(int)} is modelled on the real one's <i>failure</i>
+ * shape rather than on convenience — an unknown id throws. See that method.
  */
 final class FakeClient extends StubClient
 {
@@ -57,6 +62,24 @@ final class FakeClient extends StubClient
 	 * the plugin cannot tell them apart either, and that is why it retries.
 	 */
 	private final Set<Integer> unloadableAnimations = new HashSet<>();
+
+	/**
+	 * NPC compositions this client knows about, keyed by NPC id.
+	 *
+	 * <p>Empty by default, and an id that is <b>not</b> in here <i>throws</i> rather
+	 * than returning null — see {@link #getNpcDefinition(int)}. That is the real
+	 * 1.12.36 behaviour and it is the whole reason this is a map with a default
+	 * rather than a "return null unless told otherwise" field: a permissive fake
+	 * would make {@code NpcAppearance}'s try/catch dead code that no test could tell
+	 * from an empty method body.
+	 */
+	private final Map<Integer, net.runelite.api.NPCComposition> npcCompositions = new HashMap<>();
+
+	/** NPC ids the composition lookup returns null for, rather than throwing. */
+	private final Set<Integer> nullNpcCompositions = new HashSet<>();
+
+	/** Every NPC id the composition lookup was asked about, in order. */
+	private final List<Integer> npcDefinitionsRequested = new ArrayList<>();
 
 	/** True while the model cache is pretending to be cold: everything misses. */
 	private boolean cacheCold;
@@ -159,6 +182,61 @@ final class FakeClient extends StubClient
 		// immediately when its animation is null, so a null here would make every
 		// assertion about frames advancing pass for the wrong reason.
 		return new FakeAnimation(id);
+	}
+
+	/**
+	 * {@code Client.getNpcDefinition(int)} as 1.12.36 actually behaves.
+	 *
+	 * <p>Three outcomes, and each is one the plugin has to cope with:
+	 * <ul>
+	 *   <li><b>Known id</b> — the composition that was registered.</li>
+	 *   <li><b>Explicitly null</b> — see {@link #setNullNpcComposition}. The real
+	 *       accessor is a cache read, so a null is possible even though it is not the
+	 *       usual failure.</li>
+	 *   <li><b>Anything else, including while the cache is cold</b> — throws. That is
+	 *       the real path for an id whose archive entry is absent:
+	 *       {@code client.kz(id)} → {@code oh.ae(id, ..)} loads the bytes with
+	 *       {@code va.bb(9, id, ..)}, which returns null, and the {@code pl}
+	 *       constructor then blows up inside {@code oh.ae}'s own
+	 *       {@code catch (RuntimeException)} and is rethrown wrapped.</li>
+	 * </ul>
+	 */
+	@Override
+	public net.runelite.api.NPCComposition getNpcDefinition(int id)
+	{
+		npcDefinitionsRequested.add(id);
+
+		if (nullNpcCompositions.contains(id))
+		{
+			return null;
+		}
+
+		net.runelite.api.NPCComposition composition = cacheCold ? null : npcCompositions.get(id);
+		if (composition == null)
+		{
+			throw new IllegalStateException("no NPC composition for id " + id);
+		}
+
+		return composition;
+	}
+
+	FakeClient withNpc(int id, net.runelite.api.NPCComposition composition)
+	{
+		npcCompositions.put(id, composition);
+		return this;
+	}
+
+	/** The id resolves to a null composition instead of throwing. */
+	FakeClient setNullNpcComposition(int id)
+	{
+		nullNpcCompositions.add(id);
+		return this;
+	}
+
+	/** Every NPC id the composition lookup was asked about, in order. */
+	List<Integer> npcDefinitionsRequested()
+	{
+		return npcDefinitionsRequested;
 	}
 
 	void setUnloadableAnimations(int... ids)

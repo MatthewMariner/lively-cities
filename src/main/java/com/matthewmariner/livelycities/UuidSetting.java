@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p><b>Why a string and not a list of checkboxes.</b> RuneLite config items are
  * {@code @ConfigItem} annotations on interface methods — static declarations,
  * fixed at compile time. There is no dynamic checkbox list, and there could not
- * be one keyed on 129 uuids that ship in a data file. The established shape is
+ * be one keyed on 135 uuids that ship in a data file. The established shape is
  * therefore a {@code hidden = true} string item plus a RUNELITE menu entry that
  * appends to it, and a visible "clear the list" item for the way back. This
  * class is that string, parsed.

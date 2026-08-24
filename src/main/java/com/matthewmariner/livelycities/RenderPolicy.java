@@ -16,7 +16,7 @@ public final class RenderPolicy
 	 * Hard ceiling on simultaneously active {@code RuneLiteObject}s.
 	 *
 	 * <p>The densest neighbourhood in the shipped dataset is in Varrock (regions
-	 * 12852/12853, which hold 81 of the 175 entities between them): 59 entities
+	 * 12852/12853, which hold 81 of the 181 entities between them): 59 entities
 	 * inside a 25-tile square, 76 inside a {@link #MAX_CULL_RADIUS}-tile one. So
 	 * this is headroom rather than a routine constraint — it exists so a future
 	 * region file cannot make the client build hundreds of models in one tick.

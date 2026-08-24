@@ -555,7 +555,7 @@ public class CitizenEchoTest
 	 * <p>Separate from the test above, and it is the one that earns its place: making
 	 * an echo carry its source's {@code remarks} array left the whole suite green
 	 * until this fixture existed, because no other fixture had a source with both a
-	 * palette and a line to speak. 33 of the 129 shipped citizens have both, so the
+	 * palette and a line to speak. 39 of the 135 shipped citizens have both, so the
 	 * gap was in the fixtures rather than in the dataset.
 	 */
 	@Test
@@ -696,7 +696,7 @@ public class CitizenEchoTest
 	/**
 	 * The headline claim, recomputed from the vendored files.
 	 *
-	 * <p>129 authored citizens and 143 echoes, i.e. 272 in total. The band is wide
+	 * <p>135 authored citizens and 143 echoes, i.e. 278 in total. The band is wide
 	 * on purpose — what it is guarding is "roughly twice as many", not an exact
 	 * figure — but the exact figures are asserted too, so a data change that moved
 	 * them says so instead of drifting.
@@ -736,7 +736,7 @@ public class CitizenEchoTest
 			seeds.add(echo.getEchoSourceUuid());
 		}
 
-		assertEquals("the authored citizen roster", 129, citizens);
+		assertEquals("the authored citizen roster", 135, citizens);
 		assertEquals("citizens that seeded at least one echo", 76, seeds.size());
 		assertEquals("echoes derived from them", 143, echoes);
 		assertEquals("of which this many stand inside an authored wander box", 63, fromBoxes);
@@ -753,7 +753,7 @@ public class CitizenEchoTest
 	}
 
 	/**
-	 * Every uuid in play — 129 authored citizens, 46 scenery records and 143 echoes —
+	 * Every uuid in play — 135 authored citizens, 46 scenery records and 143 echoes —
 	 * has to be distinct.
 	 *
 	 * <p>A collision would mean two entities the user cannot tell apart in the
@@ -784,7 +784,7 @@ public class CitizenEchoTest
 		}
 
 		assertTrue("uuid collision(s): " + clashes, clashes.isEmpty());
-		assertEquals("175 authored entities plus 143 echoes", 318, seen.size());
+		assertEquals("181 authored entities plus 143 echoes", 324, seen.size());
 	}
 
 	/**
@@ -864,7 +864,7 @@ public class CitizenEchoTest
 			}
 		}
 
-		assertEquals("the fixture has to be the whole authored roster", 175, authoredCount);
+		assertEquals("the fixture has to be the whole authored roster", 181, authoredCount);
 		assertTrue("separation violation(s) involving a derived citizen: " + violations,
 			violations.isEmpty());
 		assertEquals("hand-placed entities closer than the minimum to each other, which is "
@@ -1070,7 +1070,7 @@ public class CitizenEchoTest
 			out.addAll(roster);
 		}
 
-		assertEquals("the whole shipped roster", 175, out.size());
+		assertEquals("the whole shipped roster", 181, out.size());
 		return out;
 	}
 

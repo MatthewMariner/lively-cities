@@ -9,7 +9,9 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 import net.runelite.api.coords.WorldPoint;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * A {@link RegionDataLoader} that serves region files built in memory.
@@ -80,13 +82,118 @@ final class FakeRegions extends RegionDataLoader
 	}
 
 	/**
+	 * One citizen dressed from an NPC id rather than from raw model ids — and
+	 * carrying <b>no</b> {@code modelIds} at all, which is the shape the six shipped
+	 * cameos have and the shape {@code EntityDefinition}'s relaxed gate exists for.
+	 *
+	 * <p>Not a cameo: the appearance mechanism and the opt-in flag are separate
+	 * questions (see {@code EntityRecord.npcAppearanceId}), and a fixture that
+	 * bundled them would make "the cameos checkbox governs cameos, not
+	 * NPC-dressed entities" untestable.
+	 *
+	 * <p>It carries a three-pair recolour palette for the same reason
+	 * {@link #cameoWithModelIds} does: {@link CitizenEcho} refuses an NPC-dressed
+	 * source because a re-dealt palette would not change how it looks (the colours
+	 * come from the composition), and that refusal is only observable on a source
+	 * whose palette would otherwise have been rich enough to seed two echoes.
+	 */
+	EntityDefinition npcDressed(int fileRegionId, int x, int y, int npcAppearanceId)
+	{
+		EntityRecord record = new EntityRecord();
+		record.entityType = "StationaryCitizen";
+		record.name = "NPC-dressed citizen " + (++uuids);
+		record.uuid = String.format("00000000-0000-4000-8000-%012d", uuids);
+		record.examineText = "Wearing somebody else's clothes.";
+		record.worldLocation = point(x, y, 0);
+		record.npcAppearanceId = npcAppearanceId;
+		record.modelRecolorFind = new int[]{1, 2, 3};
+		record.modelRecolorReplace = new int[]{101, 102, 103};
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, fileRegionId);
+		assertNotNull("the fake built an unusable NPC-dressed citizen", definition);
+		assertEquals("the fixture is pointless if the npcAppearanceId was dropped",
+			npcAppearanceId, definition.getNpcAppearanceId());
+		assertEquals("an NPC-dressed record carries no raw model ids", 0, definition.getModelIds().length);
+		return definition;
+	}
+
+	/**
+	 * One cameo: a named, player-shaped likeness dressed from an NPC id, which the
+	 * {@code cameos} checkbox governs.
+	 *
+	 * <p>Carries a remark, because all six shipped cameos do and because "hide and
+	 * mute work on a cameo like any citizen" needs something to mute. Carries no
+	 * recolour palette, because none of the shipped six does — their colours come from
+	 * the NPC composition. {@link #cameoWithModelIds} is the fixture for the one claim
+	 * that needs a palette.
+	 */
+	EntityDefinition cameo(int fileRegionId, int x, int y, int npcAppearanceId)
+	{
+		EntityRecord record = new EntityRecord();
+		record.entityType = "StationaryCitizen";
+		record.name = "Cameo " + (++uuids);
+		record.uuid = String.format("00000000-0000-4000-8000-%012d", uuids);
+		record.examineText = "A likeness, not a player.";
+		record.remarks = new String[]{"Say cheese."};
+		record.worldLocation = point(x, y, 0);
+		record.npcAppearanceId = npcAppearanceId;
+		record.cameo = true;
+		record.baseOrientation = 1792;
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, fileRegionId);
+		assertNotNull("the fake built an unusable cameo", definition);
+		assertTrue("the fixture is pointless if the cameo flag was dropped", definition.isCameo());
+		return definition;
+	}
+
+	/**
+	 * A cameo dressed the old way — raw {@code modelIds} plus a three-pair recolour
+	 * palette — which is to say a cameo that would seed two {@link CitizenEcho} echoes
+	 * if being a cameo were not the reason it does not.
+	 *
+	 * <p><b>This fixture exists to keep one guard honest.</b> No shipped cameo carries
+	 * a palette, and {@link CitizenEcho} refuses an NPC-dressed source as well as a
+	 * cameo one — so a fixture cameo built by {@link #cameo} is refused for two other
+	 * reasons before the cameo check is even reached, and "a cameo seeds no echoes"
+	 * would be indistinguishable from "this fixture has nothing to re-deal". Deleting
+	 * the cameo branch from {@code echoesOfSource} has to turn a test red, and this is
+	 * what makes it.
+	 *
+	 * <p>The shape is legal, not contrived: the {@code cameo} flag and the appearance
+	 * mechanism are independent record fields, and a future cameo could perfectly well
+	 * be authored from model ids.
+	 */
+	EntityDefinition cameoWithModelIds(int fileRegionId, int x, int y)
+	{
+		EntityRecord record = new EntityRecord();
+		record.entityType = "StationaryCitizen";
+		record.name = "Cameo with a wardrobe " + (++uuids);
+		record.uuid = String.format("00000000-0000-4000-8000-%012d", uuids);
+		record.examineText = "A likeness, not a player.";
+		record.remarks = new String[]{"Say cheese."};
+		record.worldLocation = point(x, y, 0);
+		record.modelIds = new int[]{100};
+		record.cameo = true;
+		record.baseOrientation = 1792;
+		record.modelRecolorFind = new int[]{1, 2, 3};
+		record.modelRecolorReplace = new int[]{101, 102, 103};
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, fileRegionId);
+		assertNotNull("the fake built an unusable cameo", definition);
+		assertTrue("the fixture is pointless if the cameo flag was dropped", definition.isCameo());
+		assertEquals("and pointless if it has no palette to re-deal",
+			3, definition.getRecolorFind().length);
+		return definition;
+	}
+
+	/**
 	 * One citizen carrying a recolour palette, which is what makes it seed
 	 * {@link CitizenEcho} echoes.
 	 *
 	 * <p>Needed rather than an extra argument on {@link #citizen}, because "a citizen
 	 * that seeds echoes" and "a citizen that seeds none" are two fixtures the crowd
-	 * tests need side by side: 49 of the 129 shipped citizens have too little palette
-	 * to re-deal, so a fixture where everybody seeds echoes could not tell "the dial
+	 * tests need side by side: 49 of the 129 non-cameo shipped citizens have too little
+	 * palette to re-deal, so a fixture where everybody seeds echoes could not tell "the dial
 	 * added the derived citizens" from "the dial doubled everything".
 	 *
 	 * <p>{@code pairs} is what decides how many echoes it seeds, and the numbers here
@@ -141,7 +248,7 @@ final class FakeRegions extends RegionDataLoader
 	 * instead of the empty one left the whole suite green: {@link #recoloured} has
 	 * nothing to say and {@link #talker} has no palette, so no source in any fixture
 	 * had both, and "an echo never speaks" was a claim no test could tell from a
-	 * fixture coincidence. 33 of the 129 shipped citizens have both.
+	 * fixture coincidence. 39 of the 135 shipped citizens have both.
 	 */
 	EntityDefinition recolouredTalker(int fileRegionId, int x, int y, int pairs, String... remarks)
 	{
@@ -261,7 +368,7 @@ final class FakeRegions extends RegionDataLoader
 	 *
 	 * <p>Separate from {@link #citizen} rather than an extra argument to it, because
 	 * "a citizen with remarks" and "a citizen with none" are two fixtures the chatter
-	 * tests need side by side in the same scene: 96 of the 129 shipped citizens have
+	 * tests need side by side in the same scene: 96 of the 135 shipped citizens have
 	 * nothing authored, so a fixture where everybody talks would not be able to tell
 	 * "the chatter skipped the silent ones" from "the chatter iterated everybody".
 	 *

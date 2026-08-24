@@ -16,7 +16,7 @@ import net.runelite.api.coords.WorldPoint;
  * Extra citizens, derived from the authored ones — the whole of
  * {@link CrowdDensity#CROWDED}.
  *
- * <p>The dataset holds 129 hand-placed citizens and the user asked for twice as
+ * <p>The dataset holds 135 hand-placed citizens and the user asked for twice as
  * many. There is no second dataset, so the second half has to come from the first:
  * an <b>echo</b> is a citizen built entirely out of one authored citizen's own
  * record, standing on separately-validated ground a few tiles away, wearing that
@@ -45,8 +45,17 @@ import net.runelite.api.coords.WorldPoint;
  * the hand-authored content this feature is not allowed to add. Those citizens
  * therefore seed no echoes. In the shipped data:
  * <ul>
- *   <li>45 of the 129 carry no recolour at all and 4 carry a single pair — no
- *       second slot to deal into, so 49 seed nothing;</li>
+ *   <li>the <b>6 cameos</b> are refused outright, before their palette is even
+ *       looked at. They are opt-in content behind their own checkbox and an echo is
+ *       not, so an echo of one would be a body the {@code cameos} setting does not
+ *       govern — see {@link #echoesOfSource};</li>
+ *   <li>a source <b>dressed from an {@code npcAppearanceId}</b> is refused too, and
+ *       for a sharper reason: its colours come from the composition rather than from
+ *       its record, so re-dealing the record's palette would change nothing and the
+ *       echo would be a pixel-for-pixel twin. Nothing else in the shipped data uses
+ *       that field, so today this and the bullet above name the same six;</li>
+ *   <li>of the 129 that remain, 45 carry no recolour at all and 4 carry a single
+ *       pair — no second slot to deal into, so 49 seed nothing;</li>
  *   <li>4 more carry two or more pairs whose {@code replace} values are all
  *       identical ("Brother Keptic", "Dark wizard", "Ambatu", "Sister Palus"), so
  *       every re-deal is the deal it started with — they seed nothing either;</li>
@@ -55,8 +64,8 @@ import net.runelite.api.coords.WorldPoint;
  *       supports only one — 144 echoes asked for, of which 143 find somewhere legal
  *       to stand (see below).</li>
  * </ul>
- * That comes to <b>143 echoes against 129 authored citizens — 272 in total,
- * 2.11×</b>, which is the "roughly twice as many" the request asked for.
+ * That comes to <b>143 echoes against 135 authored citizens — 278 in total,
+ * 2.06×</b>, which is the "roughly twice as many" the request asked for.
  * {@code CitizenEchoTest} recomputes all of those numbers from the shipped files
  * rather than trusting this paragraph.
  *
@@ -186,8 +195,8 @@ final class CitizenEcho
 	 *
 	 * <p>A judgement, not arithmetic. The palette of the richest shipped citizen
 	 * supports ten distinct re-deals; letting it spend all ten would put eleven
-	 * copies of one body in one doorway. Two is what turns 129 authored citizens
-	 * into 272 — the "twice as many" that was asked for — and it is the number the
+	 * copies of one body in one doorway. Two is what turns 135 authored citizens
+	 * into 278 — the "twice as many" that was asked for — and it is the number the
 	 * count in this class's javadoc is computed from.
 	 */
 	static final int MAX_ECHOES_PER_CITIZEN = 2;
@@ -318,12 +327,48 @@ final class CitizenEcho
 			return NONE;
 		}
 
+		if (source.isCameo())
+		{
+			// A cameo is opt-in content behind its own checkbox, and an echo is not:
+			// it is gated on the crowd density and on its source's city, and nothing
+			// else. Deriving one from a cameo would put an extra human body in the
+			// Grand Exchange for any user who set the density to Crowded, whatever
+			// the cameos checkbox said — which is the exact leak that checkbox
+			// exists to close. It would also be an extra person in a posed group
+			// photo.
+			//
+			// Structural rather than incidental. The six shipped cameos carry no
+			// authored recolour (their palette comes from an NPC composition at
+			// render time), so the palette check below would refuse them anyway
+			// today — and that is a coincidence about this dataset, not a rule.
+			return NONE;
+		}
+
+		if (source.getNpcAppearanceId() != 0)
+		{
+			// Dressed from an NPC composition, so its colours come from the client and
+			// not from its record — and an echo inherits the same npcAppearanceId,
+			// because that is where its body comes from. Re-dealing the record's
+			// palette would therefore change nothing at all: LivelyEntity.assemble
+			// applies the composition's find/replace pair for an NPC-dressed entity,
+			// not the record's. The echo would be a pixel-for-pixel copy of its source
+			// standing two tiles away — the "twins" failure this whole class is built
+			// to avoid, arrived at through the one door that does not go past the
+			// palette check below.
+			//
+			// Refused rather than fixed by re-dealing the *composition's* palette:
+			// that is the NPC's own colour scheme rather than anything a human chose
+			// for this citizen, so dealing it around would be inventing an appearance,
+			// which is exactly what this feature is not allowed to do.
+			return NONE;
+		}
+
 		short[] find = source.getRecolorFind();
 		short[] replace = source.getRecolorReplace();
 		if (find.length < 2 || replace.length < 2)
 		{
-			// Nothing to re-deal — see the class javadoc. 49 of the 129 shipped
-			// citizens land here.
+			// Nothing to re-deal — see the class javadoc. 49 of the 129 non-cameo
+			// shipped citizens land here.
 			return NONE;
 		}
 

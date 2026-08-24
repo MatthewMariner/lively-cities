@@ -100,7 +100,9 @@ final class ShippedCitizens
 				string(record, "uuid"),
 				string(record, "name"),
 				string(record, "examineText"),
-				string(record, "entityType")));
+				string(record, "entityType"),
+				bool(record, "cameo"),
+				integer(record, "npcAppearanceId")));
 		}
 	}
 
@@ -108,6 +110,19 @@ final class ShippedCitizens
 	{
 		JsonElement value = record.get(key);
 		return value != null && value.isJsonPrimitive() ? value.getAsString() : null;
+	}
+
+	private static boolean bool(JsonObject record, String key)
+	{
+		JsonElement value = record.get(key);
+		return value != null && value.isJsonPrimitive() && value.getAsBoolean();
+	}
+
+	/** @return the field's value, or {@code 0} if the record does not carry it */
+	private static int integer(JsonObject record, String key)
+	{
+		JsonElement value = record.get(key);
+		return value != null && value.isJsonPrimitive() ? value.getAsInt() : 0;
 	}
 
 	/** One shipped {@code citizenRoster} record, exactly as authored. */
@@ -119,13 +134,28 @@ final class ShippedCitizens
 		final String examineText;
 		final String entityType;
 
-		Entry(int fileRegionId, String uuid, String name, String examineText, String entityType)
+		/** The record's own {@code cameo} flag, absent-or-false flattened to false. */
+		final boolean cameo;
+
+		/** The record's own {@code npcAppearanceId}, or {@code 0} if it has none. */
+		final int npcAppearanceId;
+
+		Entry(
+			int fileRegionId,
+			String uuid,
+			String name,
+			String examineText,
+			String entityType,
+			boolean cameo,
+			int npcAppearanceId)
 		{
 			this.fileRegionId = fileRegionId;
 			this.uuid = uuid;
 			this.name = name;
 			this.examineText = examineText;
 			this.entityType = entityType;
+			this.cameo = cameo;
+			this.npcAppearanceId = npcAppearanceId;
 		}
 
 		@Override

@@ -421,6 +421,9 @@ class EntityScene
 		// config read and at most one parse per pass, not one per entity.
 		Set<UUID> hiddenUuids = overrides.hiddenUuids();
 
+		// Read once per pass like the other dials. Default false — see the config item.
+		boolean cameosAllowed = config.cameos();
+
 		List<LivelyEntity> candidates = new ArrayList<>();
 		int offByConfig = 0;
 		int onUnusableGround = 0;
@@ -431,7 +434,7 @@ class EntityScene
 			{
 				continue;
 			}
-			if (!allowedByConfig(entity.getDefinition(), density, hiddenUuids))
+			if (!allowedByConfig(entity.getDefinition(), density, hiddenUuids, cameosAllowed))
 			{
 				// Not a candidate, so the deactivate pass below despawns it. That
 				// is the whole mechanism behind "unticking a city takes effect
@@ -446,8 +449,9 @@ class EntityScene
 				// allowedByConfig: it reads the live collision map, so it is the one
 				// check that costs a scene lookup, and this is the first point at
 				// which we know the entity is close enough for the answer to matter.
-				// It is a no-op for every authored entity — a human put those there.
-				if (!CitizenEcho.isPlaceable(worldView, entity.getDefinition()))
+				// It is a no-op for the 175 vendored entities — a human stood on those
+				// tiles in game.
+				if (!groundIsUsable(worldView, entity.getDefinition()))
 				{
 					onUnusableGround++;
 					continue;
@@ -564,8 +568,8 @@ class EntityScene
 				// a log.
 				String summary = "Lively Cities: player at {} (region {}) — regions {}, "
 					+ "{} definitions in scope ({} of them echoes), {} active ({} echoes), {} walking, "
-					+ "{} switched off by the city/density settings, "
-					+ "{} echo(es) skipped because the collision map refused their tile, "
+					+ "{} switched off by the city/density/cameo settings, "
+					+ "{} entity(ies) skipped because the collision map would not vouch for their tile, "
 					+ "{} beyond the {}-tile cull or off-plane, {} deferred by the {}-object cap, {} unbuildable";
 				Object[] args = {
 					playerLocation,
@@ -870,7 +874,8 @@ class EntityScene
 	private boolean allowedByConfig(
 		EntityDefinition definition,
 		CrowdDensity density,
-		Set<UUID> hiddenUuids)
+		Set<UUID> hiddenUuids,
+		boolean cameosAllowed)
 	{
 		// Hidden first, and cheapest: it is a hash lookup, and it is the only one of
 		// the three the user chose for this specific citizen. Upstream issue #40.
@@ -893,6 +898,17 @@ class EntityScene
 			return false;
 		}
 
+		// The other opt-in, and the stricter one: a cameo needs its own checkbox
+		// ticked AND its city's, so this is a second gate rather than a replacement
+		// for the City.isEnabled call below. Deliberately not folded into that call —
+		// City fails open for a region no constant claims (see
+		// EntityDefinition.getCityRegionId), and player-shaped content must never
+		// inherit a fail-open.
+		if (definition.isCameo() && !cameosAllowed)
+		{
+			return false;
+		}
+
 		int regionId = definition.getCityRegionId();
 		if (City.of(regionId) == null && unmappedReported.add(regionId))
 		{
@@ -905,6 +921,45 @@ class EntityScene
 		}
 
 		return City.isEnabled(regionId, config) && density.keeps(definition.stableHash());
+	}
+
+	/**
+	 * Whether the ground under an entity is ground a person could stand on — asked
+	 * only of the entities whose tile <b>this plugin</b> chose rather than a human
+	 * standing on it in game.
+	 *
+	 * <p>Two such kinds, and they are disjoint:
+	 * <ul>
+	 *   <li><b>An echo</b>, whose tile is arithmetic. {@link CitizenEcho#isPlaceable}
+	 *       owns that case, including its wander-box fallback for
+	 *       {@link StandableGround.Verdict#UNKNOWN}.</li>
+	 *   <li><b>A cameo</b>, whose tile was authored off a wiki map rather than by
+	 *       walking to it — nobody has stood in the Grand Exchange and confirmed the
+	 *       six tiles are open floor. {@code UNKNOWN} is <b>not</b> admitted here:
+	 *       there is no wander box to fall back to and nothing has vouched for the
+	 *       ground, so a cameo appears once the collision map says yes and not
+	 *       before. In practice that is the tick the scene finishes building, because
+	 *       an entity outside the loaded scene has already failed
+	 *       {@code LocalPoint.fromWorld} in {@code LivelyEntity.spawn}.</li>
+	 * </ul>
+	 *
+	 * <p>The failure mode this buys is the right one: a cameo standing inside a bank
+	 * booth is exactly the "broken-looking fake" that got the predecessor plugin
+	 * disabled, and a cameo that silently does not appear is a bug report with a tile
+	 * in it. The count lands in the visibility-pass log line either way.
+	 *
+	 * <p>Reads the live collision map, so: client thread, and only for entities
+	 * already inside the cull radius.
+	 */
+	private static boolean groundIsUsable(WorldView worldView, EntityDefinition definition)
+	{
+		if (definition.isCameo())
+		{
+			return StandableGround.verdict(worldView, definition.getWorldLocation())
+				== StandableGround.Verdict.STANDABLE;
+		}
+
+		return CitizenEcho.isPlaceable(worldView, definition);
 	}
 
 	/**

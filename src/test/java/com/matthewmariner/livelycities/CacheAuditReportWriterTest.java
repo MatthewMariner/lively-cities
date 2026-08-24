@@ -91,7 +91,8 @@ public class CacheAuditReportWriterTest
 	private static CacheIdAudit.Report emptyReport()
 	{
 		CacheIdAudit.DatasetIds dataset = new CacheIdAudit.DatasetIds(
-			new TreeSet<>(), new TreeSet<>(), new TreeMap<>(), Collections.emptyList(), 0);
+			new TreeSet<>(), new TreeSet<>(), new TreeSet<>(), new TreeMap<>(),
+			Collections.emptyList(), 0);
 		return CacheIdAudit.run(new FakeClient(), dataset);
 	}
 
@@ -102,7 +103,8 @@ public class CacheAuditReportWriterTest
 		TreeSet<Integer> modelIds = new TreeSet<>();
 		modelIds.add(42);
 		CacheIdAudit.DatasetIds dataset = new CacheIdAudit.DatasetIds(
-			modelIds, new TreeSet<>(), new TreeMap<>(), Collections.emptyList(), 0);
+			modelIds, new TreeSet<>(), new TreeSet<>(), new TreeMap<>(),
+			Collections.emptyList(), 0);
 		return CacheIdAudit.run(client, dataset);
 	}
 

@@ -5,6 +5,9 @@
  * The animation name -> id table below is derived from the "Citizens" RuneLite
  * plugin (BSD 2-Clause, see NOTICE), because the region dataset this plugin
  * loads stores animations by those exact names.
+ *
+ * One constant is not theirs: HumanLeanReady, added here for the cameo records
+ * this project authored. See its javadoc.
  */
 package com.matthewmariner.livelycities;
 
@@ -37,6 +40,20 @@ public enum LivelyAnimation
 
 	HumanWithStickIdle(813),
 	HumanWithStickWalk(1146),
+
+	/**
+	 * A human leaning, as a loopable ready pose.
+	 *
+	 * <p><b>Not from the predecessor plugin's table</b> — the only addition to it,
+	 * and it is here because that table has no human lean and 1.12.36 does:
+	 * {@code javap -p -constants net.runelite.api.gameval.AnimationID} declares
+	 * {@code HUMAN_LEAN = 915} and {@code HUMAN_LEAN_READY = 916}. The {@code _READY}
+	 * one is the pose rather than the transition into it, which is what makes it safe
+	 * to loop — every other idle in this table that a human plays is a {@code _READY}
+	 * too ({@code HumanIdle} is {@code HUMAN_READY = 808}). Used by the MrCream cameo,
+	 * whose brief was "leaning casually".
+	 */
+	HumanLeanReady(916),
 
 	// Actions
 	Grabbing(551),

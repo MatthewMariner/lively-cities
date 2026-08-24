@@ -4,7 +4,7 @@ package com.matthewmariner.livelycities;
  * The one rule the placement lint is built on, pulled out on its own so it has
  * its own test ({@code PlacementCompatibilityTest}) against a hand-built
  * fixture rather than only ever being exercised indirectly through the real
- * 129-citizen dataset.
+ * 135-citizen dataset.
  */
 final class PlacementCompatibility
 {

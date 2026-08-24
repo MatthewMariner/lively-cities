@@ -113,6 +113,120 @@
                 5555
             ],
             "idleAnimation": "ChildIdle"
+        },
+        {
+            "name": "Rob",
+            "examineText": "A cameo — one of the plugin author's friends, drawn as a knight who is not moving. A likeness, not a player.",
+            "remarks": [
+                "Nothing gets past."
+            ],
+            "uuid": "0ca20006-8c47-4e29-9b05-7d16a4f9302e",
+            "regionId": 12598,
+            "entityType": "StationaryCitizen",
+            "cameo": true,
+            "worldLocation": {
+                "x": 3158,
+                "y": 3494,
+                "plane": 0
+            },
+            "npcAppearanceId": 1798,
+            "baseOrientation": 1664,
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Cazh",
+            "examineText": "A cameo — one of the plugin author's friends, drawn as a wizard mid-incantation. A likeness, not a player.",
+            "remarks": [
+                "Hold still, this one is new."
+            ],
+            "uuid": "0ca20001-9f4e-4b17-8d63-1e5a7c2b40d1",
+            "regionId": 12598,
+            "entityType": "StationaryCitizen",
+            "cameo": true,
+            "worldLocation": {
+                "x": 3160,
+                "y": 3495,
+                "plane": 0
+            },
+            "npcAppearanceId": 512,
+            "baseOrientation": 1792,
+            "idleAnimation": "Alching"
+        },
+        {
+            "name": "Sludgellama",
+            "examineText": "A cameo — one of the plugin author's friends, drawn as a hooded rogue who is up to something. A likeness, not a player.",
+            "remarks": [
+                "Don't mind me."
+            ],
+            "uuid": "0ca20004-5e2f-4c81-9d38-4a7b0916e5c2",
+            "regionId": 12598,
+            "entityType": "StationaryCitizen",
+            "cameo": true,
+            "worldLocation": {
+                "x": 3162,
+                "y": 3496,
+                "plane": 0
+            },
+            "npcAppearanceId": 526,
+            "baseOrientation": 1856,
+            "idleAnimation": "LectorIdle"
+        },
+        {
+            "name": "Peter",
+            "examineText": "A cameo — one of the plugin author's friends, drawn as a barbarian mid-flex. A likeness, not a player.",
+            "remarks": [
+                "One more set."
+            ],
+            "uuid": "0ca20003-7d16-4a9c-8b45-2f80e6c31a97",
+            "regionId": 12598,
+            "entityType": "StationaryCitizen",
+            "cameo": true,
+            "worldLocation": {
+                "x": 3164,
+                "y": 3495,
+                "plane": 0
+            },
+            "npcAppearanceId": 3256,
+            "baseOrientation": 1984,
+            "idleAnimation": "Flex"
+        },
+        {
+            "name": "Gunnar",
+            "examineText": "A cameo — one of the plugin author's friends, drawn as a sailor with the wind behind him. A likeness, not a player.",
+            "remarks": [
+                "Wind's up. Good day for it."
+            ],
+            "uuid": "0ca20002-3b8d-4f52-9a71-6c0e4d19b8f3",
+            "regionId": 12598,
+            "entityType": "StationaryCitizen",
+            "cameo": true,
+            "worldLocation": {
+                "x": 3161,
+                "y": 3493,
+                "plane": 0
+            },
+            "npcAppearanceId": 3680,
+            "baseOrientation": 1728,
+            "idleAnimation": "Fishing"
+        },
+        {
+            "name": "MrCream",
+            "examineText": "A cameo — one of the plugin author's friends, drawn as the best-dressed man at the Exchange. A likeness, not a player.",
+            "remarks": [
+                "You're late."
+            ],
+            "uuid": "0ca20005-1a6b-4d73-8f92-b30c58e2417d",
+            "regionId": 12598,
+            "entityType": "StationaryCitizen",
+            "cameo": true,
+            "worldLocation": {
+                "x": 3163,
+                "y": 3493,
+                "plane": 0
+            },
+            "npcAppearanceId": 4214,
+            "baseOrientation": 1920,
+            "idleAnimation": "HumanLeanReady"
         }
     ],
     "sceneryRoster": [

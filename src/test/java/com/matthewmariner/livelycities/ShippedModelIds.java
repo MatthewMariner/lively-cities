@@ -103,8 +103,15 @@ final class ShippedModelIds
 			}
 
 			JsonObject record = element.getAsJsonObject();
-			into.add(new Entry(regionId, label(record), modelIds(record)));
+			into.add(new Entry(regionId, label(record), modelIds(record), npcAppearanceId(record)));
 		}
+	}
+
+	/** @return the record's {@code npcAppearanceId}, or {@code 0} if it has none */
+	private static int npcAppearanceId(JsonObject record)
+	{
+		JsonElement value = record.get("npcAppearanceId");
+		return value != null && value.isJsonPrimitive() ? value.getAsInt() : 0;
 	}
 
 	private static String label(JsonObject record)
@@ -136,18 +143,42 @@ final class ShippedModelIds
 		return ids;
 	}
 
-	/** One roster record's raw, unfiltered {@code modelIds}, as authored. */
+	/**
+	 * @return every distinct raw {@code npcAppearanceId} across the shipped dataset,
+	 * the other half of the appearance surface the durability tooling has to cover
+	 */
+	static TreeSet<Integer> distinctNpcAppearanceIds()
+	{
+		TreeSet<Integer> ids = new TreeSet<>();
+		for (Entry entry : perEntity())
+		{
+			if (entry.npcAppearanceId != 0)
+			{
+				ids.add(entry.npcAppearanceId);
+			}
+		}
+		return ids;
+	}
+
+	/**
+	 * One roster record's raw, unfiltered {@code modelIds} and {@code npcAppearanceId},
+	 * as authored.
+	 */
 	static final class Entry
 	{
 		final int regionId;
 		final String label;
 		final int[] modelIds;
 
-		Entry(int regionId, String label, int[] modelIds)
+		/** The record's own {@code npcAppearanceId}, or {@code 0} if it has none. */
+		final int npcAppearanceId;
+
+		Entry(int regionId, String label, int[] modelIds, int npcAppearanceId)
 		{
 			this.regionId = regionId;
 			this.label = label;
 			this.modelIds = modelIds;
+			this.npcAppearanceId = npcAppearanceId;
 		}
 
 		@Override

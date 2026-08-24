@@ -14,17 +14,28 @@ The files under src/main/resources/RegionData/ are derived from that project's
 region data (format version 0.8). Redistribution of those files retains the
 copyright notice above as the BSD 2-Clause License requires.
 
-They are no longer byte-identical to upstream. The six citizens in 14131.json
-were named after the Barrows Brothers, with matching examine text, and are now
-generic "Barrow wight"s; their placements, models and animations are unchanged,
-only the identities. BSD-2 permits the modification — this note exists so nobody
-assumes the vendored data still matches the source it came from.
+They are no longer byte-identical to upstream, in two ways.
+
+  1. The six citizens in 14131.json were named after the Barrows Brothers, with
+     matching examine text, and are now generic "Barrow wight"s; their
+     placements, models and animations are unchanged, only the identities.
+
+  2. 12598.json (the Grand Exchange) gained six records that are not theirs at
+     all: the "friend cameo" figures, authored for this project and switched off
+     by default. They are identifiable in the data by "cameo": true, and they
+     are the only records using the "npcAppearanceId" field, which is also this
+     project's addition to the format. Nothing upstream authored was touched.
+
+BSD-2 permits both modifications — this note exists so nobody assumes the
+vendored data still matches the source it came from.
 
 The animation name -> id table in
 src/main/java/com/matthewmariner/livelycities/LivelyAnimation.java is likewise
 derived from that project (its AnimationID enum), because the region data
 addresses animations by those exact names — the names are part of the data
-format, not an implementation choice.
+format, not an implementation choice. One constant in it is not theirs:
+HumanLeanReady (916, gameval AnimationID.HUMAN_LEAN_READY), added for the cameo
+records above because their table carries no human lean.
 
 The model lighting parameters in LivelyEntity (ambient 64, contrast 850,
 x -30, y -50, z -30, passed to Model#light) are also taken from that project.

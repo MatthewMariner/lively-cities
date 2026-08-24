@@ -35,13 +35,27 @@ import static org.junit.Assert.assertTrue;
  * deliberately <b>not</b> used, since that list is for placements judged fine
  * on inspection and this one was not.
  *
+ * <p><b>The six cameos are reasoned about, not exempted.</b> They are the only
+ * player-shaped named humans in the dataset and they stand in the Grand
+ * Exchange, which is exactly the shape of content this lint exists for — so
+ * they carry {@link Theme#CAMEO}, which {@link CityTheme} maps to the Grand
+ * Exchange and to nothing else. The main test below therefore passes them
+ * because they are at home, in the same way the Barrow wights pass because they
+ * are honestly undead in Morytania; copy one into Varrock square and it goes
+ * red. {@link PlacementExceptions} was deliberately not used, and
+ * {@code CameoPlacementTest} owns the two guards this file cannot state —
+ * that every cameo in the data is tagged, and that {@code CAMEO} is mapped to
+ * exactly one city.
+ *
  * <p><b>Standing limitation, worth knowing.</b> Nothing in the shipped data
  * carries {@link Theme#UNIQUE_BOSS} any more, so the rule that catches a
  * boss impersonator is live but currently unexercised by real content —
  * {@link PlacementCompatibilityTest} is the only thing keeping it honest.
  * A future dataset that reintroduces a named boss is caught only if someone
  * also adds its uuid to {@link EntityTheme}, which is a manual step. That is
- * the lint's weakest seam.
+ * the lint's weakest seam. It is narrower than it was for cameos specifically:
+ * the dataset carries its own {@code cameo} flag, so a cameo that nobody
+ * remembered to tag is a red test rather than an invisible one.
  */
 public class PlacementLintTest
 {

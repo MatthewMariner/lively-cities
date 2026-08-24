@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-309-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-367-brightgreen)](#development)
 
 </div>
 
@@ -32,7 +32,7 @@ Varrock square has a handful of guards and a general store. Falador's streets ar
 Lumbridge is a castle with nobody in it. The world is beautifully built and almost entirely
 unpopulated, and once you notice it you cannot stop noticing it.
 
-Lively Cities adds **175 hand-placed figures** across **45 regions** — a fletching apprentice
+Lively Cities adds **181 hand-placed figures** across **45 regions** — a fletching apprentice
 working at her bench, a drunken peasant near the tavern, sleepwalkers on a Morytania
 pilgrimage, a squirrel, a rat, someone cooking over a fire. Some stand, some sit, some walk a
 route. They talk occasionally. They are entirely local to your client: no packets, no server
@@ -40,10 +40,10 @@ load, and **nothing another player can see**.
 
 | | |
 |---|---|
-| **175 entities** | 129 citizens + 46 pieces of scenery |
-| **63 wander**, 60 stand still, 6 follow a script | |
+| **181 entities** | 135 citizens + 46 pieces of scenery |
+| **63 wander**, 66 stand still, 6 follow a script | |
 | **24 places** | Varrock, Lumbridge, Falador, Al Kharid, Edgeville, Draynor, Ardougne, Catherby, Camelot, Taverley, Rimmington, Piscatoris, Canifis, the Barrows, and more |
-| **~272 at Crowded** | an optional density that roughly doubles the streets |
+| **~278 at Crowded** | an optional density that roughly doubles the streets |
 
 <!-- SCREENSHOT: a close-up of two or three citizens with distinct appearances, ideally one
      mid-walk. Save as docs/img/citizens.png and replace with:
@@ -74,6 +74,15 @@ stays up. You can also mute one individual by right-clicking them.
 
 **24 city checkboxes** — turn any place off and its citizens vanish on the click, not on the
 next region crossing.
+
+**Friend cameos** — off by default, and staying that way. Six named, human-looking figures
+posing as a group on the north-west side of the Grand Exchange: caricatures of the author's
+friends, dressed as a wizard, a sailor, a barbarian, a rogue, a butler and a White Knight.
+Everything else in this plugin is a townsperson; a cluster of named humans at the busiest
+bank in the game is the one thing here that could be mistaken for real players, so nobody
+sees them unless they tick the box. They obey the Grand Exchange checkbox too, Examine says
+outright that each is a likeness and not a player, and any of them can be hidden or muted
+individually like any other citizen.
 
 ---
 
@@ -112,8 +121,8 @@ revived. The demand outlived the maintenance by well over a year.
 **This plugin ships their placement dataset**, under their licence and with their notice
 retained — that data is hundreds of hours of walking around Gielinor deciding where a person
 should stand, and throwing it away would have been vandalism. See [NOTICE](NOTICE) for exactly
-what is derived: the dataset, the animation-name table, the model lighting constants, and one
-modification we made.
+what is derived: the dataset, the animation-name table, the model lighting constants, and the
+two modifications we made to their data.
 
 What is new is everything that stops it dying the same way:
 
@@ -121,10 +130,15 @@ What is new is everything that stops it dying the same way:
   no longer resolves. The failure that killed Citizens is now a diffable text file.
 - **Partial models never render.** If some of a figure's parts fail to load, it does not
   spawn half-built — that is what "no legs" actually was.
+- **New figures are dressed by NPC id, not by raw model id.** A record can carry
+  `npcAppearanceId` and clone an existing NPC's models and colours instead of listing cache
+  numbers nobody can look up. That is one indirection further from the geometry an artist
+  reworks, it is a named constant in `gameval.NpcID`, and the audit above covers it — which
+  is the whole reason to prefer it. The 175 vendored figures keep their `modelIds` unchanged.
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they are now
   anonymous barrow wights.
-- **309 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **367 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -133,7 +147,7 @@ What is new is everything that stops it dying the same way:
 
 Stated plainly, because you will find them anyway.
 
-- **The dataset is thin and lopsided.** 129 citizens for the whole game, and roughly a third
+- **The dataset is thin and lopsided.** 135 citizens for the whole game, and roughly a third
   of them are in one Varrock region. Falador and Nardah have almost nobody. Fixing this is
   content authoring, and it is the main work left.
 - **Some figures have gaps.** Rufus in Varrock square is missing boots — his record simply
@@ -146,6 +160,11 @@ Stated plainly, because you will find them anyway.
   projecting under the minimap could still be offered there.
 - **Crowded adds derived figures, not authored ones.** They are silent, they do not wander,
   and they wear their source's colours rearranged. They are ambience, not characters.
+- **The cameo tiles have not been walked on.** The six were placed off the Grand Exchange's
+  wiki map, not by standing there. To stop that becoming a figure inside a bank booth, a cameo
+  is the one kind of authored figure whose tile has to pass the game's own collision map before
+  it will render — so a bad tile means an absent cameo rather than a broken-looking one. If one
+  of them never appears with the setting on, that is what happened; please report the tile.
 
 ## Found a bug?
 
@@ -164,7 +183,7 @@ Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires 
 the Gradle wrapper handles the rest.
 
 ```bash
-./gradlew build          # compile and run the 309 tests
+./gradlew build          # compile and run the 367 tests
 ./gradlew run            # a dev client with the plugin loaded
 ./gradlew auditCacheIds  # dev client + walk every cache id (see below)
 ```
@@ -195,9 +214,14 @@ and `RegionDataLoaderTest` already assert, over the shipped JSON alone:
 
 - every `modelIds` entry is positive and not implausibly large (see
   `CacheIdPlausibility` for where the ceiling comes from)
-- no entity ships an empty `modelIds` array
-- the dataset's distinct-model-id count is pinned (currently 384) — if this
-  test fails after you *intentionally* changed the dataset, update the pinned
+- every entity has either a `modelIds` array or an `npcAppearanceId`, and never
+  neither — and never both, which would leave a hand-typed model list as dead
+  weight (the `npcAppearanceId` wins when a record carries both)
+- every `npcAppearanceId` is inside the same plausible range, which bites
+  harder there: `gameval.NpcID`'s highest constant in 1.12.36 is 16346
+- the dataset's distinct-model-id count is pinned (currently 384) and its
+  distinct-`npcAppearanceId` count is pinned (currently 6) — if either test
+  fails after you *intentionally* changed the dataset, update the pinned
   number in `ModelIdAuditTest`; if you did not touch the dataset, something
   else changed it
 - every animation name the dataset uses resolves in `LivelyAnimation`
@@ -218,10 +242,16 @@ This is the real check, and the one to run after a suspected renumbering:
 
 This launches the same dev client `./gradlew run` does, with one extra system
 property set. On startup, `LivelyCitiesPlugin` walks every distinct model id,
-merged-object id, and animation id the shipped dataset references and asks the
-live client (`client.loadModelData(id)` / `client.loadAnimation(id)`) whether
-each one still resolves — these two calls are the only real ground truth,
-which is why this cannot be a unit test.
+merged-object id, `npcAppearanceId` and animation id the shipped dataset
+references and asks the live client (`client.loadModelData(id)`,
+`client.getNpcDefinition(id)` and `client.loadAnimation(id)`) whether each one
+still resolves — these calls are the only real ground truth, which is why this
+cannot be a unit test.
+
+An `npcAppearanceId` is checked through `NpcAppearance.resolve`, i.e. the same
+code path the renderer uses, so "the lookup worked but the composition has no
+models" counts as a failure rather than as a green id in front of an invisible
+citizen.
 
 The client does not need to be logged into a world; the cache is loaded before
 the login screen. Watch the client log for a summary line
@@ -234,8 +264,9 @@ open the full report:
 
 The report is a small, diffable, sorted plain-text file — commit it (or just
 compare it by eye against a previous run) to see exactly what changed. It has
-four sections: failing model ids, failing merged-object ids, failing animation
-ids, and a **known-permanent-null** section for animation ids that are
+five sections: failing model ids, failing merged-object ids, failing NPC
+appearance ids, failing animation ids, and a **known-permanent-null** section
+for animation ids that are
 *expected* to fail — currently just `BeeIdle=0`, because
 `client.loadAnimation(0)` returns null by design (no frame lengths, not a Maya
 animation), not because of a broken cache entry. A real regression never shows

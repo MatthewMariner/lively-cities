@@ -224,7 +224,8 @@ public class RegionDataLoaderTest
 
 	/**
 	 * The shipped dataset, loaded through the real resource prefix. Audited by
-	 * hand: 45 files, 129 citizens, 46 scenery, every record valid.
+	 * hand: 45 files, 135 citizens (129 vendored plus the six cameos), 46 scenery,
+	 * every record valid.
 	 */
 	@Test
 	public void loadsTheWholeShippedDatasetWithoutSkippingAnything()
@@ -249,7 +250,7 @@ public class RegionDataLoaderTest
 		}
 
 		assertEquals("region file count", 45, files);
-		assertEquals("citizen count", 129, citizens);
+		assertEquals("citizen count", 135, citizens);
 		assertEquals("scenery count", 46, scenery);
 		assertEquals("nothing in the shipped data should be skipped", 0, skipped);
 	}

@@ -23,6 +23,39 @@ public class LivelyAnimationTest
 		assertEquals(6539, LivelyAnimation.fromName("WerewolfIdle").getId());
 	}
 
+	/**
+	 * The one constant this project added rather than inheriting.
+	 *
+	 * <p>{@code HumanLeanReady} is 916, which
+	 * {@code javap -p -constants net.runelite.api.gameval.AnimationID} on the 1.12.36
+	 * jar names {@code HUMAN_LEAN_READY} — the pose rather than
+	 * {@code HUMAN_LEAN = 915}, which is the transition into it. Pinned here because
+	 * it is the only entry in the table with no upstream provenance (see
+	 * {@code NOTICE}) and because a {@code _READY} id is the difference between a
+	 * loopable idle and an animation that plays once and stops.
+	 */
+	@Test
+	public void theOneLocallyAddedAnimationIsTheHumanLeanReadyPose()
+	{
+		assertNotNull(LivelyAnimation.fromName("HumanLeanReady"));
+		assertEquals("gameval AnimationID.HUMAN_LEAN_READY",
+			916, LivelyAnimation.fromName("HumanLeanReady").getId());
+		assertNull("HUMAN_LEAN (915) is the transition, and is deliberately not in the table",
+			byId(915));
+	}
+
+	private static LivelyAnimation byId(int id)
+	{
+		for (LivelyAnimation animation : LivelyAnimation.values())
+		{
+			if (animation.getId() == id)
+			{
+				return animation;
+			}
+		}
+		return null;
+	}
+
 	@Test
 	public void unknownAndEmptyNamesResolveToNullInsteadOfThrowing()
 	{
@@ -85,11 +118,15 @@ public class LivelyAnimationTest
 		assertTrue("animation names used by the dataset but absent from the enum: " + missing,
 			missing.isEmpty());
 
-		// Sanity: 58 distinct idleAnimation names and 25 distinct moveAnimation
+		// Sanity: 61 distinct idleAnimation names and 25 distinct moveAnimation
 		// names across the 45 files, overlapping on HumanIdle and BeeIdle ->
-		// 81 distinct. A drop here means definitions stopped resolving names.
-		assertEquals("distinct animation names in the dataset", 81, ShippedAnimationNames.all().size());
-		assertEquals("distinct animations resolved onto definitions", 81, seen.size());
+		// 84 distinct. A drop here means definitions stopped resolving names.
+		//
+		// It was 81 before the six cameos, which brought in Alching, Flex and
+		// HumanLeanReady as idle poses; the other three (Fishing, Think, HumanIdle —
+		// and LectorIdle) were already in use elsewhere in the dataset.
+		assertEquals("distinct animation names in the dataset", 84, ShippedAnimationNames.all().size());
+		assertEquals("distinct animations resolved onto definitions", 84, seen.size());
 	}
 
 	/**

@@ -10,13 +10,15 @@ import java.util.TreeSet;
 import net.runelite.api.Client;
 
 /**
- * The cache-backed half of the durability tooling: walks every distinct raw
- * cache id the shipped dataset references and asks a live {@link Client}
+ * The cache-backed half of the durability tooling: walks every distinct cache id
+ * the shipped dataset references — model ids, merged-object ids,
+ * {@code npcAppearanceId}s and animation ids — and asks a live {@link Client}
  * whether each one still resolves.
  *
- * <p><b>Why this cannot be a normal test.</b> {@code client.loadModelData(id)}
- * and {@code client.loadAnimation(id)} are the only ground truth for whether an
- * id is still valid, and both require a real, cache-loaded client — there is no
+ * <p><b>Why this cannot be a normal test.</b> {@code client.loadModelData(id)},
+ * {@code client.getNpcDefinition(id)} and {@code client.loadAnimation(id)} are the
+ * only ground truth for whether an id is still valid, and all require a real,
+ * cache-loaded client — there is no
  * offline substitute (see {@link CacheIdPlausibility}, which is as far as pure
  * data invariants can go). {@code LivelyCitiesPlugin} only ever calls
  * {@link #run} when {@code developerMode} is on <b>and</b> the
@@ -63,6 +65,7 @@ final class CacheIdAudit
 	{
 		TreeSet<Integer> modelIds = new TreeSet<>();
 		TreeSet<Integer> mergedObjectIds = new TreeSet<>();
+		TreeSet<Integer> npcAppearanceIds = new TreeSet<>();
 		TreeMap<String, Integer> animationIdsByName = new TreeMap<>();
 		List<String> regionSummaries = new ArrayList<>();
 		int regionsLoaded = 0;
@@ -92,6 +95,15 @@ final class CacheIdAudit
 					mergedObjectIds.add(mergedObject.getObjectId());
 				}
 
+				// The whole point of preferring an NPC id to raw model ids is that it
+				// is still auditable. An entity dressed this way contributes no model
+				// ids at all, so without this line it would be the one part of the
+				// dataset the durability tooling could not see.
+				if (entity.getNpcAppearanceId() != 0)
+				{
+					npcAppearanceIds.add(entity.getNpcAppearanceId());
+				}
+
 				addIfPresent(entity.getIdleAnimation(), animationIdsByName);
 				addIfPresent(entity.getMoveAnimation(), animationIdsByName);
 			}
@@ -102,7 +114,8 @@ final class CacheIdAudit
 				region.getSceneryCount(), regionModelIds.size()));
 		}
 
-		return new DatasetIds(modelIds, mergedObjectIds, animationIdsByName, regionSummaries, regionsLoaded);
+		return new DatasetIds(modelIds, mergedObjectIds, npcAppearanceIds,
+			animationIdsByName, regionSummaries, regionsLoaded);
 	}
 
 	private static void addIfPresent(LivelyAnimation animation, Map<String, Integer> into)
@@ -158,6 +171,15 @@ final class CacheIdAudit
 			}
 		}
 
+		List<Integer> failingNpcAppearanceIds = new ArrayList<>();
+		for (int id : dataset.npcAppearanceIds)
+		{
+			if (!resolvesAsNpcAppearance(client, id))
+			{
+				failingNpcAppearanceIds.add(id);
+			}
+		}
+
 		List<String> failingAnimations = new ArrayList<>();
 		List<String> knownPermanentNullAnimations = new ArrayList<>();
 		for (Map.Entry<String, Integer> entry : dataset.animationIdsByName.entrySet())
@@ -176,7 +198,7 @@ final class CacheIdAudit
 			}
 		}
 
-		return new Report(dataset, failingModelIds, failingMergedObjectIds,
+		return new Report(dataset, failingModelIds, failingMergedObjectIds, failingNpcAppearanceIds,
 			failingAnimations, knownPermanentNullAnimations);
 	}
 
@@ -188,6 +210,31 @@ final class CacheIdAudit
 		}
 		catch (RuntimeException e)
 		{
+			return false;
+		}
+	}
+
+	/**
+	 * Asks the same question {@link NpcAppearance#resolve} asks, through the same
+	 * class, so the audit and the render core can never disagree about what "this
+	 * NPC id still works" means.
+	 *
+	 * <p>Going through {@code resolve} rather than calling {@code getNpcDefinition}
+	 * here is the point: an id that resolves to a composition with <i>no models</i>
+	 * renders nothing, so an audit that only checked the lookup would report a green
+	 * id for an invisible citizen. The label is the audit's own, not an entity's —
+	 * the same NPC id can be shared by several records.
+	 */
+	private static boolean resolvesAsNpcAppearance(Client client, int id)
+	{
+		try
+		{
+			return NpcAppearance.resolve(client, id, "cache id audit") != null;
+		}
+		catch (RuntimeException e)
+		{
+			// resolve() already contains its own throws; this is the backstop for
+			// anything thrown on the way in, on the same terms as the two above.
 			return false;
 		}
 	}
@@ -209,6 +256,13 @@ final class CacheIdAudit
 	{
 		final Set<Integer> modelIds;
 		final Set<Integer> mergedObjectIds;
+
+		/**
+		 * Every distinct {@code npcAppearanceId} the dataset references — the ids
+		 * whose compositions supply a body instead of a {@code modelIds} array.
+		 */
+		final Set<Integer> npcAppearanceIds;
+
 		final Map<String, Integer> animationIdsByName;
 		final List<String> regionSummaries;
 		final int regionsLoaded;
@@ -216,12 +270,14 @@ final class CacheIdAudit
 		DatasetIds(
 			Set<Integer> modelIds,
 			Set<Integer> mergedObjectIds,
+			Set<Integer> npcAppearanceIds,
 			Map<String, Integer> animationIdsByName,
 			List<String> regionSummaries,
 			int regionsLoaded)
 		{
 			this.modelIds = Collections.unmodifiableSet(modelIds);
 			this.mergedObjectIds = Collections.unmodifiableSet(mergedObjectIds);
+			this.npcAppearanceIds = Collections.unmodifiableSet(npcAppearanceIds);
 			this.animationIdsByName = Collections.unmodifiableMap(animationIdsByName);
 			this.regionSummaries = Collections.unmodifiableList(regionSummaries);
 			this.regionsLoaded = regionsLoaded;
@@ -234,6 +290,7 @@ final class CacheIdAudit
 		final DatasetIds dataset;
 		final List<Integer> failingModelIds;
 		final List<Integer> failingMergedObjectIds;
+		final List<Integer> failingNpcAppearanceIds;
 		final List<String> failingAnimations;
 		final List<String> knownPermanentNullAnimations;
 
@@ -241,19 +298,24 @@ final class CacheIdAudit
 			DatasetIds dataset,
 			List<Integer> failingModelIds,
 			List<Integer> failingMergedObjectIds,
+			List<Integer> failingNpcAppearanceIds,
 			List<String> failingAnimations,
 			List<String> knownPermanentNullAnimations)
 		{
 			this.dataset = dataset;
 			this.failingModelIds = Collections.unmodifiableList(failingModelIds);
 			this.failingMergedObjectIds = Collections.unmodifiableList(failingMergedObjectIds);
+			this.failingNpcAppearanceIds = Collections.unmodifiableList(failingNpcAppearanceIds);
 			this.failingAnimations = Collections.unmodifiableList(failingAnimations);
 			this.knownPermanentNullAnimations = Collections.unmodifiableList(knownPermanentNullAnimations);
 		}
 
 		boolean hasUnexpectedFailures()
 		{
-			return !failingModelIds.isEmpty() || !failingMergedObjectIds.isEmpty() || !failingAnimations.isEmpty();
+			return !failingModelIds.isEmpty()
+				|| !failingMergedObjectIds.isEmpty()
+				|| !failingNpcAppearanceIds.isEmpty()
+				|| !failingAnimations.isEmpty();
 		}
 
 		/**
@@ -278,6 +340,14 @@ final class CacheIdAudit
 			sb.append("# merged-object ids checked: ").append(dataset.mergedObjectIds.size()).append('\n');
 			sb.append("# merged-object ids failing: ").append(failingMergedObjectIds.size()).append('\n');
 			for (int id : failingMergedObjectIds)
+			{
+				sb.append(id).append('\n');
+			}
+			sb.append('\n');
+
+			sb.append("# npc appearance ids checked: ").append(dataset.npcAppearanceIds.size()).append('\n');
+			sb.append("# npc appearance ids failing: ").append(failingNpcAppearanceIds.size()).append('\n');
+			for (int id : failingNpcAppearanceIds)
 			{
 				sb.append(id).append('\n');
 			}

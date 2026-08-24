@@ -126,6 +126,50 @@ public interface LivelyCitiesConfig extends Config
 		return CrowdDensity.FULL;
 	}
 
+	/**
+	 * The cameo checkbox's label and description, pulled out as constants so
+	 * {@code CameoPlacementTest} can assert on the exact words without reflection.
+	 *
+	 * <p>Unannotated interface fields, exactly like {@link #GROUP} — RuneLite reads
+	 * {@code @ConfigItem} off methods and {@code @ConfigSection} off annotated fields,
+	 * so these are inert to the settings panel and are only here to be the single
+	 * source of the string.
+	 *
+	 * <p><b>The description is load-bearing text, not a tooltip.</b> It has to tell a
+	 * user — and a hub reviewer — what the feature adds, that it is player-shaped, and
+	 * that being off is the deliberate default rather than an accident. Trimming it to
+	 * a label is what the test prevents.
+	 */
+	String CAMEOS_NAME = "Friend cameos (off by default)";
+
+	String CAMEOS_DESCRIPTION =
+		"Adds six named, human-looking figures posing as a group on the north-west side of the "
+			+ "Grand Exchange: caricatures of the plugin author's friends, dressed as a wizard, a "
+			+ "sailor, a barbarian, a rogue, a butler and a White Knight. This is player-shaped "
+			+ "content and it is deliberately switched off by default — everything else in this "
+			+ "plugin is a townsperson, and a cluster of named humans at the busiest bank in the "
+			+ "game is exactly what gets mistaken for real players. They are cosmetic and local "
+			+ "like every other figure here, they obey the Grand Exchange checkbox as well as this "
+			+ "one, Examine says outright that each is a likeness and not a player, and you can "
+			+ "hide or mute any of them individually. Turn it on if you want them; nobody will "
+			+ "ever see them by accident.";
+
+	@ConfigItem(
+		keyName = "cameos",
+		name = CAMEOS_NAME,
+		description = CAMEOS_DESCRIPTION,
+		position = 3
+	)
+	default boolean cameos()
+	{
+		// False, and this default is not a preference — see the description above and
+		// CameoPlacementTest. The predecessor plugin's own content rule was "no fake
+		// players", and named human figures at a classic bank spot reproduce exactly
+		// the confusion that got it disabled. A fresh install and a hub reviewer both
+		// see none of them.
+		return false;
+	}
+
 	// --- Chatter -------------------------------------------------------------
 	//
 	// These are here first, and they exist before the feature they control, for a

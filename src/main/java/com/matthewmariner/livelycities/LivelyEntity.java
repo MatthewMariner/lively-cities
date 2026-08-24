@@ -41,11 +41,13 @@ import net.runelite.api.coords.LocalPoint;
  *       That is what stops a bad model producing one warning per game tick,
  *       forever.</li>
  *   <li><b>Transient</b> — {@code loadModelData} returned null for some or all
- *       of the parts, or {@code loadAnimation} returned null for an animation the
- *       record asked for. On a cold cache both are routine and say nothing about
- *       the id: the field report behind this code had 84 distinct model ids
- *       missing right after login and present later, and animations come out of
- *       the same cache. So neither is latched; both are retried, at most
+ *       of the parts, the record's {@code npcAppearanceId} would not resolve to an
+ *       appearance (see {@link NpcAppearance}), or {@code loadAnimation} returned
+ *       null for an animation the record asked for. On a cold cache all three are
+ *       routine and say nothing about the id: the field report behind this code had
+ *       84 distinct model ids missing right after login and present later, and
+ *       animations and NPC compositions come out of the same cache archives. So
+ *       none is latched; all are retried, at most
  *       {@link #MAX_MODEL_ATTEMPTS} / {@link #MAX_ANIMATION_ATTEMPTS} times per
  *       scene load ({@link #onScopeEntered()} hands back both budgets) and spaced
  *       by {@link #RETRY_BACKOFF_PASSES}, which lets a warm cache heal the entity
@@ -82,7 +84,7 @@ final class LivelyEntity
 {
 	/**
 	 * Lighting used by the source dataset's authoring tool. Changing these
-	 * changes the look of all 175 entities, so they stay put.
+	 * changes the look of all 181 entities, so they stay put.
 	 */
 	private static final int LIGHT_AMBIENT = 64;
 	private static final int LIGHT_CONTRAST = 850;
@@ -146,7 +148,7 @@ final class LivelyEntity
 
 	/**
 	 * What this citizen can say and what it is saying; {@code null} for the 142 of
-	 * 175 shipped entities with nothing authored.
+	 * 181 shipped entities with nothing authored.
 	 *
 	 * <p>Owned here, on the wrapper, rather than in the overlay — see
 	 * {@link CitizenRemarks}. The consequence that matters is one line down in
@@ -158,6 +160,19 @@ final class LivelyEntity
 	private RuneLiteObject object;
 	private Model model;
 	private boolean broken;
+
+	/**
+	 * The NPC appearance this entity wears, once the client has produced it;
+	 * {@code null} for an entity dressed from raw {@code modelIds}, and for one that
+	 * is still waiting on the composition.
+	 *
+	 * <p>Cached because it is the entity's <i>body</i> — the model ids and the
+	 * recolour pairs both come out of it, and {@link #assemble} runs after
+	 * {@link #loadParts()} rather than inside it. Only ever assigned a resolved
+	 * appearance, so a miss leaves it null and the next visibility pass asks again
+	 * — the same rule as {@link #idleController}, and for the same reason.
+	 */
+	private NpcAppearance appearance;
 
 	/**
 	 * The two animation controllers, built on first use and then kept.
@@ -245,7 +260,7 @@ final class LivelyEntity
 
 	/**
 	 * @return this citizen's remarks, or {@code null} if it has nothing authored to
-	 * say — which is every {@code Scenery} record and 96 of the 129 citizens
+	 * say — which is every {@code Scenery} record and 96 of the 135 citizens
 	 */
 	@Nullable
 	CitizenRemarks getRemarks()
@@ -545,6 +560,18 @@ final class LivelyEntity
 		return installed;
 	}
 
+	/**
+	 * @return the NPC appearance this entity is wearing, or {@code null} if it is
+	 * dressed from raw model ids or has not resolved one yet. For the tests: "it used
+	 * the NPC's models rather than the record's" and "it is still waiting" are two
+	 * outcomes that otherwise look identical from outside.
+	 */
+	@Nullable
+	NpcAppearance getAppearance()
+	{
+		return appearance;
+	}
+
 	// --- What the client is about to draw ------------------------------------
 	//
 	// Four read-only accessors for the two things that have to project this entity
@@ -758,10 +785,6 @@ final class LivelyEntity
 	@Nullable
 	private List<ModelData> loadParts()
 	{
-		int[] modelIds = definition.getModelIds();
-		List<EntityDefinition.MergedObject> merged = definition.getMergedObjects();
-		int requested = modelIds.length + merged.size();
-
 		if (modelAttempts >= MAX_MODEL_ATTEMPTS)
 		{
 			return null;
@@ -774,6 +797,20 @@ final class LivelyEntity
 
 		passesSinceAttempt = 0;
 		modelAttempts++;
+
+		// Which ids to build is itself a question for the client when the record
+		// names an NPC instead of listing models — and it is asked inside the budget,
+		// after it has been spent, so a composition that will not resolve costs the
+		// same three attempts and three log lines a missing model does rather than
+		// one per game tick.
+		int[] modelIds = modelIdsToBuild();
+		if (modelIds == null)
+		{
+			return null;
+		}
+
+		List<EntityDefinition.MergedObject> merged = definition.getMergedObjects();
+		int requested = modelIds.length + merged.size();
 
 		List<ModelData> parts = new ArrayList<>(requested);
 		StringBuilder missing = new StringBuilder();
@@ -830,6 +867,60 @@ final class LivelyEntity
 	}
 
 	/**
+	 * The model ids this entity is made of — the record's own, or the ones an NPC
+	 * composition supplies.
+	 *
+	 * <p>Costs one of {@link #MAX_MODEL_ATTEMPTS}, already spent by the caller.
+	 *
+	 * @return the ids, or {@code null} if the record names an NPC whose appearance
+	 * the client would not give us. Never falls back to the record's {@code modelIds}
+	 * — see {@link NpcAppearance} for why a different body in the right place is
+	 * worse than no body.
+	 */
+	@Nullable
+	private int[] modelIdsToBuild()
+	{
+		int npcId = definition.getNpcAppearanceId();
+		if (npcId == 0)
+		{
+			return definition.getModelIds();
+		}
+
+		if (appearance != null)
+		{
+			return appearance.getModelIds();
+		}
+
+		NpcAppearance resolved = NpcAppearance.resolve(client, npcId, definition.label());
+		if (resolved == null)
+		{
+			// One line for the entity, on the first attempt only — the same shape as
+			// the missing-model line below, because it is the same failure from the
+			// player's point of view: nothing spawns.
+			if (modelAttempts == 1)
+			{
+				log.warn("{}: npcAppearanceId {} would not resolve to an appearance — not spawning; "
+						+ "a cold cache is one cause and a renumbered NPC id is the other, so it will be "
+						+ "retried up to {} time(s) per scene load. Run ./gradlew auditCacheIds to tell "
+						+ "them apart.",
+					definition.label(), npcId, MAX_MODEL_ATTEMPTS);
+			}
+			else
+			{
+				log.debug("{}: npcAppearanceId {} still not resolving (attempt {} of {})",
+					definition.label(), npcId, modelAttempts, MAX_MODEL_ATTEMPTS);
+			}
+			return null;
+		}
+
+		appearance = resolved;
+		log.debug("{}: dressed from NPC {} ('{}') — {} model(s), {} recolour pair(s)",
+			definition.label(), npcId, resolved.getNpcName(),
+			resolved.getModelIds().length, resolved.getRecolorFind().length);
+		return resolved.getModelIds();
+	}
+
+	/**
 	 * Merges, recolours, transforms and lights a complete set of parts.
 	 *
 	 * @return the lit model, or {@code null} for a structural failure — the
@@ -850,8 +941,13 @@ final class LivelyEntity
 			return null;
 		}
 
-		short[] find = definition.getRecolorFind();
-		short[] replace = definition.getRecolorReplace();
+		// The NPC's palette when the entity is wearing one, the record's otherwise.
+		// The pair has to come from the same place the models did: a find/replace list
+		// authored against one model's colours repaints nothing on another's, and
+		// would silently leave the citizen in the NPC's own default colours while
+		// looking like a recolour that worked.
+		short[] find = appearance != null ? appearance.getRecolorFind() : definition.getRecolorFind();
+		short[] replace = appearance != null ? appearance.getRecolorReplace() : definition.getRecolorReplace();
 		if (find.length > 0)
 		{
 			// ModelData.recolor's own javadoc says to call cloneColors() first.
