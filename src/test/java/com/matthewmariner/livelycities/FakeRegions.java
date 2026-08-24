@@ -73,6 +73,134 @@ final class FakeRegions extends RegionDataLoader
 	}
 
 	/**
+	 * One citizen carrying a recolour palette, which is what makes it seed
+	 * {@link CitizenEcho} echoes.
+	 *
+	 * <p>Needed rather than an extra argument on {@link #citizen}, because "a citizen
+	 * that seeds echoes" and "a citizen that seeds none" are two fixtures the crowd
+	 * tests need side by side: 49 of the 129 shipped citizens have too little palette
+	 * to re-deal, so a fixture where everybody seeds echoes could not tell "the dial
+	 * added the derived citizens" from "the dial doubled everything".
+	 *
+	 * <p>{@code pairs} is what decides how many echoes it seeds, and the numbers here
+	 * are chosen so the relationship is visible in the fixture rather than buried:
+	 * {@code find} is {@code 1..pairs} and {@code replace} is
+	 * {@code 101..100+pairs}, all distinct, so every rotation of the palette is a
+	 * distinct re-deal and the citizen seeds {@code min(pairs - 1,
+	 * CitizenEcho.MAX_ECHOES_PER_CITIZEN)} echoes. Two pairs therefore seeds one echo
+	 * and three or more seeds two.
+	 */
+	EntityDefinition recoloured(int fileRegionId, int x, int y, int pairs)
+	{
+		EntityRecord record = new EntityRecord();
+		record.entityType = "StationaryCitizen";
+		record.name = "Recoloured citizen " + (++uuids);
+		record.uuid = String.format("00000000-0000-4000-8000-%012d", uuids);
+		record.examineText = "A citizen with a wardrobe.";
+		record.worldLocation = point(x, y, 0);
+		record.modelIds = new int[]{100};
+
+		record.modelRecolorFind = new int[pairs];
+		record.modelRecolorReplace = new int[pairs];
+		for (int i = 0; i < pairs; i++)
+		{
+			record.modelRecolorFind[i] = i + 1;
+			record.modelRecolorReplace[i] = 101 + i;
+		}
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, fileRegionId);
+		assertNotNull("the fake built an unusable recoloured citizen", definition);
+		return definition;
+	}
+
+	/**
+	 * One citizen that both carries a recolour palette and has something to say.
+	 *
+	 * <p><b>This fixture exists because of a mutation test.</b> Making
+	 * {@code EntityDefinition.echoOf} hand an echo its source's {@code remarks} array
+	 * instead of the empty one left the whole suite green: {@link #recoloured} has
+	 * nothing to say and {@link #talker} has no palette, so no source in any fixture
+	 * had both, and "an echo never speaks" was a claim no test could tell from a
+	 * fixture coincidence. 33 of the 129 shipped citizens have both.
+	 */
+	EntityDefinition recolouredTalker(int fileRegionId, int x, int y, int pairs, String... remarks)
+	{
+		EntityRecord record = new EntityRecord();
+		record.entityType = "StationaryCitizen";
+		record.name = "Recoloured talker " + (++uuids);
+		record.uuid = String.format("00000000-0000-4000-8000-%012d", uuids);
+		record.examineText = "A citizen with a wardrobe and an opinion.";
+		record.remarks = remarks;
+		record.worldLocation = point(x, y, 0);
+		record.modelIds = new int[]{100};
+
+		record.modelRecolorFind = new int[pairs];
+		record.modelRecolorReplace = new int[pairs];
+		for (int i = 0; i < pairs; i++)
+		{
+			record.modelRecolorFind[i] = i + 1;
+			record.modelRecolorReplace[i] = 101 + i;
+		}
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, fileRegionId);
+		assertNotNull("the fake built an unusable recoloured talker", definition);
+		assertNotNull("the fixture is pointless if the remarks were dropped", definition.getRemarks());
+		return definition;
+	}
+
+	/**
+	 * A row of {@link #recoloured} citizens on consecutive tiles, spaced so their
+	 * echoes have somewhere to go.
+	 *
+	 * <p>Three tiles apart rather than adjacent: an echo stands
+	 * {@link CitizenEcho#MIN_SEPARATION_TILES} from its source, so a shoulder-to-
+	 * shoulder row would put every echo on top of the next citizen and the fixture
+	 * would be testing tile collisions instead of the crowd dial.
+	 */
+	List<EntityDefinition> recolouredCrowd(int fileRegionId, int x, int y, int count, int pairs)
+	{
+		List<EntityDefinition> out = new ArrayList<>(count);
+		for (int i = 0; i < count; i++)
+		{
+			out.add(recoloured(fileRegionId, x + (i % 4) * 3, y + (i / 4) * 3, pairs));
+		}
+		return out;
+	}
+
+	/**
+	 * One wandering citizen carrying a recolour palette, so it seeds echoes that
+	 * stand on the authored ground of its own box.
+	 */
+	EntityDefinition recolouredWanderer(
+		int fileRegionId, WorldPoint base, WorldPoint bl, WorldPoint tr, int pairs)
+	{
+		EntityRecord record = new EntityRecord();
+		record.entityType = "WanderingCitizen";
+		record.name = "Recoloured wanderer " + (++uuids);
+		record.uuid = String.format("00000000-0000-4000-8000-%012d", uuids);
+		record.worldLocation = point(base.getX(), base.getY(), base.getPlane());
+		record.wanderBoxBL = point(bl.getX(), bl.getY(), bl.getPlane());
+		record.wanderBoxTR = point(tr.getX(), tr.getY(), tr.getPlane());
+		record.baseOrientation = 512;
+		record.idleAnimation = "HumanIdle";
+		record.moveAnimation = "HumanWalk";
+		record.modelIds = new int[]{100};
+
+		record.modelRecolorFind = new int[pairs];
+		record.modelRecolorReplace = new int[pairs];
+		for (int i = 0; i < pairs; i++)
+		{
+			record.modelRecolorFind[i] = i + 1;
+			record.modelRecolorReplace[i] = 101 + i;
+		}
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, fileRegionId);
+		assertNotNull("the fake built an unusable recoloured wanderer", definition);
+		assertNotNull("the fake's wanderer lost its box in validation", definition.getWanderBox());
+		return definition;
+	}
+
+	/**
 	 * One citizen that stands still but has an idle animation.
 	 *
 	 * <p>Needed rather than convenient: a wanderer's animation gets re-selected by

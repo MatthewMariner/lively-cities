@@ -58,6 +58,27 @@ public final class EntityDefinition
 	private final LivelyAnimation moveAnimation;
 	private final WanderBox wanderBox;
 
+	/**
+	 * The uuid of the authored citizen this one was derived from, or {@code null}
+	 * for an authored entity — which is what {@link #isEcho()} reads.
+	 *
+	 * <p>Kept rather than merely used once, because "which citizen is this a copy
+	 * of?" is the question a log line and a test both want to ask, and rederiving
+	 * it is impossible: the derivation is one-way (see {@link CitizenEcho}).
+	 */
+	@Nullable
+	private final UUID echoSourceUuid;
+
+	/**
+	 * For an echo only: whether its tile came from inside its source's authored
+	 * wander box, i.e. from ground a human already decided a citizen could pace.
+	 *
+	 * <p>This is the fallback signal {@link CitizenEcho} falls back <i>to</i> when
+	 * the live collision map has no answer. Always {@code false} for an authored
+	 * entity, which never consults either.
+	 */
+	private final boolean echoOnAuthoredGround;
+
 	private EntityDefinition(
 		UUID uuid,
 		int regionId,
@@ -76,8 +97,12 @@ public final class EntityDefinition
 		List<MergedObject> mergedObjects,
 		@Nullable LivelyAnimation idleAnimation,
 		@Nullable LivelyAnimation moveAnimation,
-		@Nullable WanderBox wanderBox)
+		@Nullable WanderBox wanderBox,
+		@Nullable UUID echoSourceUuid,
+		boolean echoOnAuthoredGround)
 	{
+		this.echoSourceUuid = echoSourceUuid;
+		this.echoOnAuthoredGround = echoOnAuthoredGround;
 		this.uuid = uuid;
 		this.regionId = regionId;
 		this.tileRegionId = tileRegionId;
@@ -194,7 +219,77 @@ public final class EntityDefinition
 			mergedObjects(record.mergedObjects, label),
 			idle,
 			move,
-			wanderBox(record, type, location, label));
+			wanderBox(record, type, location, label),
+			null,
+			false);
+	}
+
+	/**
+	 * Builds one procedurally-derived citizen — an "echo" — from an authored one.
+	 *
+	 * <p>Every decision behind the arguments is {@link CitizenEcho}'s; this method
+	 * only assembles them, so that the one place that may construct an
+	 * {@link EntityDefinition} stays this class. What it does add is the two things
+	 * that are properties of <i>being</i> a definition rather than of being an echo:
+	 * the tile's own region id (recomputed, because an echo can stand a few tiles
+	 * over a region border exactly like the shipped "Dark wizard" does), and the
+	 * {@link EntityType#StationaryCitizen} type.
+	 *
+	 * <p><b>The type is forced rather than inherited</b>, and that is the whole of
+	 * "echoes do not wander": {@link CitizenWalk#forDefinition} needs a
+	 * {@link WanderBox}, {@code wanderBox} is always {@code null} here, and a
+	 * {@code WanderingCitizen} that stands still would be a lie in every log line.
+	 *
+	 * <p>What is inherited is the body: model ids, merged objects, scale, translate
+	 * and the idle animation. What is not: the name, the examine text, the remarks
+	 * (an echo is silent — see {@link CitizenEcho}), the move animation (nothing
+	 * moves), and the recolour, which is the source's own palette re-dealt.
+	 *
+	 * @param source               the authored citizen this is derived from
+	 * @param uuid                 the echo's own uuid, derived from the source's
+	 * @param tile                 the echo's tile, already at least
+	 *                             {@link CitizenEcho#MIN_SEPARATION_TILES} from the
+	 *                             source and from its siblings
+	 * @param orientation          already inside 0..2047
+	 * @param recolorFind          the source's find array, as-is
+	 * @param recolorReplace       the source's replace array, re-dealt
+	 * @param name                 an honestly generic name — never the source's
+	 * @param examineText          truthful about what this is — never the source's
+	 * @param onAuthoredGround     whether {@code tile} came from inside the source's
+	 *                             authored wander box
+	 */
+	static EntityDefinition echoOf(
+		EntityDefinition source,
+		UUID uuid,
+		WorldPoint tile,
+		int orientation,
+		short[] recolorFind,
+		short[] recolorReplace,
+		String name,
+		String examineText,
+		boolean onAuthoredGround)
+	{
+		return new EntityDefinition(
+			uuid,
+			source.regionId,
+			RenderPolicy.regionIdOf(tile.getX(), tile.getY()),
+			EntityType.StationaryCitizen,
+			name,
+			examineText,
+			NO_REMARKS,
+			tile,
+			orientation,
+			source.modelIds,
+			recolorFind,
+			recolorReplace,
+			source.scale == null ? null : source.scale.clone(),
+			source.translate == null ? null : source.translate.clone(),
+			source.mergedObjects,
+			source.idleAnimation,
+			null,
+			null,
+			source.uuid,
+			onAuthoredGround);
 	}
 
 	/**
@@ -657,6 +752,43 @@ public final class EntityDefinition
 	}
 
 	/**
+	 * @return true if this citizen was derived from an authored one by
+	 * {@link CitizenEcho} rather than read out of a region file.
+	 *
+	 * <p>Read in three places, and each is a rule rather than a nicety:
+	 * {@link CrowdDensity#includesEchoes()} decides whether it may be shown at all,
+	 * {@link StandableGround} has to be satisfied about its tile before it spawns,
+	 * and the crowd cap sorts authored citizens ahead of echoes so a procedural one
+	 * can never displace an authored one.
+	 */
+	public boolean isEcho()
+	{
+		return echoSourceUuid != null;
+	}
+
+	/**
+	 * @return the uuid of the authored citizen this echo was derived from, or
+	 * {@code null} if this is an authored entity. Its own {@link #getUuid()} is
+	 * different, deliberately and permanently: {@link CitizenOverrides} hides and
+	 * mutes by uuid, so hiding a source must not hide its echo.
+	 */
+	@Nullable
+	public UUID getEchoSourceUuid()
+	{
+		return echoSourceUuid;
+	}
+
+	/**
+	 * @return for an echo, whether its tile came from inside its source's authored
+	 * wander box. Only consulted when the live collision map has no answer — see
+	 * {@link StandableGround}.
+	 */
+	public boolean isEchoOnAuthoredGround()
+	{
+		return echoOnAuthoredGround;
+	}
+
+	/**
 	 * A stable 64-bit hash of this entity's identity.
 	 *
 	 * <p>Derived from the record's uuid and nothing else, so it is the same value
@@ -675,7 +807,34 @@ public final class EntityDefinition
 	 */
 	public long stableHash()
 	{
-		long bits = uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits();
+		return stableHashOf(uuid);
+	}
+
+	/**
+	 * {@link #stableHash()} for a uuid that has no definition yet.
+	 *
+	 * <p>Needed because {@link CitizenEcho} has to hash an echo's uuid <i>while
+	 * deciding</i> what that echo looks like, which is before there is an
+	 * {@link EntityDefinition} to ask. Delegating rather than copying the
+	 * arithmetic is the point: a second written-out copy of the mixer is a second
+	 * thing to keep in step with a value that is baked into saved settings.
+	 */
+	static long stableHashOf(UUID uuid)
+	{
+		return mix(uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits());
+	}
+
+	/**
+	 * The bit mixer behind {@link #stableHash()}: MurmurHash3's 64-bit finaliser,
+	 * written out so the value can never change underneath a saved setting.
+	 *
+	 * <p>Also what derives an echo's uuid from its source's — see
+	 * {@link CitizenEcho}. One mixer, one place, so "the same echoes appear every
+	 * session" and "the same citizens survive thinning every session" are the same
+	 * guarantee rather than two implementations of it.
+	 */
+	static long mix(long bits)
+	{
 		bits ^= bits >>> 33;
 		bits *= 0xff51afd7ed558ccdL;
 		bits ^= bits >>> 33;

@@ -31,33 +31,72 @@ package com.matthewmariner.livelycities;
  * too. That falls out of comparing one bucket against a rising threshold rather
  * than hashing per level, and it means turning the dial up only ever adds people
  * — it never swaps one crowd for another.
+ *
+ * <p><b>{@link #CROWDED} is the one level that adds rather than subtracts</b>, and
+ * it is deliberately not a fourth percentage. Thinning can only ever remove
+ * authored citizens, so there is no percentage above 100 to ask for; going the
+ * other way needs citizens that are not in the dataset, which is
+ * {@link CitizenEcho}'s job. So {@link #getKeepPercent()} is 100 for both
+ * {@link #FULL} and {@link #CROWDED} — they keep the same authored roster, which is
+ * all of it — and the difference between them is the separate, boolean
+ * {@link #includesEchoes()}. Two questions, two accessors: "how much of the roster"
+ * and "and the derived ones as well?".
  */
 public enum CrowdDensity
 {
-	/** No thinning at all: the dial's "off" position. */
-	FULL("Full", 100),
+	/**
+	 * Everything {@link #FULL} shows, plus the procedurally-derived echoes —
+	 * roughly twice as many citizens. Opt-in, and the only level that shows an
+	 * entity the dataset does not contain.
+	 *
+	 * <p>Listed first so the dropdown reads densest-to-sparsest. It is a strict
+	 * superset of {@link #FULL} for the same reason every other level nests: the
+	 * authored roster is untouched and the echoes are added on top, so turning the
+	 * dial up here cannot make an authored citizen disappear.
+	 */
+	CROWDED("Crowded", 100, true),
+
+	/** No thinning at all, and no additions: the dial's "off" position. */
+	FULL("Full", 100, false),
 
 	/** Roughly two thirds of the roster. */
-	NORMAL("Normal", 66),
+	NORMAL("Normal", 66, false),
 
 	/** Roughly a third of the roster. */
-	SPARSE("Sparse", 33);
+	SPARSE("Sparse", 33, false);
 
 	/** Buckets the hash is spread over; the percentage is a count of buckets. */
 	private static final int BUCKETS = 100;
 
 	private final String label;
 	private final int keepPercent;
+	private final boolean echoes;
 
-	CrowdDensity(String label, int keepPercent)
+	CrowdDensity(String label, int keepPercent, boolean echoes)
 	{
 		this.label = label;
 		this.keepPercent = keepPercent;
+		this.echoes = echoes;
 	}
 
+	/**
+	 * @return what share of the <b>authored</b> roster this level keeps. Never above
+	 * 100 — see the class javadoc for why the extra citizens are not expressed here.
+	 */
 	public int getKeepPercent()
 	{
 		return keepPercent;
+	}
+
+	/**
+	 * @return whether this level also shows {@link CitizenEcho}'s derived citizens.
+	 * True for {@link #CROWDED} and nothing else, which is what makes the feature
+	 * purely additive and purely opt-in: {@link #FULL} still yields exactly the
+	 * authored set and nothing more.
+	 */
+	public boolean includesEchoes()
+	{
+		return echoes;
 	}
 
 	/**

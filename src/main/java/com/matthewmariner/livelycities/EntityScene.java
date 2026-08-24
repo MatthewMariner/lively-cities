@@ -54,6 +54,20 @@ import net.runelite.api.coords.WorldPoint;
  * and coming back then costs an activate rather than a model rebuild. They are
  * not kept forever — see {@link #EVICTION_GRACE_SCOPE_CHANGES}.
  *
+ * <p><b>Echoes live in {@link #built} beside the citizens they came from.</b>
+ * {@link #ensureBuilt} asks {@link CitizenEcho} for a region's derived citizens as
+ * it wraps the authored ones, whatever the density dial currently says, and
+ * {@link #allowedByConfig} is what refuses them anywhere but
+ * {@link CrowdDensity#CROWDED}. Building them unconditionally is what makes
+ * "{@code CROWDED} inherits every constraint" a structural fact rather than a
+ * checklist: an echo enters and leaves scope, is evicted, is deactivated on a
+ * scene change and is torn down by exactly the code above, because there is no
+ * separate collection for it to be missing from. The two places that <i>do</i>
+ * treat it differently are both in {@link #updateVisibility}: its tile has to
+ * satisfy {@link StandableGround} before it may spawn, and it sorts behind every
+ * authored entity so the object cap can never spend an authored citizen's slot on
+ * a derived one.
+ *
  * <p><b>Two clocks.</b> {@link #onGameTick} is the per-game-tick pass: sync the
  * scope, decide who is visible, step the wanderers one tile.
  * {@link #onFrame} is the per-frame pass, and it does exactly one thing —
@@ -408,6 +422,7 @@ class EntityScene
 
 		List<LivelyEntity> candidates = new ArrayList<>();
 		int offByConfig = 0;
+		int onUnusableGround = 0;
 		for (LivelyEntity entity : inScope)
 		{
 			entity.setWanted(false);
@@ -426,14 +441,36 @@ class EntityScene
 			}
 			if (RenderPolicy.isCandidate(playerLocation, viewPlane, entity.getDefinition(), cullRadius))
 			{
+				// The placement gate, and it is deliberately here rather than in
+				// allowedByConfig: it reads the live collision map, so it is the one
+				// check that costs a scene lookup, and this is the first point at
+				// which we know the entity is close enough for the answer to matter.
+				// It is a no-op for every authored entity — a human put those there.
+				if (!CitizenEcho.isPlaceable(worldView, entity.getDefinition()))
+				{
+					onUnusableGround++;
+					continue;
+				}
 				candidates.add(entity);
 			}
 		}
 
-		// Nearest first, so the cap sheds the far edge of the crowd rather than
-		// whatever the region files happened to list last.
-		candidates.sort(Comparator.comparingInt(
-			e -> RenderPolicy.tileDistance(playerLocation, e.getDefinition().getWorldLocation())));
+		// Authored citizens first, then nearest first inside each group.
+		//
+		// The distance half is the original rule: the cap sheds the far edge of the
+		// crowd rather than whatever the region files happened to list last. The
+		// authored/echo half is what makes CROWDED safe to hit the cap with — and it
+		// will hit it, because the densest neighbourhood in the shipped data already
+		// holds 76 authored entities at the widest render distance against a cap of
+		// 80. Sorting every authored entity ahead of every echo means the cap is
+		// spent on echoes and only then on authored citizens, so turning the dial up
+		// can never take away somebody a human placed. A single distance comparator
+		// would let an echo two tiles away displace an authored citizen ten tiles
+		// away, which is exactly the trade nobody asked for.
+		candidates.sort(Comparator
+			.comparingInt((LivelyEntity e) -> e.getDefinition().isEcho() ? 1 : 0)
+			.thenComparingInt(
+				e -> RenderPolicy.tileDistance(playerLocation, e.getDefinition().getWorldLocation())));
 
 		int deferred = 0;
 		int planned = 0;
@@ -525,18 +562,22 @@ class EntityScene
 				// the dataset covers", and that is otherwise unanswerable from
 				// a log.
 				String summary = "Lively Cities: player at {} (region {}) — regions {}, "
-					+ "{} definitions in scope, {} active, {} walking, "
+					+ "{} definitions in scope ({} of them echoes), {} active ({} echoes), {} walking, "
 					+ "{} switched off by the city/density settings, "
+					+ "{} echo(es) skipped because the collision map refused their tile, "
 					+ "{} beyond the {}-tile cull or off-plane, {} deferred by the {}-object cap, {} unbuildable";
 				Object[] args = {
 					playerLocation,
 					RenderPolicy.regionIdOf(playerLocation.getX(), playerLocation.getY()),
 					scopeRegions,
 					inScope.size(),
+					getEchoInScopeCount(),
 					countActive(),
+					countActiveEchoes(),
 					walkers.size(),
 					offByConfig,
-					inScope.size() - candidates.size() - offByConfig,
+					onUnusableGround,
+					inScope.size() - candidates.size() - offByConfig - onUnusableGround,
 					cullRadius,
 					deferred,
 					RenderPolicy.MAX_ACTIVE_OBJECTS,
@@ -678,6 +719,30 @@ class EntityScene
 		return n;
 	}
 
+	/**
+	 * {@link #countActive()}, restricted to one side of the authored/derived line.
+	 *
+	 * <p>Walks {@link #built} rather than {@link #inScope} for the same reason
+	 * {@link #countActive()} does: an entity active but out of scope is the leak
+	 * these counts exist to catch, and a counter that could not see it would be
+	 * green for the wrong reason.
+	 */
+	private int countActive(boolean echoes)
+	{
+		int n = 0;
+		for (List<LivelyEntity> entities : built.values())
+		{
+			for (LivelyEntity entity : entities)
+			{
+				if (entity.isActive() && entity.getDefinition().isEcho() == echoes)
+				{
+					n++;
+				}
+			}
+		}
+		return n;
+	}
+
 	int countBroken()
 	{
 		int n = 0;
@@ -694,6 +759,41 @@ class EntityScene
 	int getInScopeCount()
 	{
 		return inScope.size();
+	}
+
+	/**
+	 * @return how many of the wrappers in scope are {@link CitizenEcho}-derived.
+	 * Echoes are built alongside their sources whatever the density dial says (see
+	 * {@link #ensureBuilt}), so this is non-zero at every level — what changes with
+	 * the dial is {@link #countActiveEchoes()}.
+	 */
+	int getEchoInScopeCount()
+	{
+		int n = 0;
+		for (LivelyEntity entity : inScope)
+		{
+			if (entity.getDefinition().isEcho())
+			{
+				n++;
+			}
+		}
+		return n;
+	}
+
+	/**
+	 * @return how many <i>echoes</i> the client currently has registered. Asks the
+	 * client, like {@link #countActive()}, so "FULL shows no echoes" is evidence
+	 * rather than bookkeeping.
+	 */
+	int countActiveEchoes()
+	{
+		return countActive(true);
+	}
+
+	/** @return how many <i>authored</i> entities the client currently has registered. */
+	int countActiveAuthored()
+	{
+		return countActive(false);
 	}
 
 	/**
@@ -731,6 +831,31 @@ class EntityScene
 	}
 
 	/**
+	 * The wrapper for a uuid, or {@code null}.
+	 *
+	 * <p>{@link #wrapperFor(EntityDefinition)} compares by identity, which is right
+	 * for an authored definition — the loader hands out the same object every time —
+	 * and useless for an echo, which {@link #ensureBuilt} rederives on every region
+	 * build. The uuid is the thing that survives that, which is exactly why
+	 * {@link CitizenEcho} derives one.
+	 */
+	@Nullable
+	LivelyEntity wrapperForUuid(UUID uuid)
+	{
+		for (List<LivelyEntity> entities : built.values())
+		{
+			for (LivelyEntity entity : entities)
+			{
+				if (uuid.equals(entity.getDefinition().getUuid()))
+				{
+					return entity;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Whether the config lets this entity be shown at all.
 	 *
 	 * <p>Both questions are asked of the entity's <b>tile</b> region and its own
@@ -745,7 +870,21 @@ class EntityScene
 	{
 		// Hidden first, and cheapest: it is a hash lookup, and it is the only one of
 		// the three the user chose for this specific citizen. Upstream issue #40.
+		//
+		// Asked of the entity's OWN uuid, which for an echo is not its source's — so
+		// hiding a citizen hides that citizen and not the stranger derived from it,
+		// and each is independently hideable. That is the whole reason CitizenEcho
+		// derives a uuid instead of borrowing one.
 		if (hiddenUuids.contains(definition.getUuid()))
+		{
+			return false;
+		}
+
+		// The opt-in. An echo is only ever wanted at CROWDED, so FULL yields exactly
+		// the authored set — and turning the dial back down despawns the echoes on
+		// the click, through the same "what is not wanted is despawned" rule the city
+		// checkboxes use.
+		if (definition.isEcho() && !density.includesEchoes())
 		{
 			return false;
 		}
@@ -841,11 +980,32 @@ class EntityScene
 		}
 
 		List<LivelyEntity> entities = new ArrayList<>(region.getEntityCount());
+		int echoes = 0;
 		for (EntityDefinition definition : region.getEntities())
 		{
 			entities.add(new LivelyEntity(client, definition));
+
+			// Echoes are built whatever the density dial says, and gated in
+			// allowedByConfig instead. That is not laziness: it means an echo enters
+			// and leaves scope, is evicted, is torn down, and is despawned by exactly
+			// the same code as an authored citizen, so "CROWDED inherits every
+			// constraint" is structural rather than a list of places to remember. The
+			// cost of an unwanted echo is one wrapper with no model — LivelyEntity
+			// builds the model on its first spawn — so a FULL user pays a few hundred
+			// bytes per region in scope and nothing else.
+			for (EntityDefinition echo : CitizenEcho.echoesOf(definition))
+			{
+				entities.add(new LivelyEntity(client, echo));
+				echoes++;
+			}
 		}
 		built.put(regionId, entities);
+
+		if (echoes > 0)
+		{
+			log.debug("region {}: {} authored entity(ies) seeded {} echo(es) for the Crowded density",
+				regionId, region.getEntityCount(), echoes);
+		}
 	}
 
 	/**

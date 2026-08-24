@@ -165,6 +165,79 @@ public class PlacementLintTest
 	}
 
 	/**
+	 * An echo is judged by the same lint as the citizen it came from, and passes it
+	 * for the same reason.
+	 *
+	 * <p>{@link EntityTheme} is keyed on uuid and an echo's uuid is its own, so an
+	 * echo is {@link Theme#GENERIC} to the table — and {@code GENERIC} is compatible
+	 * with everywhere. That would be a hole if an echo could carry its source's
+	 * <i>identity</i>: a second "Ali" in Varrock would be a desert transplant the lint
+	 * could not see. It cannot, and this is the test that says why it cannot: an echo
+	 * has no name and no examine text of its source's, so it is a plain Gielinor
+	 * passer-by — which needs no regional justification, exactly like the 96 shipped
+	 * citizens the table does not list.
+	 *
+	 * <p>What still has to hold is geography. An echo stands within
+	 * {@link RenderPolicy#DATASET_OVERHANG_ALLOWANCE} tiles of its source and is filed
+	 * under the same region file, so it is judged against the same city's theme — it
+	 * cannot wander into a region with a different flavour, because it cannot wander
+	 * at all.
+	 */
+	@Test
+	public void everyEchoIsJudgedAgainstItsSourcesOwnRegionAndPassesAsAGenericPasserBy()
+	{
+		RegionDataLoader loader = new RegionDataLoader(TestGson.injected());
+		List<String> violations = new ArrayList<>();
+		int echoes = 0;
+
+		for (int regionId : ShippedRegions.ids())
+		{
+			RegionDefinition region = loader.loadRegion(regionId);
+			assertTrue("region " + regionId + " failed to load", region != null);
+
+			Theme regionTheme = CityTheme.of(City.of(regionId));
+
+			for (EntityDefinition source : region.getEntities())
+			{
+				for (EntityDefinition echo : CitizenEcho.echoesOf(source))
+				{
+					echoes++;
+
+					Theme echoTheme = EntityTheme.themeOf(echo.getUuid().toString());
+					if (echoTheme != Theme.GENERIC)
+					{
+						violations.add(echo.label() + " carries " + echoTheme
+							+ " — an echo has no authored identity to carry a theme with");
+					}
+
+					if (!PlacementCompatibility.isCompatible(echoTheme, regionTheme))
+					{
+						violations.add(echo.label() + ": " + echoTheme + " echo in a "
+							+ regionTheme + " region (" + cityLabel(City.of(regionId)) + ")");
+					}
+
+					if (echo.getRegionId() != regionId)
+					{
+						violations.add(echo.label() + " left the file its source was filed under");
+					}
+
+					if (RenderPolicy.tileDistance(
+						source.getWorldLocation(), echo.getWorldLocation())
+						> RenderPolicy.DATASET_OVERHANG_ALLOWANCE)
+					{
+						violations.add(echo.label() + " stands further from its source than the "
+							+ "overhang allowance, so it could be judged against another city");
+					}
+				}
+			}
+		}
+
+		assertTrue("the dataset has to actually produce echoes for this to mean anything",
+			echoes > 0);
+		assertTrue("echo placement violation(s): " + violations, violations.isEmpty());
+	}
+
+	/**
 	 * A human-readable summary of every non-generic themed citizen and its
 	 * status, printed for review. Backed by a real assertion — cross-checked
 	 * against an independently-computed count — so the printout cannot drift

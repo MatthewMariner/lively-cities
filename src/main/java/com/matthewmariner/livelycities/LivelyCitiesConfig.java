@@ -113,7 +113,12 @@ public interface LivelyCitiesConfig extends Config
 		keyName = "crowdDensity",
 		name = "Crowd density",
 		description = "Thins the roster proportionally. The same people are always the ones kept, "
-			+ "so a street looks the same every time you walk down it.",
+			+ "so a street looks the same every time you walk down it. "
+			+ "\"Crowded\" goes the other way and roughly doubles the crowd: every hand-placed "
+			+ "citizen stays, and extra ones are derived from them — differently dressed, "
+			+ "generically named, silent, and only ever on ground the game's own collision map "
+			+ "says a person could stand on. They are always the same extra people, and hiding "
+			+ "one does not hide the citizen it came from.",
 		position = 2
 	)
 	default CrowdDensity crowdDensity()

@@ -63,6 +63,53 @@ public class CrowdDensityTest
 	}
 
 	/**
+	 * {@link CrowdDensity#CROWDED} keeps the whole authored roster too, and is the
+	 * only level that admits {@link CitizenEcho}'s derived citizens.
+	 *
+	 * <p>Both halves matter and they are different claims. "Keeps everyone" is what
+	 * makes the level purely additive: it is {@link CrowdDensity#FULL} plus something,
+	 * never a different crowd. "Only one" is what makes the feature opt-in — a second
+	 * level that admitted echoes would mean a user who had chosen SPARSE for a quieter
+	 * city could be handed extra people.
+	 */
+	@Test
+	public void crowdedKeepsEveryoneAndIsTheOnlyLevelThatAdmitsEchoes()
+	{
+		assertTrue(CrowdDensity.CROWDED.keeps(0L));
+		assertTrue(CrowdDensity.CROWDED.keeps(99L));
+		assertTrue(CrowdDensity.CROWDED.keeps(-1L));
+		assertTrue(CrowdDensity.CROWDED.keeps(Long.MIN_VALUE));
+		assertTrue(CrowdDensity.CROWDED.keeps(Long.MAX_VALUE));
+		assertEquals("the thinning percentage is 100 — the extra people are not a percentage",
+			100, CrowdDensity.CROWDED.getKeepPercent());
+
+		assertTrue(CrowdDensity.CROWDED.includesEchoes());
+		for (CrowdDensity density : CrowdDensity.values())
+		{
+			if (density != CrowdDensity.CROWDED)
+			{
+				assertFalse(density + " must not admit derived citizens", density.includesEchoes());
+			}
+		}
+	}
+
+	/**
+	 * The default is unchanged, and that is the opt-in.
+	 *
+	 * <p>A new level at the top of the enum is one {@code @ConfigItem} default away
+	 * from being on for everybody who has never touched the dial — including the
+	 * users who never asked for extra citizens. RuneLite serialises an enum config
+	 * value by name, so a profile with no {@code crowdDensity} key falls through to
+	 * this method.
+	 */
+	@Test
+	public void theDefaultIsStillFullSoTheExtraCitizensAreOptIn()
+	{
+		assertEquals(CrowdDensity.FULL, new FakeConfig().crowdDensity());
+		assertFalse(new FakeConfig().crowdDensity().includesEchoes());
+	}
+
+	/**
 	 * Turning the dial up must only ever add people. It falls out of comparing one
 	 * bucket against a rising threshold — but a version that hashed the uuid
 	 * together with the level would pass a proportion test and swap the whole
@@ -76,10 +123,13 @@ public class CrowdDensityTest
 		Set<UUID> sparse = kept(CrowdDensity.SPARSE, uuids);
 		Set<UUID> normal = kept(CrowdDensity.NORMAL, uuids);
 		Set<UUID> full = kept(CrowdDensity.FULL, uuids);
+		Set<UUID> crowded = kept(CrowdDensity.CROWDED, uuids);
 
 		assertTrue("everyone sparse keeps, normal keeps too", normal.containsAll(sparse));
 		assertTrue("and everyone normal keeps, full keeps too", full.containsAll(normal));
+		assertTrue("and everyone full keeps, crowded keeps too", crowded.containsAll(full));
 		assertEquals(uuids.size(), full.size());
+		assertEquals("crowded adds people, it never swaps them", uuids.size(), crowded.size());
 		assertTrue("the levels have to actually differ", sparse.size() < normal.size());
 	}
 
@@ -183,9 +233,14 @@ public class CrowdDensityTest
 	@Test
 	public void theLabelsAreWhatTheConfigPanelWillShow()
 	{
+		assertEquals("Crowded", CrowdDensity.CROWDED.toString());
 		assertEquals("Full", CrowdDensity.FULL.toString());
 		assertEquals("Normal", CrowdDensity.NORMAL.toString());
 		assertEquals("Sparse", CrowdDensity.SPARSE.toString());
+
+		// Declaration order is dropdown order, densest first.
+		assertEquals(0, CrowdDensity.CROWDED.ordinal());
+		assertEquals(CrowdDensity.values().length - 1, CrowdDensity.SPARSE.ordinal());
 	}
 
 	private static Set<UUID> kept(CrowdDensity density, List<UUID> uuids)
