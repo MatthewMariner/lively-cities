@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Is it a known limitation?
+    url: https://github.com/MatthewMariner/lively-cities#known-limitations
+    about: Pop-in past ~16 tiles, missing boots on Rufus, steppy animation without RuneLite's Animation Smoothing plugin, and the thin dataset are all documented.

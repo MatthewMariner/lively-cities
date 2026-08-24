@@ -1,0 +1,27 @@
+name: Someone is in the wrong place
+description: A citizen who doesn't belong where they're standing
+labels: ["placement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This gets its own template because it is the single most common complaint about this
+        kind of plugin, and the most useful to fix. The predecessor was criticised for Barrows
+        Brothers wandering above their own crypts and a Karamja NPC standing in Varrock square.
+        There is an automated lint for this now, but it can only catch what it has been told to
+        look for — a human noticing is still the best detector.
+  - type: input
+    id: who
+    attributes:
+      label: Who, and where?
+      description: Their name from Examine, and where they are.
+      placeholder: "\"Ak-Haranu\" standing in Varrock square"
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why do they not belong?
+      placeholder: They look like a desert trader and there is nothing desert about Varrock.
+    validations:
+      required: true

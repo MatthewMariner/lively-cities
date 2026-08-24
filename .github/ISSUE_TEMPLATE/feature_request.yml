@@ -1,0 +1,36 @@
+name: Feature request
+description: An idea for the plugin
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Worth knowing before you write: this plugin is **cosmetic and local**. It cannot send
+        anything to the server, generate input, or interact with real NPCs, objects or tiles —
+        those are Jagex and Plugin Hub rules, not preferences. Ideas that need any of those
+        can't be built here however good they are.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What makes the game better about it?
+      description: The bar is "does a city feel more alive". Ambience beats mechanics here.
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Roughly what kind of thing is it?
+      options:
+        - More citizens in a place that feels empty
+        - New behaviour for existing citizens
+        - A new setting or control
+        - Something about how they look
+        - Other
+    validations:
+      required: true

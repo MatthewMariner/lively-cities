@@ -1,7 +1,177 @@
-# Lively Cities
-Cosmetic townsfolk and scenery that make cities feel lived-in
+<div align="center">
 
-## After an OSRS update: checking the dataset still resolves
+# Lively Cities
+
+**Gielinor's cities are empty. This fills them.**
+
+Cosmetic townsfolk who stand, sit, work and wander through the streets of Old School
+RuneScape — client-side, purely visual, and gone the moment you switch it off.
+
+[![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
+[![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
+[![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-309-brightgreen)](#development)
+
+</div>
+
+> [!NOTE]
+> **Not yet on the Plugin Hub.** This is pre-release. To try it today you need to build it
+> yourself — see [Development](#development). Hub submission is the next milestone.
+
+<!-- SCREENSHOT: hero — Varrock square at Crowded density, mid-afternoon, no interface panels
+     open. Wide, 16:9, showing several citizens at different distances. Save as
+     docs/img/hero.png and replace this comment with:  ![Varrock square](docs/img/hero.png) -->
+
+---
+
+## What it does
+
+Varrock square has a handful of guards and a general store. Falador's streets are bare.
+Lumbridge is a castle with nobody in it. The world is beautifully built and almost entirely
+unpopulated, and once you notice it you cannot stop noticing it.
+
+Lively Cities adds **175 hand-placed figures** across **45 regions** — a fletching apprentice
+working at her bench, a drunken peasant near the tavern, sleepwalkers on a Morytania
+pilgrimage, a squirrel, a rat, someone cooking over a fire. Some stand, some sit, some walk a
+route. They talk occasionally. They are entirely local to your client: no packets, no server
+load, and **nothing another player can see**.
+
+| | |
+|---|---|
+| **175 entities** | 129 citizens + 46 pieces of scenery |
+| **63 wander**, 60 stand still, 6 follow a script | |
+| **24 places** | Varrock, Lumbridge, Falador, Al Kharid, Edgeville, Draynor, Ardougne, Catherby, Camelot, Taverley, Rimmington, Piscatoris, Canifis, the Barrows, and more |
+| **~272 at Crowded** | an optional density that roughly doubles the streets |
+
+<!-- SCREENSHOT: a close-up of two or three citizens with distinct appearances, ideally one
+     mid-walk. Save as docs/img/citizens.png and replace with:
+     ![Citizens](docs/img/citizens.png) -->
+
+---
+
+## Settings
+
+Everything is a dial, because the thing this plugin's predecessor got most complained about
+was having none.
+
+<!-- SCREENSHOT: the RuneLite config panel for Lively Cities, Cities section expanded so the
+     checkboxes are visible. Save as docs/img/config.png and replace with:
+     ![Settings](docs/img/config.png) -->
+
+**Crowd density** — `Sparse` · `Normal` · `Full` · `Crowded`. Thinning is deterministic: the
+same people are always the ones kept, so a street looks the same every time you walk down it
+rather than reshuffling every login. `Crowded` goes the other way and adds derived extras.
+
+**Render distance** — 5 to 30 tiles, default 25. This is the dial that actually changes what
+you see. Above about 16 tiles distant figures will sometimes pop in as the client recentres
+its scene; that is a limit of how much world the game keeps loaded, not a bug, and the setting
+says so.
+
+**Overhead text** — a hard off switch, plus how often anyone speaks and how long a line
+stays up. You can also mute one individual by right-clicking them.
+
+**24 city checkboxes** — turn any place off and its citizens vanish on the click, not on the
+next region crossing.
+
+---
+
+## It stays out of your way
+
+This is the part that matters more than the citizens, and it is deliberate.
+
+- **They never steal a click.** Every menu entry is deprioritised, so anything real sorts
+  above them. Hold an item or a spell on your cursor and citizens produce no clickbox at
+  all — you cannot misclick one while using an item on something.
+- **Fake is obvious.** Their right-click target is a colour the game never uses for a real
+  one, and Examine says outright what they are.
+- **Nothing reaches the server.** No packets, no input generation, no interaction with real
+  NPCs, objects or scene tiles. That is enforced structurally in the tests, not just
+  asserted: the test client throws on every real-action call, so any code path reaching for
+  one fails the build.
+- **Don't like someone?** Right-click → **Hide**. It persists. "Unhide all" brings them back.
+
+<!-- SCREENSHOT: right-click menu on a citizen showing Examine / Hide / Mute below the real
+     options, with the coloured target text visible. Save as docs/img/menu.png and replace
+     with:  ![Right-click menu](docs/img/menu.png) -->
+
+---
+
+## Credits, and why this exists
+
+Lively Cities is a successor to **[Citizens](https://github.com/gc/citizens)** by Magnaboy,
+skeldoor, jebscape and Diabolickal — BSD-2 licensed, and genuinely good. It reached ~7,700
+installs and a Jagex moderator publicly called the idea great.
+
+Then an August 2024 game update renumbered player-model cache ids. Its citizens broke
+visually, someone posted *"Who is this man? Why does he not have any legs?"*, the hub disabled
+it, and although a contributor fixed the ids fourteen months later the listing was never
+revived. The demand outlived the maintenance by well over a year.
+
+**This plugin ships their placement dataset**, under their licence and with their notice
+retained — that data is hundreds of hours of walking around Gielinor deciding where a person
+should stand, and throwing it away would have been vandalism. See [NOTICE](NOTICE) for exactly
+what is derived: the dataset, the animation-name table, the model lighting constants, and one
+modification we made.
+
+What is new is everything that stops it dying the same way:
+
+- **`./gradlew auditCacheIds`** walks every cache id the dataset depends on and reports what
+  no longer resolves. The failure that killed Citizens is now a diffable text file.
+- **Partial models never render.** If some of a figure's parts fail to load, it does not
+  spawn half-built — that is what "no legs" actually was.
+- **A placement lint** checks each figure's theme against the region it stands in. It caught
+  six citizens impersonating the Barrows Brothers above their own crypts; they are now
+  anonymous barrow wights.
+- **309 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+  has seen fail is a hypothesis.
+
+---
+
+## Known limitations
+
+Stated plainly, because you will find them anyway.
+
+- **The dataset is thin and lopsided.** 129 citizens for the whole game, and roughly a third
+  of them are in one Varrock region. Falador and Nardah have almost nobody. Fixing this is
+  content authoring, and it is the main work left.
+- **Some figures have gaps.** Rufus in Varrock square is missing boots — his record simply
+  never had that model id. Ours renders faithfully what was authored.
+- **Distant figures pop in** past ~16 tiles. See Render distance above.
+- **Smoothing needs RuneLite's own Animation Smoothing plugin** turned on. With it off,
+  nothing in the game interpolates — real NPCs included — so our figures look equally steppy.
+- **The right-click guard has one hole.** It suppresses citizen entries on interface clicks by
+  looking for a "Walk here" option. A *minimap* right-click also carries one, so a citizen
+  projecting under the minimap could still be offered there.
+- **Crowded adds derived figures, not authored ones.** They are silent, they do not wander,
+  and they wear their source's colours rearranged. They are ambience, not characters.
+
+## Found a bug?
+
+Please open an issue — there are templates for [bug reports and feature
+requests](../../issues/new/choose). The most useful bug report names **where you were
+standing** and **what you expected instead**, since almost everything here is positional.
+
+If it is a rendering problem, `~/.runelite/logs/client.log` filtered to `livelycities` is
+usually decisive, and pasting it saves a round trip.
+
+---
+
+## Development
+
+Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires a JDK ≥ 11;
+the Gradle wrapper handles the rest.
+
+```bash
+./gradlew build          # compile and run the 309 tests
+./gradlew run            # a dev client with the plugin loaded
+./gradlew auditCacheIds  # dev client + walk every cache id (see below)
+```
+
+`run-windows.sh` builds in WSL and launches the client natively on Windows using RuneLite's
+own bundled JRE — faster than WSLg, and no Windows JDK needed. It defaults to an isolated
+`user.home` so your real profiles are never written to.
+
+### After an OSRS update: checking the dataset still resolves
 
 The predecessor to this plugin ("Citizens") died this way: an August 2024 OSRS
 update renumbered player-model cache ids, most of its citizens broke visually,
@@ -16,7 +186,7 @@ described as reworking existing models.
 
 There are two checks, because only one of them can run without a live client.
 
-### 1. The offline dataset audit — runs on every `./gradlew test`
+#### 1. The offline dataset audit — runs on every `./gradlew test`
 
 No client needed. `ModelIdAuditTest`, `LivelyAnimationTest`, `CacheIdAuditTest`
 and `RegionDataLoaderTest` already assert, over the shipped JSON alone:
@@ -36,7 +206,7 @@ animation name), but **they cannot tell you whether an id still resolves in
 the current game cache** — that needs a live client, which the normal test
 suite deliberately never has.
 
-### 2. The cache-backed validator — `./gradlew auditCacheIds`
+#### 2. The cache-backed validator — `./gradlew auditCacheIds`
 
 This is the real check, and the one to run after a suspected renumbering:
 
@@ -93,3 +263,9 @@ current cache — the exact failure mode that killed Citizens.
 Never ship a fix without re-running `auditCacheIds`: gc's own fix for Citizens
 was self-described as comprehensive only "for the most part," which is why
 that check exists at all rather than trusting a manual diff.
+
+---
+
+<div align="center">
+<sub>Cosmetic and local. Sends nothing to the server. Not affiliated with Jagex.</sub>
+</div>

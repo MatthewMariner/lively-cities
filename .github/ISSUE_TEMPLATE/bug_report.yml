@@ -1,0 +1,72 @@
+name: Bug report
+description: Something renders wrong, behaves wrong, or gets in your way
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Almost everything in this plugin is **positional** — what you see depends on where you
+        stand. So the two most useful things you can tell us are *where you were* and *what you
+        expected instead*.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      placeholder: A citizen in Varrock square had no legs.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where were you standing?
+      description: A place name is fine. Exact tile is better — the Developer Tools panel shows it, or just say "Varrock square by the fountain".
+      placeholder: Varrock square, north side of the fountain
+    validations:
+      required: true
+  - type: dropdown
+    id: density
+    attributes:
+      label: Crowd density
+      options: ["Full (default)", "Crowded", "Normal", "Sparse", "Not sure"]
+    validations:
+      required: true
+  - type: input
+    id: distance
+    attributes:
+      label: Render distance
+      description: The plugin's own setting, not the game's draw distance. Default is 25.
+      placeholder: "25"
+  - type: dropdown
+    id: smoothing
+    attributes:
+      label: Is RuneLite's Animation Smoothing plugin enabled?
+      description: With it off, nothing in the game interpolates — real NPCs included — so figures look steppy for reasons unrelated to this plugin.
+      options: ["Yes", "No", "Not sure"]
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Client log
+      description: |
+        For anything visual this is usually decisive. Filter your log to our lines and paste the result:
+        `grep livelycities ~/.runelite/logs/client.log | tail -50`
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Plugin and RuneLite version
+      placeholder: "Lively Cities (built from main @ abc1234), RuneLite 1.12.36"
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the [Known limitations](../../blob/main/README.md#known-limitations) section — some of this is documented behaviour
+          required: true
