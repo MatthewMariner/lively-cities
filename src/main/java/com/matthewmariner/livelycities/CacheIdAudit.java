@@ -33,6 +33,9 @@ import net.runelite.api.Client;
  */
 final class CacheIdAudit
 {
+	/** Under {@code ~/.runelite/lively-cities/} — see {@link ReportWriter}. */
+	static final String REPORT_FILE_NAME = "model-id-audit.txt";
+
 	/**
 	 * {@code LivelyAnimation.BeeIdle}'s id. {@code client.loadAnimation(0)}
 	 * returns null by design in every cache state — the real

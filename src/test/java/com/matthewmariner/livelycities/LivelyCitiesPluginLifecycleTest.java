@@ -749,6 +749,10 @@ public class LivelyCitiesPluginLifecycleTest
 		plugin.citizenMenu = new CitizenMenu(client, scene, config.overrides());
 		plugin.overrides = config.overrides();
 		plugin.configWriter = config.writer();
+
+		// A stopwatch that measures nothing. Off is what a shipped client gets, so it
+		// is what every test here should get; the measuring itself is FrameTimingsTest's.
+		plugin.frameTimings = FrameTimings.off();
 		return plugin;
 	}
 

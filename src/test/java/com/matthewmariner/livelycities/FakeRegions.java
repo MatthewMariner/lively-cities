@@ -192,9 +192,19 @@ final class FakeRegions extends RegionDataLoader
 	 *
 	 * <p>Needed rather than an extra argument on {@link #citizen}, because "a citizen
 	 * that seeds echoes" and "a citizen that seeds none" are two fixtures the crowd
-	 * tests need side by side: 49 of the 129 non-cameo shipped citizens have too little
-	 * palette to re-deal, so a fixture where everybody seeds echoes could not tell "the dial
-	 * added the derived citizens" from "the dial doubled everything".
+	 * tests need side by side: of the 128 shipped citizens that reach
+	 * {@link CitizenEcho}'s palette check, 49 have too little palette to re-deal — 45
+	 * carry no recolour pairs at all and 4 carry a single pair, and the check wants two.
+	 * So a fixture where everybody seeds echoes could not tell "the dial added the
+	 * derived citizens" from "the dial doubled everything".
+	 *
+	 * <p><b>128, not the 129 non-cameo citizens.</b> The two figures are one apart and
+	 * they are not the same population: 135 shipped citizens minus the 6 cameos is 129,
+	 * and one of those 129 — "Rufus" — is dressed from an {@code npcAppearanceId} and is
+	 * turned away by {@link CitizenEcho} before the palette check is reached at all. He
+	 * also carries no recolour pairs, so counting him in would make the numerator 50;
+	 * both halves of the ratio have to be the same population or the sentence is
+	 * comparing two different things.
 	 *
 	 * <p>{@code pairs} is what decides how many echoes it seeds, and the numbers here
 	 * are chosen so the relationship is visible in the fixture rather than buried:

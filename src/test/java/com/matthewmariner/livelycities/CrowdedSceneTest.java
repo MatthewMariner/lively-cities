@@ -52,7 +52,11 @@ public class CrowdedSceneTest
 	@Before
 	public void setUp()
 	{
-		client = new FakeClient();
+		// A warm NPC archive: two of the tests below spawn the real dataset, which
+		// includes one citizen dressed from an npcAppearanceId. An unregistered id
+		// throws, exactly as the real client does, so without this that citizen
+		// silently fails to spawn and every crowd count here comes out one short.
+		client = new FakeClient().withShippedNpcAppearances();
 		regions = new FakeRegions();
 		config = new FakeConfig();
 		scene = new EntityScene(client, regions, config, config.overrides());

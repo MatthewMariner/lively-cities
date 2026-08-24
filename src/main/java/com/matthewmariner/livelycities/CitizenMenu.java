@@ -1,5 +1,6 @@
 package com.matthewmariner.livelycities;
 
+import java.awt.Rectangle;
 import java.awt.Shape;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -19,6 +20,8 @@ import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.widgets.Widget;
 
 /**
  * The right-click menu for a fake citizen: Examine, Hide, Mute — and nothing that
@@ -70,7 +73,8 @@ import net.runelite.api.events.MenuOptionClicked;
  *       nothing.</li>
  *   <li><b>Nothing is added to an interface's menu either.</b> The clickbox is in
  *       canvas space and the inventory is drawn over the viewport, so a citizen
- *       standing behind it projects underneath it — see {@link #isWorldClick}.</li>
+ *       standing behind it projects underneath it — see {@link #isWorldClick} and
+ *       {@link #isOverMinimap}.</li>
  * </ol>
  *
  * <p><b>What {@code setDrawFrontTilesFirst} turned out to be, since the plan
@@ -121,6 +125,30 @@ class CitizenMenu
 	static final String OPTION_EXAMINE = "Examine";
 	static final String OPTION_HIDE = "Hide";
 	static final String OPTION_MUTE = "Mute";
+
+	/**
+	 * The minimap panel, in each of the three toplevel layouts a desktop client can
+	 * be in: fixed (interface 548), resizable-classic (161) and resizable-modern
+	 * (164).
+	 *
+	 * <p><b>Not invented — this is RuneLite's own answer to "where is the minimap".</b>
+	 * {@code net.runelite.client.ui.overlay.OverlayOrigin.MINIMAP} in client-1.12.36
+	 * resolves exactly these three component ids, in exactly the order
+	 * {@link #minimapPanel()} does (verified by disassembling
+	 * {@code OverlayOrigin$3.getWidget} and {@code OverlayOrigin.getComponent}). They
+	 * are the containers RuneLite positions its own {@code CANVAS_TOP_RIGHT} overlays
+	 * against, so they are laid out and drawn whenever the minimap is on screen —
+	 * which is what makes {@code getBounds()} on them mean something.
+	 *
+	 * <p>The container rather than the {@code MINIMAP} child inside it, deliberately:
+	 * it covers the compass and the orb column as well as the map itself, and a
+	 * citizen projecting under any of those is equally unreachable. A wider rectangle
+	 * costs nothing here and is one fewer guess about which child owns the "Walk here"
+	 * option.
+	 */
+	private static final int FIXED_MINIMAP_PANEL = InterfaceID.Toplevel.MAPCONTAINER;
+	private static final int RESIZABLE_MINIMAP_PANEL = InterfaceID.ToplevelOsrsStretch.MAP_CONTAINER;
+	private static final int RESIZABLE_MODERN_MINIMAP_PANEL = InterfaceID.ToplevelPreEoc.MAP_CONTAINER;
 
 	private final Client client;
 	private final EntityScene scene;
@@ -186,6 +214,14 @@ class CitizenMenu
 		final Point mouse = client.getMouseCanvasPosition();
 		if (playerLocation == null || worldView == null || mouse == null)
 		{
+			return;
+		}
+
+		if (isOverMinimap(mouse))
+		{
+			// The one interface that also carries a "Walk here", so the check above
+			// waved it through — GitHub issue #2. Same rule, answered geometrically
+			// because the menu itself cannot answer it. Still before any clickbox.
 			return;
 		}
 
@@ -308,12 +344,9 @@ class CitizenMenu
 	 * "was this a click on the world", read off the menu it built, rather than a
 	 * geometric guess about where the inventory happens to be.
 	 *
-	 * <p><b>Honest limit:</b> a minimap right-click also carries "Walk here", so a
-	 * citizen whose projected outline reaches under the minimap could still be
-	 * offered there. That is a corner of the screen citizens are almost never drawn
-	 * in, and the alternative — {@code WorldView.getSelectedSceneTile()} — is
-	 * documented as "the last right clicked tile", which is a different question and
-	 * one this could not verify without a live client.
+	 * <p><b>It has exactly one exception, and it is handled next door.</b> A minimap
+	 * right-click carries a "Walk here" too, so this returns true for one interface —
+	 * see {@link #isOverMinimap}, and GitHub issue #2.
 	 */
 	private static boolean isWorldClick(MenuOpened event)
 	{
@@ -332,6 +365,115 @@ class CitizenMenu
 		}
 
 		return false;
+	}
+
+	/**
+	 * Whether the right-click landed on the minimap panel — the one interface
+	 * {@link #isWorldClick} cannot see. GitHub issue #2.
+	 *
+	 * <p><b>Why this has to be geometry.</b> The obvious fix would be to read it off
+	 * the menu, and the menu does not carry it. Disassembling the injected 1.12.36
+	 * client, there is exactly one producer of a "Walk here" option — the string lives
+	 * in {@code kk.hm} and the only code that reads it builds the entry as
+	 * {@code rp.fb("Walk here", "", 23, 0, mouseX - originX, mouseY - originY, 0,
+	 * false, worldViewId, ..)}. Opcode 23 is {@link MenuAction#WALK}, the identifier is
+	 * a literal {@code 0}, the target is empty, and {@code param0}/{@code param1} are a
+	 * mouse position relative to whatever the caller's origin was. Every field is the
+	 * same whichever of the three call sites built it, so there is nothing on the entry
+	 * that says "this one came from the map". {@code MenuEntry.getWidget()} is not an
+	 * answer either: the entry is built by that call, which takes no widget.
+	 *
+	 * <p><b>Why these ids and this order.</b> Straight out of
+	 * {@code net.runelite.client.ui.overlay.OverlayOrigin.MINIMAP} in client-1.12.36 —
+	 * RuneLite's own "where is the minimap" — rather than a rule invented here:
+	 * {@code isResized()} picks fixed versus resizable, and inside resizable
+	 * {@code getTopLevelInterfaceId() == 164} picks the modern layout from the classic
+	 * one. {@code Client.getWidget(int)} decodes the packed component id through
+	 * {@code WidgetUtil.componentToInterface}/{@code componentToId} (also verified in
+	 * the bytecode) and returns {@code null} when that interface is not loaded, so
+	 * asking about the wrong layout is a null rather than a wrong rectangle.
+	 *
+	 * <p><b>It fails open, on purpose.</b> No widget and a hidden widget both mean
+	 * "cannot tell", and the answer to "cannot tell" is the previous behaviour — a
+	 * spurious Examine option — rather than silently withholding the plugin's own menu
+	 * from a chunk of the screen. The entries here are inert and local, so the failure
+	 * this trades against is the milder one.
+	 *
+	 * <p><b>No null or emptiness check on the rectangle</b>, and that is deliberate
+	 * rather than an omission. {@code lw.getBounds()} in 1.12.36 is literally
+	 * {@code new Rectangle(cz, ca, getWidth(), getHeight())} — a fresh instance, never
+	 * null — and {@link Rectangle#contains(int, int)} already answers "no" for any box
+	 * with a zero or negative dimension. Either guard would be a branch no test could
+	 * tell from an empty statement, which is the kind of code this project treats as
+	 * worse than absent.
+	 *
+	 * <p><b>The case those guards would nominally cover is a panel the client has
+	 * loaded and never laid out, and the geometry already answers it.</b> Two earlier
+	 * revisions of this paragraph claimed a "phantom rectangle at canvas (0, 0)"
+	 * instead; both were wrong, so the bytecode is written out. {@code lw}'s no-arg
+	 * constructor initialises the two canvas coordinates {@code cz} and {@code ca} to
+	 * <b>{@code -1}</b> ({@code iconst_m1}) and the raw width and height fields
+	 * {@code cv} and {@code do} to {@code 0} ({@code iconst_0}). {@code getWidth()}
+	 * reads {@code cv}, which is <i>not</i> the interface definition's width — that is a
+	 * separate field {@code dd}, exposed separately as {@code getOriginalWidth()}, and
+	 * the buffer decoders that fill {@code dd} in never touch {@code cv}. So an
+	 * unpositioned panel reports {@code Rectangle(-1, -1, 0, 0)}: empty, and
+	 * {@code contains} returns false for every point on the canvas, {@code (0, 0)}
+	 * included. There is no window in which this guard suppresses a citizen it should
+	 * have offered. The original reasoning — {@code getBounds()} is never null and
+	 * {@code contains()} already says no to a degenerate box — was right all along.
+	 *
+	 * <p><b>What {@code isHidden()} is for, then.</b> Not that case, and it is not a
+	 * layout signal at all: disassembling 1.12.36 it is self-hidden (the raw boolean
+	 * field {@code cq}, which is the whole of {@code isSelfHidden()}) OR, with no
+	 * parent, the widget's own interface not being the current toplevel, OR the parent
+	 * being hidden. All three are visibility flags. What it covers is the case that
+	 * does happen: a panel the client <i>has</i> laid out, so it owns a real rectangle
+	 * over the minimap, and has since marked hidden — the whole toplevel swapped out
+	 * from under it, or the panel switched off. Geometry alone would go on suppressing
+	 * citizens under a minimap that is not on screen, so the flag earns its place; it
+	 * just earns it for a positioned panel rather than an unpositioned one.
+	 *
+	 * <p><b>What is still not covered:</b> {@code InterfaceID.TOPLEVEL_OSM} (601), the
+	 * mobile-style layout, whose minimap sits at a fourth component id.
+	 * {@code OverlayOrigin.MINIMAP} does not handle it either, so a plugin's overlays
+	 * do not snap to the minimap there and this guard does not fire there. Adding a
+	 * fourth branch would be a check nothing could verify — see the class javadoc's
+	 * rule about the clickbox seam.
+	 */
+	private boolean isOverMinimap(Point mouse)
+	{
+		final Widget panel = minimapPanel();
+		if (panel == null || panel.isHidden())
+		{
+			return false;
+		}
+
+		final Rectangle bounds = panel.getBounds();
+		return bounds.contains(mouse.getX(), mouse.getY());
+	}
+
+	/**
+	 * The minimap panel widget for whichever toplevel layout is loaded, or
+	 * {@code null} if none of the three resolves.
+	 *
+	 * <p>Private, unlike {@link #clickbox}, and that is the difference worth noting:
+	 * the clickbox needs a test seam because it projects through the live camera, while
+	 * this is three ordinary {@code Client} calls a fake can answer. The tests drive it
+	 * through {@code FakeClient}'s widget map rather than by overriding it, so what they
+	 * exercise is this method and not a stand-in for it.
+	 */
+	@Nullable
+	private Widget minimapPanel()
+	{
+		if (!client.isResized())
+		{
+			return client.getWidget(FIXED_MINIMAP_PANEL);
+		}
+
+		return client.getTopLevelInterfaceId() == InterfaceID.TOPLEVEL_PRE_EOC
+			? client.getWidget(RESIZABLE_MODERN_MINIMAP_PANEL)
+			: client.getWidget(RESIZABLE_MINIMAP_PANEL);
 	}
 
 	/**

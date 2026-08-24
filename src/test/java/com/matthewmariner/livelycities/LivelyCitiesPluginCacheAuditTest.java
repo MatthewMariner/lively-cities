@@ -1,5 +1,10 @@
 package com.matthewmariner.livelycities;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import net.runelite.api.GameState;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.overlay.Overlay;
@@ -7,6 +12,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 /**
  * The developer-mode gate on {@link LivelyCitiesPlugin#runDeveloperCacheAudit()}
@@ -102,6 +108,56 @@ public class LivelyCitiesPluginCacheAuditTest
 		assertEquals(0, plugin.auditRuns);
 	}
 
+	/**
+	 * The audit's report goes in {@code model-id-audit.txt}, and never in the frame
+	 * report's file.
+	 *
+	 * <p>The mirror of {@code FrameTimingsTest}'s
+	 * {@code theFrameReportIsWrittenUnderItsOwnNameAndNeverTheAudits}, and it exists for
+	 * the same reason: {@link ReportWriter} takes the file name as an argument, so each
+	 * of its two callers names its own constant and until now nothing checked which one
+	 * either of them passed. This is the cheaper direction of the two failures — a frame
+	 * report is one dev session away from being regenerated, while the audit needs a
+	 * live cache — but an unasserted constant is an unasserted constant, and the two
+	 * call sites are four lines apart.
+	 *
+	 * <p>The audit itself runs for real here, against an empty {@link FakeRegions} and
+	 * {@link FakeClient}: no cache is touched, the report comes out empty, and what is
+	 * under test is the envelope rather than the contents.
+	 */
+	@Test
+	public void theCacheAuditIsWrittenUnderItsOwnNameAndNeverTheFrameReports()
+	{
+		RecordingPlugin plugin = new RecordingPlugin();
+		plugin.client = client;
+		plugin.clientThread = clientThread;
+		plugin.regionDataLoader = new FakeRegions();
+
+		plugin.runDeveloperCacheAudit();
+
+		assertEquals("one report, written once",
+			Collections.singletonList(CacheIdAudit.REPORT_FILE_NAME), plugin.fileNames);
+		assertNotEquals("the cache id audit must never be written over the frame report's file",
+			FrameTimings.REPORT_FILE_NAME, plugin.fileNames.get(0));
+	}
+
+	/**
+	 * The plugin with the disk taken out but the audit left in — see the identically
+	 * shaped {@code ReportingPlugin} in {@code FrameTimingsTest}.
+	 */
+	private static final class RecordingPlugin extends LivelyCitiesPlugin
+	{
+		private final List<String> fileNames = new ArrayList<>();
+
+		@Override
+		CompletableFuture<Void> writeReportAsync(
+			File outputDir, String fileName, String text, String what)
+		{
+			fileNames.add(fileName);
+			return CompletableFuture.completedFuture(null);
+		}
+	}
+
 	private CountingPlugin plugin()
 	{
 		CountingPlugin plugin = new CountingPlugin();
@@ -123,6 +179,11 @@ public class LivelyCitiesPluginCacheAuditTest
 			{
 			}
 		};
+
+		// Same reasoning as the registry above: startUp() asks the stopwatch whether it
+		// is on, and a null one would fail every test here for a reason that is not the
+		// gate under test.
+		plugin.frameTimings = FrameTimings.off();
 		return plugin;
 	}
 

@@ -1317,37 +1317,8 @@
                 "y": 3434,
                 "plane": 0
             },
-            "modelIds": [
-                35127,
-                34274,
-                311,
-                8233,
-                11769,
-                32850,
-                11730,
-                11727,
-                28512,
-                26630,
-                25683,
-                11732
-            ],
+            "npcAppearanceId": 3114,
             "baseOrientation": 0,
-            "modelRecolorFind": [
-                25238,
-                7056,
-                7054,
-                9098,
-                4626,
-                6798
-            ],
-            "modelRecolorReplace": [
-                8472,
-                8472,
-                8596,
-                8720,
-                16,
-                5056
-            ],
             "idleAnimation": "HumanIdle"
         },
         {

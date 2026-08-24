@@ -12,6 +12,7 @@ import net.runelite.api.WorldView;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.gameval.InterfaceID;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -232,6 +233,153 @@ public class CitizenMenuTest
 			0, interfaceMenu.clickboxCalls);
 		assertTrue("and nothing of ours may be in it",
 			interfaceClient.menu().created().isEmpty());
+	}
+
+	// --- the minimap hole (issue #2) ------------------------------------------
+	//
+	// The "Walk here" test above is the client's own answer to "was this the world?",
+	// and it is wrong for exactly one interface. These eight pin the premise, the three
+	// toplevel layouts the guard has to work in, and the four ways it deliberately
+	// declines to fire. Every one of them uses the same seeded menu and the same mouse
+	// position, so the only thing that varies is what the interface layout says is
+	// under the cursor.
+
+	/**
+	 * The premise, pinned before the fix that depends on it.
+	 *
+	 * <p>A minimap right-click carries a {@code MenuAction.WALK} like any ground
+	 * click, so {@code isWorldClick} passes it — and with nothing else to go on, the
+	 * plugin offers its entries. This is the bug from issue #2 reproduced, and it is
+	 * <i>also</i> the documented fail-open behaviour: when the guard cannot find a
+	 * minimap widget to measure against, it leaves the old behaviour alone rather than
+	 * withholding the plugin's menu from a region of the screen it is guessing about.
+	 */
+	@Test
+	public void aMinimapMenuLooksExactlyLikeAWorldMenuSoTheGuardHasToBeGeometric()
+	{
+		FakeClient bare = new FakeClient();
+		TestMenu bareMenu = menuUnderTheMinimapFixture(bare, FakeMenu::seedMinimapClick);
+
+		bareMenu.onMenuOpened(bare.menuOpened());
+
+		assertEquals("nothing on a minimap menu distinguishes it from a ground menu, so with "
+				+ "no widget to measure against the entries go in — the hole itself",
+			3, bare.menu().created().size());
+	}
+
+	@Test
+	public void nothingIsAddedToAMinimapRightClickInFixedMode()
+	{
+		assertNothingIsOfferedUnderTheMinimap(new FakeClient()
+			.withWidget(InterfaceID.Toplevel.MAPCONTAINER, minimapPanelUnderTheMouse()));
+	}
+
+	@Test
+	public void nothingIsAddedToAMinimapRightClickInTheClassicResizableLayout()
+	{
+		assertNothingIsOfferedUnderTheMinimap(new FakeClient()
+			.resizedWith(InterfaceID.TOPLEVEL_OSRS_STRETCH)
+			.withWidget(InterfaceID.ToplevelOsrsStretch.MAP_CONTAINER, minimapPanelUnderTheMouse()));
+	}
+
+	@Test
+	public void nothingIsAddedToAMinimapRightClickInTheModernResizableLayout()
+	{
+		assertNothingIsOfferedUnderTheMinimap(new FakeClient()
+			.resizedWith(InterfaceID.TOPLEVEL_PRE_EOC)
+			.withWidget(InterfaceID.ToplevelPreEoc.MAP_CONTAINER, minimapPanelUnderTheMouse()));
+	}
+
+	/**
+	 * Each layout asks about its own component id and only its own.
+	 *
+	 * <p>Three ids, one of which is right at any moment, and the wrong one resolving to
+	 * {@code null} is what {@code Client.getWidget(int)} really does for an interface
+	 * that is not loaded. Without this, a version that asked about all three — or about
+	 * the wrong one — would pass every test above.
+	 */
+	@Test
+	public void eachLayoutAsksAboutItsOwnMinimapIdAndNotTheOthers()
+	{
+		// Fixed mode, with both resizable panels registered under the mouse.
+		assertTheCitizenIsStillOffered(new FakeClient()
+			.withWidget(InterfaceID.ToplevelOsrsStretch.MAP_CONTAINER, minimapPanelUnderTheMouse())
+			.withWidget(InterfaceID.ToplevelPreEoc.MAP_CONTAINER, minimapPanelUnderTheMouse()));
+
+		// Modern resizable, with the classic panel registered.
+		assertTheCitizenIsStillOffered(new FakeClient()
+			.resizedWith(InterfaceID.TOPLEVEL_PRE_EOC)
+			.withWidget(InterfaceID.ToplevelOsrsStretch.MAP_CONTAINER, minimapPanelUnderTheMouse())
+			.withWidget(InterfaceID.Toplevel.MAPCONTAINER, minimapPanelUnderTheMouse()));
+
+		// Classic resizable, with the modern panel registered.
+		assertTheCitizenIsStillOffered(new FakeClient()
+			.resizedWith(InterfaceID.TOPLEVEL_OSRS_STRETCH)
+			.withWidget(InterfaceID.ToplevelPreEoc.MAP_CONTAINER, minimapPanelUnderTheMouse())
+			.withWidget(InterfaceID.Toplevel.MAPCONTAINER, minimapPanelUnderTheMouse()));
+	}
+
+	/**
+	 * A minimap the client is not drawing suppresses nothing.
+	 *
+	 * <p>This is not tidiness, and it is the case {@code isHidden()} actually exists for
+	 * — see {@code CitizenMenu.isOverMinimap}'s javadoc. The panel here is a
+	 * <i>positioned</i> one: the client laid it out, so it owns a real rectangle over
+	 * the minimap and the mouse is inside it, and it has since been marked hidden. On
+	 * geometry alone the guard would fire and the citizen would be withheld under a
+	 * minimap that is not on screen; the flag is what stops that. Delete the
+	 * {@code isHidden()} branch and this test is the one that goes red.
+	 */
+	@Test
+	public void aMinimapTheClientIsNotDrawingSuppressesNothing()
+	{
+		assertTheCitizenIsStillOffered(new FakeClient()
+			.withWidget(InterfaceID.Toplevel.MAPCONTAINER, minimapPanelUnderTheMouse().hidden()));
+	}
+
+	/**
+	 * A right-click beside the panel is still a world click — the rectangle has to be
+	 * measured rather than merely found.
+	 *
+	 * <p>A real 157x157 panel in the fixed layout's top-left corner, laid out and drawn.
+	 * The mouse is nowhere near it, and the citizen is offered — so a version of the
+	 * guard that fired on merely <i>finding</i> a panel, without measuring it, fails
+	 * here.
+	 */
+	@Test
+	public void aRightClickBesideTheMinimapPanelIsStillAWorldClick()
+	{
+		assertTheCitizenIsStillOffered(new FakeClient()
+			.withWidget(InterfaceID.Toplevel.MAPCONTAINER, FakeWidget.at(570, 4, 157, 157)));
+	}
+
+	/**
+	 * A panel the client has never laid out suppresses nothing either — and it needs no
+	 * emptiness check to get there.
+	 *
+	 * <p><b>These are the numbers the real widget produces, not a fixture invented to
+	 * make a point.</b> Disassembling {@code lw} in injected-client-1.12.36: the no-arg
+	 * constructor sets the two canvas coordinates {@code cz} and {@code ca} to
+	 * {@code -1} and the raw width and height fields {@code cv} and {@code do} to
+	 * {@code 0}, and {@code getBounds()} is {@code new Rectangle(cz, ca, getWidth(),
+	 * getHeight())}. So an unpositioned panel's bounds is {@code Rectangle(-1, -1, 0,
+	 * 0)}, {@code Rectangle.contains} says no to every point in it, and this is a world
+	 * click.
+	 *
+	 * <p>Which is why {@code isOverMinimap} carries no null or emptiness check on the
+	 * rectangle: {@code getBounds()} never returns null, and {@code contains()} already
+	 * answers the degenerate case. An earlier revision of that javadoc claimed the
+	 * unpositioned panel reported a rectangle at canvas <i>(0, 0)</i> — the coordinates
+	 * are {@code -1}, the width comes off {@code cv} rather than the interface
+	 * definition's {@code dd}, and the test that pinned the invented behaviour used
+	 * {@code FakeWidget.at(0, 0, 500, 400)}, a box no client would produce. This
+	 * replaces it with what the client really produces.
+	 */
+	@Test
+	public void aPanelTheClientHasNeverLaidOutSuppressesNothing()
+	{
+		assertTheCitizenIsStillOffered(new FakeClient()
+			.withWidget(InterfaceID.Toplevel.MAPCONTAINER, FakeWidget.neverLaidOut()));
 	}
 
 	@Test
@@ -649,6 +797,65 @@ public class CitizenMenuTest
 	}
 
 	// --- helpers ------------------------------------------------------------
+
+	/**
+	 * A minimap panel whose rectangle contains {@link #MOUSE}.
+	 *
+	 * <p>A method rather than a constant: {@link FakeWidget#hidden()} mutates, and one
+	 * shared instance would let a test that hid it hide it for every other test in the
+	 * class.
+	 */
+	private static FakeWidget minimapPanelUnderTheMouse()
+	{
+		return FakeWidget.at(MOUSE.getX() - 100, MOUSE.getY() - 100, 250, 200);
+	}
+
+	/**
+	 * A citizen on screen, a menu the client would have built for a right-click that
+	 * carries "Walk here", and a {@link TestMenu} wired to the given client.
+	 *
+	 * <p>Everything except the interface layout is held constant across the minimap
+	 * tests, so the only thing any of them varies is what is under the cursor.
+	 */
+	private TestMenu menuUnderTheMinimapFixture(
+		FakeClient other, java.util.function.Consumer<FakeMenu> seed)
+	{
+		other.setLocalPlayer(new FakePlayer(PLAYER));
+		other.setTopLevelWorldView(view);
+		other.setMouseCanvasPosition(MOUSE);
+		seed.accept(other.menu());
+
+		regions.file(VARROCK_NORTH, regions.talker(VARROCK_NORTH, 3220, 3421, "Busy today."));
+		EntityScene otherScene = new EntityScene(other, regions, config, config.overrides());
+		otherScene.syncRegions(view);
+		otherScene.updateVisibility(PLAYER, view);
+		assertTrue("the citizen has to be on screen, or the layout is not what stopped this",
+			otherScene.countActive() > 0);
+
+		return new TestMenu(other, otherScene);
+	}
+
+	private void assertNothingIsOfferedUnderTheMinimap(FakeClient other)
+	{
+		TestMenu otherMenu = menuUnderTheMinimapFixture(other, FakeMenu::seedMinimapClick);
+
+		otherMenu.onMenuOpened(other.menuOpened());
+
+		assertEquals("a right-click on the minimap panel must not cost a projection",
+			0, otherMenu.clickboxCalls);
+		assertTrue("and must add nothing", other.menu().created().isEmpty());
+		assertNull("nor leave a target behind for a later click", otherMenu.getTarget());
+	}
+
+	private void assertTheCitizenIsStillOffered(FakeClient other)
+	{
+		TestMenu otherMenu = menuUnderTheMinimapFixture(other, FakeMenu::seedMinimapClick);
+
+		otherMenu.onMenuOpened(other.menuOpened());
+
+		assertEquals("the minimap guard must not fire here", 3, other.menu().created().size());
+		assertNotNull(otherMenu.getTarget());
+	}
 
 	private void spawn(EntityDefinition... entities)
 	{

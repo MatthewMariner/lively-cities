@@ -15,6 +15,7 @@ Nothing below requires new work. When the content lands, re-run the checks and f
 | Tests | `./gradlew clean test` | all green |
 | Offline dataset audit | *(part of the above)* | green |
 | Cache ids still resolve | `./gradlew auditCacheIds` | no failing ids outside the known-permanent-null section |
+| Frame cost measured | `./gradlew runWithTimings`, then play for a few minutes | a real figure in `~/.runelite/lively-cities/frame-timings.txt`, inside the thresholds the README states — and **written into the README and the PR body below**, replacing the placeholder sentence |
 | Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight ~/Workspaces/osrs/lively-cities` | `Result: PASS` |
 | Compiles under the hub's own build | see [Verifying the hub build](#verifying-the-hub-build) | `BUILD SUCCESSFUL` |
 | Screenshots in the README | — | *deliberately deferred (2026-08-24) — the page ships with placeholders* |
@@ -41,9 +42,18 @@ cp -r gradle gradlew "$S/"
 ( cd "$S" && ./gradlew compileJava )
 ```
 
-Last verified 2026-08-23: **BUILD SUCCESSFUL, 63 classes.** Our source uses Gson and Guice,
+Last verified **2026-08-24: BUILD SUCCESSFUL, 67 classes**, run against the working tree
+rather than a commit so the uncommitted work was included. Our source uses Gson and Guice,
 which look like third-party dependencies but arrive transitively through the client — worth
-re-proving rather than assuming after any new import.
+re-proving rather than assuming, so **re-run this after any new import.**
+
+The 63 → 67 accounting, since a class count that cannot be explained is not evidence of
+anything: `NpcAppearance` (added with the cameos), then `FrameTimings` plus its two nested
+types. `ReportWriter` is a rename of `CacheAuditReportWriter`, so it is not a new class.
+
+Note the recipe above uses `git archive HEAD`, which silently omits uncommitted changes — if
+you are verifying work in progress, copy `src/main` from the working tree instead, or the
+build you prove is not the build you are filing.
 
 ---
 
@@ -115,6 +125,15 @@ appears verbatim in merged hub PRs — it answers the reviewer's actual question
 > figure is. Overhead chatter ships with a global off switch, a per-citizen mute, and
 > configurable cadence — the predecessor's most-complained-about behaviour, whose promised
 > toggle never arrived.
+>
+> On frame cost: the clickbox hull is computed in `MenuOpened` rather than per tick or per
+> frame, so the only per-frame work is interpolating walking figures between tiles. That is
+> instrumented rather than asserted — `./gradlew runWithTimings` reports median/p95/p99 for
+> the per-tick pass, model building and the per-frame pass, with the active-object count
+> beside them. **<<FILL IN before filing: the measured p99 for the per-frame pass and for
+> the per-tick pass, at N active objects. Do not file this paragraph with the placeholder
+> still in it — an unmeasured performance claim is exactly what got the predecessor
+> dismissed.>>**
 
 ## After filing
 

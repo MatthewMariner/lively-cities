@@ -71,7 +71,8 @@ final class ShippedModelIds
 
 	/**
 	 * @return every distinct raw {@code modelIds} value across the whole shipped
-	 * dataset — the figure the plan calls "384 distinct model ids"
+	 * dataset — 376 of them. It was 384 before Rufus traded his twelve authored ids for
+	 * an {@code npcAppearanceId}; eight of those twelve were used by nobody else.
 	 */
 	static TreeSet<Integer> distinct()
 	{

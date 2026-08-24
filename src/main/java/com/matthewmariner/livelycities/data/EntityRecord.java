@@ -50,9 +50,10 @@ public class EntityRecord
 	 * predecessor plugin: an August 2024 update renumbered player-model ids and its
 	 * citizens broke visually. An NPC id is a named, generated constant in
 	 * {@code net.runelite.api.gameval.NpcID}, is what a game update renumbers last,
-	 * and — unlike a model id — can be looked up by anyone with the jar. The 175
-	 * vendored entities keep their {@code modelIds}; anything authored here should
-	 * prefer this.
+	 * and — unlike a model id — can be looked up by anyone with the jar. The vendored
+	 * entities keep their {@code modelIds} except where the authored array was itself
+	 * the bug ("Rufus", GitHub issue #1, whose twelve ids contained no footwear);
+	 * anything authored here should prefer this.
 	 */
 	public Integer npcAppearanceId;
 	public float[] scale;

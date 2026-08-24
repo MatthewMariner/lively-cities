@@ -15,9 +15,10 @@ import net.runelite.api.NPCComposition;
  * {@code README.md}). An NPC id is a generated constant in
  * {@code net.runelite.api.gameval.NpcID}, reviewable by anyone with the jar, and
  * one indirection further from the geometry an artist reworks. So new authored
- * content prefers this, and the 175 vendored entities keep their {@code modelIds}
- * unchanged — {@code EntityRecord.npcAppearanceId} says which wins when a record
- * carries both.
+ * content prefers this, and the vendored entities keep their {@code modelIds}
+ * unchanged with one exception — "Rufus", whose authored array had no footwear model
+ * in it at all (GitHub issue #1), so there was nothing worth keeping.
+ * {@code EntityRecord.npcAppearanceId} says which wins when a record carries both.
  *
  * <p><b>The accessors, verified against 1.12.36 rather than guessed.</b>
  * {@code javap net.runelite.api.Client} declares
@@ -56,7 +57,7 @@ import net.runelite.api.NPCComposition;
  * tile fractions with an inverted sign convention (see
  * {@code LivelyEntity.assemble}); mapping between them is arithmetic this could not
  * verify without a live client, and getting it wrong silently is a citizen at the
- * wrong height. The six NPCs this currently sources are ordinary human-sized
+ * wrong height. The seven NPCs this currently sources are ordinary human-sized
  * townsfolk, so identity scale is the right answer for them — a future
  * non-human-sized NPC would render at default size, which is a known limitation
  * rather than a surprise. {@code transform()} is likewise not called: it reads live

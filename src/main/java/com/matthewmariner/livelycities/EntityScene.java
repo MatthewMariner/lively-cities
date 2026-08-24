@@ -76,6 +76,10 @@ import net.runelite.api.coords.WorldPoint;
  * active wanderers rather than the whole cache, because a frame handler that
  * scans every wrapper is a frame handler that shows up in a profile.
  *
+ * <p><b>Both clocks are metered</b>, along with model building, so that claim is a
+ * figure rather than an argument — see {@link FrameTimings}. Off for every shipped
+ * client, and off is one field read per pass.
+ *
  * <p><b>Where a border-crossing wanderer lives.</b> Scope membership is decided
  * once, from the entity's authored tile, and a citizen walking across a region
  * border does not change it. Six of the 63 wanderers have boxes that straddle
@@ -126,6 +130,15 @@ class EntityScene
 	private final RegionDataLoader loader;
 	private final LivelyCitiesConfig config;
 	private final CitizenOverrides overrides;
+
+	/**
+	 * The stopwatch, off unless a developer asked for it — see {@link FrameTimings}.
+	 *
+	 * <p>Held rather than reached through a static so that "measuring is off" is a
+	 * field on this object and not a global, and so a test can hand this scene a live
+	 * meter without changing anything a shipped client does.
+	 */
+	private final FrameTimings timings;
 
 	/**
 	 * Who is saying what.
@@ -199,13 +212,32 @@ class EntityScene
 		Client client,
 		RegionDataLoader loader,
 		LivelyCitiesConfig config,
-		CitizenOverrides overrides)
+		CitizenOverrides overrides,
+		FrameTimings timings)
 	{
 		this.client = client;
 		this.loader = loader;
 		this.config = config;
 		this.overrides = overrides;
+		this.timings = timings;
 		this.chatter = new CitizenChatter(config, overrides);
+	}
+
+	/**
+	 * The same scene with no stopwatch attached.
+	 *
+	 * <p>For the tests, and it is the default for all but the handful that are about
+	 * the measurement itself: a meter that is off records nothing and costs one field
+	 * read, so wiring {@link FrameTimings#off()} into every other test keeps those
+	 * tests measuring what they are about.
+	 */
+	EntityScene(
+		Client client,
+		RegionDataLoader loader,
+		LivelyCitiesConfig config,
+		CitizenOverrides overrides)
+	{
+		this(client, loader, config, overrides, FrameTimings.off());
 	}
 
 	/**
@@ -373,10 +405,17 @@ class EntityScene
 	 */
 	void onFrame(WorldView worldView, float fraction)
 	{
+		final long startedAt = timings.start();
+
 		for (int i = 0; i < walkers.size(); i++)
 		{
 			frameQuietly(walkers.get(i), worldView, fraction);
 		}
+
+		// Every frame, including the ones where walkers is empty — "it does nothing
+		// sixty times a second" is the claim, and a meter that only sampled the busy
+		// frames could not make it.
+		timings.recordFrame(startedAt, walkers.size());
 	}
 
 	/**
@@ -385,6 +424,21 @@ class EntityScene
 	 * @param playerLocation the local player's world location, never null
 	 */
 	void updateVisibility(WorldPoint playerLocation, WorldView worldView)
+	{
+		final long startedAt = timings.start();
+		final int active = runVisibilityPass(playerLocation, worldView);
+		timings.recordVisibility(startedAt, active);
+	}
+
+	/**
+	 * {@link #updateVisibility} with the stopwatch peeled off.
+	 *
+	 * @return how many objects the client is left holding — {@code planned} minus the
+	 * ones that could not be built or placed. Computed rather than counted:
+	 * {@link #countActive()} walks every cached wrapper, so calling it here would make
+	 * an ordinary user pay for a figure only the meter wants.
+	 */
+	private int runVisibilityPass(WorldPoint playerLocation, WorldView worldView)
 	{
 		if (worldView.isInstance())
 		{
@@ -398,7 +452,7 @@ class EntityScene
 				log.info("Lively Cities: instanced region — holding off ({} entity(ies) deactivated)", cleared);
 				instanceReported = true;
 			}
-			return;
+			return 0;
 		}
 		instanceReported = false;
 
@@ -527,6 +581,14 @@ class EntityScene
 				continue;
 			}
 
+			// "Is this the spawn that builds the model?" — two field reads either side
+			// of the call, and the only way to tell a first spawn (which merges,
+			// recolours and lights a model) from a reactivation (which does not) from
+			// out here. A deferred build, i.e. a cold cache, leaves the model still null
+			// and is deliberately not counted: it timed nothing.
+			final boolean building = entity.getRenderedModel() == null;
+			final long buildStartedAt = building ? timings.start() : 0L;
+
 			if (spawnQuietly(entity, worldView))
 			{
 				spawned++;
@@ -534,6 +596,14 @@ class EntityScene
 			else
 			{
 				failed++;
+			}
+
+			if (building && entity.getRenderedModel() != null)
+			{
+				// `planned` rather than a live count: it is what this pass is about to
+				// have on screen, it is already in a local, and asking the client would
+				// mean walking every wrapper once per model built.
+				timings.recordModelBuild(buildStartedAt, planned);
 			}
 		}
 
@@ -604,6 +674,11 @@ class EntityScene
 		{
 			log.debug("{} entity(ies) deferred by the {}-object cap", deferred, RenderPolicy.MAX_ACTIVE_OBJECTS);
 		}
+
+		// What the client is left holding: everything this pass planned for, minus the
+		// ones that could not be built or placed. Arithmetic on locals rather than a
+		// walk of every cached wrapper — see runVisibilityPass's contract.
+		return planned - failed;
 	}
 
 	/**

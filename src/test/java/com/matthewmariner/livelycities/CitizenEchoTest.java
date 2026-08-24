@@ -696,20 +696,27 @@ public class CitizenEchoTest
 	/**
 	 * The headline claim, recomputed from the vendored files.
 	 *
-	 * <p>135 authored citizens and 143 echoes, i.e. 278 in total. The band is wide
+	 * <p>135 authored citizens and 141 echoes, i.e. 276 in total. The band is wide
 	 * on purpose — what it is guarding is "roughly twice as many", not an exact
 	 * figure — but the exact figures are asserted too, so a data change that moved
 	 * them says so instead of drifting.
 	 *
-	 * <p><b>Why 143 and not 144.</b> 76 citizens have a palette rich enough to dress
-	 * an echo differently, and between them they ask for 144 echoes; one of those has
+	 * <p><b>Why 141 and not 142.</b> 75 citizens have a palette rich enough to dress
+	 * an echo differently, and between them they ask for 142 echoes; one of those has
 	 * nowhere left in its region to stand that is
 	 * {@link CitizenEcho#MIN_SEPARATION_TILES} from everything else the plugin renders
 	 * there — the "Mysterious Old Man" in Varrock (region 12853) gets one echo instead
-	 * of two — so it is never derived at all. An earlier revision derived all 144 by
-	 * checking separation against one citizen's own lineage only, and 41 pairs of
-	 * rendered entities ended up closer than the minimum, three of them on the same
+	 * of two — so it is never derived at all. An earlier revision derived every one of
+	 * them by checking separation against one citizen's own lineage only, and 41 pairs
+	 * of rendered entities ended up closer than the minimum, three of them on the same
 	 * tile — see {@link #noTwoShippedRenderedEntitiesStandCloserThanTheMinimum}.
+	 *
+	 * <p><b>Why 75 seeds and not 76.</b> "Rufus" in Varrock square used to seed two
+	 * echoes and now seeds none: he is dressed from an {@code npcAppearanceId} (GitHub
+	 * issue #1 — his authored {@code modelIds} carried no footwear), and a source whose
+	 * colours come from a composition rather than from its own record has no palette to
+	 * re-deal, so {@code CitizenEcho} refuses it. That is the price of the fix: two
+	 * ambient bodies at {@code CROWDED}, against a citizen who is no longer barefoot.
 	 */
 	@Test
 	public void theShippedRosterRoughlyDoublesUnderCrowded()
@@ -737,13 +744,22 @@ public class CitizenEchoTest
 		}
 
 		assertEquals("the authored citizen roster", 135, citizens);
-		assertEquals("citizens that seeded at least one echo", 76, seeds.size());
-		assertEquals("echoes derived from them", 143, echoes);
-		assertEquals("of which this many stand inside an authored wander box", 63, fromBoxes);
+		assertEquals("citizens that seeded at least one echo", 75, seeds.size());
+		assertEquals("echoes derived from them", 141, echoes);
+		assertEquals("of which this many stand inside an authored wander box", 61, fromBoxes);
 		assertEquals("the rest stand on a derived offset the collision map has to vouch for",
 			80, echoes - fromBoxes);
 
-		assertTrue("CROWDED must never yield fewer citizens than FULL", echoes >= 0);
+		// Stated as the two rosters rather than as `echoes >= 0`, which is what this
+		// line used to say: `echoes` is a counter that is only ever incremented, so the
+		// old form could not go red whatever the derivation did, and the message claimed
+		// a comparison the assertion was not making. Strict, because "the same roster
+		// twice" is a failure of this feature and not a degenerate pass of it.
+		int atFull = citizens;
+		int atCrowded = citizens + echoes;
+		assertTrue("CROWDED must never yield fewer citizens than FULL: " + atCrowded
+				+ " against " + atFull,
+			atCrowded > atFull);
 		assertTrue("and it must actually roughly double them: " + citizens + " + " + echoes,
 			echoes >= citizens);
 
@@ -753,7 +769,7 @@ public class CitizenEchoTest
 	}
 
 	/**
-	 * Every uuid in play — 135 authored citizens, 46 scenery records and 143 echoes —
+	 * Every uuid in play — 135 authored citizens, 46 scenery records and 141 echoes —
 	 * has to be distinct.
 	 *
 	 * <p>A collision would mean two entities the user cannot tell apart in the
@@ -784,7 +800,7 @@ public class CitizenEchoTest
 		}
 
 		assertTrue("uuid collision(s): " + clashes, clashes.isEmpty());
-		assertEquals("181 authored entities plus 143 echoes", 324, seen.size());
+		assertEquals("181 authored entities plus 141 echoes", 322, seen.size());
 	}
 
 	/**
@@ -875,7 +891,7 @@ public class CitizenEchoTest
 	/**
 	 * Every shipped echo wears its source's own colours, re-dealt.
 	 *
-	 * <p>The same three claims as the fixture test, over the 143 real echoes. What
+	 * <p>The same three claims as the fixture test, over the 141 real echoes. What
 	 * this adds is coverage of the dataset's awkward palettes — repeated colours,
 	 * eleven-pair wardrobes — where a rotation can quietly come out as the identity.
 	 */
@@ -1022,7 +1038,7 @@ public class CitizenEchoTest
 			checked++;
 		}
 
-		assertEquals("the shipped echo roster", 143, checked);
+		assertEquals("the shipped echo roster", 141, checked);
 	}
 
 	private static String describe(EntityDefinition entity)

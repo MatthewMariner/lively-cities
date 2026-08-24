@@ -52,20 +52,22 @@ import net.runelite.api.coords.WorldPoint;
  *   <li>a source <b>dressed from an {@code npcAppearanceId}</b> is refused too, and
  *       for a sharper reason: its colours come from the composition rather than from
  *       its record, so re-dealing the record's palette would change nothing and the
- *       echo would be a pixel-for-pixel twin. Nothing else in the shipped data uses
- *       that field, so today this and the bullet above name the same six;</li>
- *   <li>of the 129 that remain, 45 carry no recolour at all and 4 carry a single
+ *       echo would be a pixel-for-pixel twin. One shipped citizen is in this bucket
+ *       and not the one above — "Rufus" in Varrock square, who wears
+ *       {@code NpcID.FARMER1} because his authored {@code modelIds} had no footwear
+ *       in them (GitHub issue #1). He used to seed two echoes and now seeds none;</li>
+ *   <li>of the 128 that remain, 45 carry no recolour at all and 4 carry a single
  *       pair — no second slot to deal into, so 49 seed nothing;</li>
  *   <li>4 more carry two or more pairs whose {@code replace} values are all
  *       identical ("Brother Keptic", "Dark wizard", "Ambatu", "Sister Palus"), so
  *       every re-deal is the deal it started with — they seed nothing either;</li>
- *   <li>the remaining <b>76</b> seed {@link #MAX_ECHOES_PER_CITIZEN} echoes each
+ *   <li>the remaining <b>75</b> seed {@link #MAX_ECHOES_PER_CITIZEN} echoes each
  *       where their palette supports two <i>distinct</i> re-deals, and one where it
- *       supports only one — 144 echoes asked for, of which 143 find somewhere legal
+ *       supports only one — 142 echoes asked for, of which 141 find somewhere legal
  *       to stand (see below).</li>
  * </ul>
- * That comes to <b>143 echoes against 135 authored citizens — 278 in total,
- * 2.06×</b>, which is the "roughly twice as many" the request asked for.
+ * That comes to <b>141 echoes against 135 authored citizens — 276 in total,
+ * 2.04×</b>, which is the "roughly twice as many" the request asked for.
  * {@code CitizenEchoTest} recomputes all of those numbers from the shipped files
  * rather than trusting this paragraph.
  *
@@ -93,7 +95,7 @@ import net.runelite.api.coords.WorldPoint;
  * {@link #MIN_SEPARATION_TILES} from all of them, whoever they belong to.
  *
  * <p><b>What that costs.</b> An echo with nowhere legal left to stand is not derived
- * at all: across the shipped files that is exactly one of the 144 asked for — the
+ * at all: across the shipped files that is exactly one of the 142 asked for — the
  * "Mysterious Old Man" in Varrock gets one echo instead of two — and it moves four
  * others off a wander-box tile onto a ring offset the collision map then has to
  * vouch for. Skipping is the same answer this class already gives an echo whose tile
@@ -196,7 +198,7 @@ final class CitizenEcho
 	 * <p>A judgement, not arithmetic. The palette of the richest shipped citizen
 	 * supports ten distinct re-deals; letting it spend all ten would put eleven
 	 * copies of one body in one doorway. Two is what turns 135 authored citizens
-	 * into 278 — the "twice as many" that was asked for — and it is the number the
+	 * into 276 — the "twice as many" that was asked for — and it is the number the
 	 * count in this class's javadoc is computed from.
 	 */
 	static final int MAX_ECHOES_PER_CITIZEN = 2;
@@ -367,8 +369,8 @@ final class CitizenEcho
 		short[] replace = source.getRecolorReplace();
 		if (find.length < 2 || replace.length < 2)
 		{
-			// Nothing to re-deal — see the class javadoc. 49 of the 129 non-cameo
-			// shipped citizens land here.
+			// Nothing to re-deal — see the class javadoc. 49 of the 128 shipped citizens
+			// that reach this line land here.
 			return NONE;
 		}
 

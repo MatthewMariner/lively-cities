@@ -129,6 +129,17 @@ public class LivelyCitiesPlugin extends Plugin
 	ConfigWriter configWriter;
 
 	/**
+	 * The stopwatch, off for every ordinary launch — see {@link FrameTimings}.
+	 *
+	 * <p>Injected here as well as into {@link EntityScene} because the two halves live
+	 * in different places: the scene owns the measuring, and this class owns the
+	 * cadence and the file, which is where {@code RuneLite.RUNELITE_DIR} and the
+	 * background thread are. Guice hands both the same {@code @Singleton}.
+	 */
+	@Inject
+	FrameTimings frameTimings;
+
+	/**
 	 * True when the client was launched with {@code --developer-mode} — the same
 	 * {@code RuneLiteProperties} launcher flag {@code ./gradlew run} already
 	 * passes for this project (see {@code build.gradle}). Bound by
@@ -184,6 +195,17 @@ public class LivelyCitiesPlugin extends Plugin
 		{
 			clientThread.invoke(this::runDeveloperCacheAudit);
 		}
+
+		if (frameTimings.isEnabled())
+		{
+			// Said out loud, because a measurement running silently is a measurement
+			// somebody forgets is running — and because "is it actually on?" is the
+			// first question when the report file turns out to be empty.
+			log.info("Lively Cities: frame timings are on ({} is set) — a summary every {} game "
+					+ "tick(s), and a report in ~/.runelite/lively-cities/{}",
+				FrameTimings.SYSTEM_PROPERTY, FrameTimings.REPORT_INTERVAL_TICKS,
+				FrameTimings.REPORT_FILE_NAME);
+		}
 	}
 
 	/**
@@ -218,25 +240,97 @@ public class LivelyCitiesPlugin extends Plugin
 			dataset.animationIdsByName.size(), report.failingAnimations.size(),
 			report.knownPermanentNullAnimations.size());
 
-		// Disk I/O never happens on the client thread. The report itself is
-		// already finished plain data by this point, so handing it to a
-		// background thread costs nothing the client thread would otherwise wait
-		// on.
-		File outputDir = new File(RuneLite.RUNELITE_DIR, "lively-cities");
-		CompletableFuture.runAsync(() -> writeReport(outputDir, report));
+		// Disk I/O never happens on the client thread. The text is built here, where
+		// the report was, so what crosses the thread boundary is a finished snapshot
+		// rather than an object still holding collections.
+		writeReportAsync(reportDir(), CacheIdAudit.REPORT_FILE_NAME, report.toReportText(),
+			"cache id audit");
 	}
 
-	private static void writeReport(File outputDir, CacheIdAudit.Report report)
+	/**
+	 * Hands one finished report to a background thread.
+	 *
+	 * <p>Package-private and non-final so a test can run it inline and see what it was
+	 * handed — the same seam, for the same reason, as {@link #reportFrameTimings()} and
+	 * {@link #runDeveloperCacheAudit()}, one level further down. It exists because the
+	 * <b>file name</b> is the one argument at these call sites that nothing else could
+	 * check. {@link ReportWriter} has been parameterised by file name since it grew a
+	 * second caller, so each caller now names its own constant — and passing
+	 * {@code CacheIdAudit.REPORT_FILE_NAME} from the frame-timing path compiles,
+	 * type-checks, and silently makes the frame report overwrite the model id audit.
+	 * Two callers, two constants, and until this seam existed neither constant appeared
+	 * in a single assertion.
+	 *
+	 * @param what what to call it in the log line, so a failure names the report that
+	 *             failed rather than "a report"
+	 */
+	CompletableFuture<Void> writeReportAsync(File outputDir, String fileName, String text, String what)
+	{
+		return CompletableFuture.runAsync(() -> writeReport(outputDir, fileName, text, what));
+	}
+
+	/**
+	 * Writes one finished report. Background thread only — see {@link ReportWriter}.
+	 */
+	private static void writeReport(File outputDir, String fileName, String text, String what)
 	{
 		try
 		{
-			File file = CacheAuditReportWriter.write(outputDir, report);
-			log.info("Lively Cities cache id audit report written to {}", file);
+			File file = ReportWriter.write(outputDir, fileName, text);
+			log.info("Lively Cities {} report written to {}", what, file);
 		}
 		catch (IOException e)
 		{
-			log.warn("Lively Cities cache id audit: could not write the report under {}", outputDir, e);
+			log.warn("Lively Cities {}: could not write the report under {}", what, outputDir, e);
 		}
+	}
+
+	/**
+	 * The plugin's own subdirectory of {@code ~/.runelite}.
+	 *
+	 * <p>Resolved per call rather than held in a static, because
+	 * {@code RuneLite.RUNELITE_DIR} is a static that a test never wants written to and
+	 * that neither report is on a hot path for.
+	 */
+	private static File reportDir()
+	{
+		return new File(RuneLite.RUNELITE_DIR, "lively-cities");
+	}
+
+	/**
+	 * The frame-timing cadence: one info line and one file, every
+	 * {@link FrameTimings#REPORT_INTERVAL_TICKS} game ticks.
+	 *
+	 * <p>The text is built here, on the client thread, and written on a background one
+	 * — the same split {@link #runDeveloperCacheAudit()} uses, and for the same two
+	 * reasons: disk I/O never happens on the client thread, and a report handed over as
+	 * finished text is a snapshot rather than a view of counters that are still moving.
+	 *
+	 * <p>Unreachable for an ordinary user: {@link FrameTimings#onGameTick()} returns
+	 * false forever unless both halves of its gate are set.
+	 *
+	 * <p><b>Nothing is written when there is nothing to say.</b> {@link #shutDown()}
+	 * calls this unconditionally, so without the {@code hasSamples()} guard a client
+	 * that was started and closed without the stopwatch ever taking a sample would
+	 * replace a real report with a file that says "no samples" three times over.
+	 *
+	 * <p>Package-private and non-final so a test can override it and count the calls —
+	 * the same seam, for the same reason, as {@link #runDeveloperCacheAudit()}. What
+	 * needs asserting is <i>when</i> this runs, and under which file name
+	 * ({@link #writeReportAsync}); that it can write a file is {@code ReportWriterTest}'s,
+	 * against a temp directory rather than the real {@code ~/.runelite}.
+	 */
+	void reportFrameTimings()
+	{
+		if (!frameTimings.hasSamples())
+		{
+			return;
+		}
+
+		log.info(frameTimings.summaryLine());
+
+		writeReportAsync(reportDir(), FrameTimings.REPORT_FILE_NAME, frameTimings.toReportText(),
+			"frame timings");
 	}
 
 	@Override
@@ -251,6 +345,11 @@ public class LivelyCitiesPlugin extends Plugin
 		// on. Left set, it would keep that wrapper — and its lit model — alive past
 		// the teardown whose whole job is to leave nothing behind.
 		citizenMenu.forget();
+
+		// The tail of the session, before the scene is torn down. A no-op unless the
+		// stopwatch is on, and non-blocking either way — the periodic report is the one
+		// to rely on if the client is killed rather than closed.
+		reportFrameTimings();
 
 		// Not blocking: invoke() runs inline on the client thread and defers
 		// otherwise. The count lands in the log either way.
@@ -438,6 +537,13 @@ public class LivelyCitiesPlugin extends Plugin
 
 		scene.syncRegions(worldView);
 		scene.onGameTick(playerLocation, worldView);
+
+		// After the pass it is timing, so the tick that triggers a report is a tick the
+		// report already includes. Returns false forever unless the stopwatch is on.
+		if (frameTimings.onGameTick())
+		{
+			reportFrameTimings();
+		}
 	}
 
 	/**

@@ -67,6 +67,21 @@ tasks.register('auditCacheIds', JavaExec) {
 	args "--developer-mode", "--debug"
 }
 
+// The frame-time stopwatch, same shape and for the same reason as auditCacheIds
+// above: a dev-only capability that is compiled into the shipped jar but cannot be
+// switched on by an ordinary user. FrameTimings needs BOTH this system property and
+// --developer-mode, so `run` and `test` measure nothing. Play for a few minutes and a
+// report lands in ~/.runelite/lively-cities/frame-timings.txt with median/p95/p99 for
+// the per-tick pass, model building and the per-frame pass.
+tasks.register('runWithTimings', JavaExec) {
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = pluginMainClass
+
+	jvmArgs "-ea"
+	systemProperty 'livelycities.frameTimings', 'true'
+	args "--developer-mode", "--debug"
+}
+
 tasks.register('shadowJar', Jar) {
 	dependsOn configurations.testRuntimeClasspath
 	manifest {

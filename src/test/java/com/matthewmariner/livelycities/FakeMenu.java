@@ -60,6 +60,24 @@ final class FakeMenu implements Menu
 	}
 
 	/**
+	 * The menu the client builds for a right-click on the <b>minimap</b>: Cancel and
+	 * Walk here, and nothing that says where the click came from.
+	 *
+	 * <p>Deliberately a strict subset of {@link #seedWorldClick()} rather than
+	 * something recognisable — that is the whole of GitHub issue #2. Disassembling the
+	 * injected 1.12.36 client, every "Walk here" in the game comes out of one method
+	 * with a literal identifier of {@code 0}, an empty target and mouse-relative
+	 * params, so no field on the entry distinguishes a map click from a ground click.
+	 * A fixture that made the two menus tell themselves apart would let a
+	 * menu-reading fix pass a test the real client would fail.
+	 */
+	FakeMenu seedMinimapClick()
+	{
+		return seed(MenuAction.CANCEL, "Cancel")
+			.seed(MenuAction.WALK, "Walk here");
+	}
+
+	/**
 	 * The menu the client builds for a right-click on an interface: no "Walk here",
 	 * because there is no tile under an inventory slot.
 	 */

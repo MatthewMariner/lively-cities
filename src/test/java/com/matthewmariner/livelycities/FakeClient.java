@@ -226,6 +226,31 @@ final class FakeClient extends StubClient
 		return this;
 	}
 
+	/**
+	 * Registers a working composition for every {@code npcAppearanceId} the shipped
+	 * dataset references — a warm NPC archive.
+	 *
+	 * <p>Needed by the tests that spawn the <b>real</b> {@code RegionData/*.json}
+	 * rather than a {@link FakeRegions} fixture. {@link #getNpcDefinition(int)} throws
+	 * for an id nobody registered, which is the real 1.12.36 behaviour, so without
+	 * this those tests model a client whose NPC archive is missing every id the
+	 * dataset names: "Rufus" in Varrock would silently fail to spawn and a crowd count
+	 * would come out one short for a reason that has nothing to do with what was being
+	 * measured. It cost an afternoon once; hence this method rather than a per-test
+	 * {@code withNpc} call.
+	 *
+	 * <p>Reads the ids straight out of the dataset, so an eighth one added to the JSON
+	 * is covered without touching this.
+	 */
+	FakeClient withShippedNpcAppearances()
+	{
+		for (int id : ShippedModelIds.distinctNpcAppearanceIds())
+		{
+			withNpc(id, FakeNpcComposition.of("shipped npc " + id, 900_000 + id));
+		}
+		return this;
+	}
+
 	/** The id resolves to a null composition instead of throwing. */
 	FakeClient setNullNpcComposition(int id)
 	{
@@ -515,6 +540,64 @@ final class FakeClient extends StubClient
 	void setMouseCanvasPosition(@Nullable net.runelite.api.Point position)
 	{
 		this.mouseCanvasPosition = position;
+	}
+
+	// --- The interface layout, for the minimap guard. -------------------------
+	//
+	// Three methods, and they are the three RuneLite's own OverlayOrigin.MINIMAP
+	// asks (verified in client-1.12.36's bytecode): is the client resized, which
+	// toplevel interface is loaded, and what is at this component id.
+	//
+	// The widget map starts EMPTY and getWidget returns null for anything not in
+	// it, which is the real behaviour for a component in an interface that is not
+	// loaded — getWidget(group, child) returns null once either array index is out
+	// of range. That default is what lets a test say "the layout the client is in
+	// is not the one this id belongs to" by simply not registering it.
+
+	private final Map<Integer, net.runelite.api.widgets.Widget> widgets = new HashMap<>();
+
+	private boolean resized;
+
+	private int topLevelInterfaceId = net.runelite.api.gameval.InterfaceID.TOPLEVEL;
+
+	@Override
+	public boolean isResized()
+	{
+		return resized;
+	}
+
+	@Override
+	public int getTopLevelInterfaceId()
+	{
+		return topLevelInterfaceId;
+	}
+
+	@Override
+	@Nullable
+	public net.runelite.api.widgets.Widget getWidget(int componentId)
+	{
+		return widgets.get(componentId);
+	}
+
+	/** Puts one widget at one packed {@code gameval.InterfaceID} component id. */
+	FakeClient withWidget(int componentId, net.runelite.api.widgets.Widget widget)
+	{
+		widgets.put(componentId, widget);
+		return this;
+	}
+
+	/**
+	 * Switches the client into one of the resizable layouts.
+	 *
+	 * @param topLevelInterfaceId {@code InterfaceID.TOPLEVEL_OSRS_STRETCH} or
+	 *                            {@code InterfaceID.TOPLEVEL_PRE_EOC} — the two the
+	 *                            resizable branch has to tell apart
+	 */
+	FakeClient resizedWith(int topLevelInterfaceId)
+	{
+		this.resized = true;
+		this.topLevelInterfaceId = topLevelInterfaceId;
+		return this;
 	}
 
 	/**

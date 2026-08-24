@@ -3,8 +3,12 @@ package com.matthewmariner.livelycities;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
+import net.runelite.api.gameval.NpcID;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -103,8 +107,8 @@ public class ModelIdAuditTest
 			violations.isEmpty());
 
 		// Both halves have to be non-empty or this test is only checking one rule.
-		assertEquals("entities dressed from raw model ids", 175, fromModelIds);
-		assertEquals("entities dressed from an NPC appearance", 6, fromNpcAppearance);
+		assertEquals("entities dressed from raw model ids", 174, fromModelIds);
+		assertEquals("entities dressed from an NPC appearance", 7, fromNpcAppearance);
 	}
 
 	/**
@@ -129,23 +133,107 @@ public class ModelIdAuditTest
 		assertTrue("implausible npcAppearanceId(s) in the shipped dataset: " + violations,
 			violations.isEmpty());
 		assertEquals("the dataset has to actually use the mechanism for this to mean anything",
-			6, ShippedModelIds.distinctNpcAppearanceIds().size());
+			7, ShippedModelIds.distinctNpcAppearanceIds().size());
 	}
 
 	/**
-	 * The load-bearing pin. 384 is the precise size of the fragility surface the
-	 * plan's L0 audit measured — the exact input list the cache-backed validator
-	 * has to check. A dataset change that adds or removes model ids has to move
-	 * this number, which is what makes the change visible in review rather than
-	 * silently changing what durability tooling covers.
+	 * <b>GitHub issue #1: "Rufus renders without boots."</b>
+	 *
+	 * <p>Not a rendering bug — the client logged no model-load failure for him, and a
+	 * partial build cannot spawn at all (see {@code LivelyEntity}). His record carried
+	 * twelve model ids, the most of any entity in the corpus, and none of them was
+	 * footwear. It sat unfixed because the only fix available was to guess a raw model
+	 * id, and a wrong guess puts a hat where the boots should be.
+	 *
+	 * <p>{@code npcAppearanceId} removed the guess: he now wears a <i>named</i>
+	 * constant. The id is asserted through {@link NpcID#FARMER1} rather than as 3114,
+	 * and the second assertion is the one that makes the choice checkable rather than
+	 * asserted — the 1.12.36 jar's other, independently generated id table names the
+	 * same number {@code FARMER}, i.e. an NPC whose in-game name is literally "Farmer".
+	 * That is the whole evidence for "the id maps to the thing we think it does".
+	 *
+	 * <p><b>That first line is a compile-time pin, not a runtime one</b>, and an earlier
+	 * revision of this javadoc oversold it as "a mechanical check". Both names are
+	 * {@code static final int}, so javac inlines them (JLS 4.12.4) and what actually
+	 * executes is {@code assertEquals(3114, 3114)} — two literals that cannot disagree.
+	 * It still earns its keep, because {@code runeLiteVersion = 'latest.release'} means
+	 * a jar bump recompiles this file and a disagreement between the two tables would be
+	 * baked in as two <i>different</i> literals and go red on the next run. But what it
+	 * pins is the jar this file was compiled against, not the jar the suite is running
+	 * on, and the only way to make it a genuine runtime read is reflection, which this
+	 * project does not use.
+	 *
+	 * <p>The rest is the trade, written down: he is emphatically <b>not</b> a cameo — an
+	 * ordinary townsperson must not become opt-in content by way of a bug fix, see
+	 * {@code EntityRecord.cameo} — and he is the only non-cameo citizen dressed this
+	 * way. He is looked up <b>by name across the whole roster</b> rather than taken out
+	 * of the list filtered on {@code !cameo}, because an earlier revision did the
+	 * latter and its {@code assertFalse(rufus.cameo)} was then a restatement of the
+	 * filter that had selected him: it could not fail. Flip {@code cameo} to true on his
+	 * record now and it does.
+	 *
+	 * <p>That his authored body is <b>replaced, not patched</b> — the appearance wins,
+	 * so the twelve ids and their six recolour pairs left the record entirely — used to
+	 * be a fourth loop here with no counter in it, which would have passed having
+	 * asserted nothing if its {@code if} had stopped matching.
+	 * {@link #everyEntityHasEitherModelIdsOrAnNpcAppearanceIdAndNeverNeither} already
+	 * makes exactly that claim over every entity in the dataset, and reports carrying
+	 * both as a violation, so the loop was deleted rather than decorated.
 	 */
 	@Test
-	public void the384DistinctModelIdFigureIsPinned()
+	public void theCitizenWhoseAuthoredModelsHadNoBootsWearsANamedNpcInstead()
+	{
+		assertEquals("the two independently generated id tables in runelite-api-1.12.36 have to "
+				+ "agree that this number is the NPC named \"Farmer\" — that agreement is the only "
+				+ "evidence anybody has that the id means what the dataset says it means",
+			net.runelite.api.NpcID.FARMER, NpcID.FARMER1);
+
+		ShippedCitizens.Entry rufus = null;
+		for (ShippedCitizens.Entry citizen : ShippedCitizens.all())
+		{
+			if ("Rufus".equals(citizen.name))
+			{
+				assertNull("two citizens named Rufus would make every assertion below ambiguous",
+					rufus);
+				rufus = citizen;
+			}
+		}
+
+		assertNotNull("the citizen this entire test is about is no longer in the dataset", rufus);
+		assertEquals(NpcID.FARMER1, rufus.npcAppearanceId);
+		assertFalse("a townsperson fixed by re-dressing him must not become opt-in content",
+			rufus.cameo);
+
+		List<ShippedCitizens.Entry> dressedFromAnNpc = new ArrayList<>();
+		for (ShippedCitizens.Entry citizen : ShippedCitizens.all())
+		{
+			if (citizen.npcAppearanceId != 0 && !citizen.cameo)
+			{
+				dressedFromAnNpc.add(citizen);
+			}
+		}
+
+		assertEquals("exactly one non-cameo citizen is dressed from a composition: " + dressedFromAnNpc,
+			1, dressedFromAnNpc.size());
+		assertEquals("and it is him", "Rufus", dressedFromAnNpc.get(0).name);
+	}
+
+	/**
+	 * The load-bearing pin. The plan's L0 audit measured 384 — the exact input list
+	 * the cache-backed validator had to check. It is 376 now: "Rufus" in Varrock was
+	 * moved onto an {@code npcAppearanceId} (GitHub issue #1) and eight of his twelve
+	 * model ids were used by nobody else, so they left the corpus with him. A dataset
+	 * change that adds or removes model ids has to move this number, which is what makes
+	 * the change visible in review rather than silently changing what the durability
+	 * tooling covers.
+	 */
+	@Test
+	public void theDistinctModelIdFigureIsPinned()
 	{
 		assertEquals("distinct model ids across the shipped dataset — see the L0 audit in "
 				+ "plans/osrs-lively-cities.md; a change here means the durability tooling's "
 				+ "input list changed and should be re-reviewed",
-			384, ShippedModelIds.distinct().size());
+			376, ShippedModelIds.distinct().size());
 	}
 
 	/**

@@ -34,7 +34,7 @@ public class CacheIdAuditTest
 	 * {@link ShippedModelIds#distinct()} — two independent readings of the same
 	 * dataset, one through {@link EntityDefinition} (validated, what the render
 	 * core actually uses) and one straight off the raw JSON
-	 * ({@link ModelIdAuditTest} pins the raw one at 384). They have to agree,
+	 * ({@link ModelIdAuditTest} pins the raw one at 376). They have to agree,
 	 * because the shipped dataset has zero skipped records and zero non-positive
 	 * ids — if they ever disagree, either a record started being skipped or a
 	 * non-positive id crept into the corpus, and this is what would notice
@@ -49,7 +49,7 @@ public class CacheIdAuditTest
 		assertEquals("every City-claimed region has to load", 45, dataset.regionsLoaded);
 		assertEquals("collect() must see exactly the raw dataset's distinct model ids",
 			ShippedModelIds.distinct(), dataset.modelIds);
-		assertEquals(384, dataset.modelIds.size());
+		assertEquals(376, dataset.modelIds.size());
 	}
 
 	/**
@@ -74,9 +74,9 @@ public class CacheIdAuditTest
 	 *
 	 * <p>This is the whole justification for preferring an NPC id to a raw model id.
 	 * An entity dressed from a composition contributes <b>no</b> model ids at all, so
-	 * without this bucket the six cameos would be the one part of the dataset the
-	 * durability tooling could not see — and "we chose the more auditable mechanism"
-	 * would be a claim rather than a fact.
+	 * without this bucket the seven entities dressed that way would be the one part of
+	 * the dataset the durability tooling could not see — and "we chose the more
+	 * auditable mechanism" would be a claim rather than a fact.
 	 *
 	 * <p>Cross-checked against {@link ShippedModelIds#distinctNpcAppearanceIds()},
 	 * which reads the raw JSON, exactly as the model ids are.
@@ -89,7 +89,8 @@ public class CacheIdAuditTest
 
 		assertEquals("collect() must see exactly the raw dataset's npcAppearanceIds",
 			ShippedModelIds.distinctNpcAppearanceIds(), dataset.npcAppearanceIds);
-		assertEquals("the six cameos' NPC ids", 6, dataset.npcAppearanceIds.size());
+		assertEquals("the six cameos' NPC ids plus the one \"Rufus\" wears", 7,
+			dataset.npcAppearanceIds.size());
 		assertFalse("an NPC id is not a model id and must not be counted as one",
 			dataset.modelIds.containsAll(dataset.npcAppearanceIds));
 	}

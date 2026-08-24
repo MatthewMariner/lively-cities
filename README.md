@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-367-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-397-brightgreen)](#development)
 
 </div>
 
@@ -43,7 +43,7 @@ load, and **nothing another player can see**.
 | **181 entities** | 135 citizens + 46 pieces of scenery |
 | **63 wander**, 66 stand still, 6 follow a script | |
 | **24 places** | Varrock, Lumbridge, Falador, Al Kharid, Edgeville, Draynor, Ardougne, Catherby, Camelot, Taverley, Rimmington, Piscatoris, Canifis, the Barrows, and more |
-| **~278 at Crowded** | an optional density that roughly doubles the streets |
+| **~276 at Crowded** | an optional density that roughly doubles the streets |
 
 <!-- SCREENSHOT: a close-up of two or three citizens with distinct appearances, ideally one
      mid-walk. Save as docs/img/citizens.png and replace with:
@@ -100,6 +100,11 @@ This is the part that matters more than the citizens, and it is deliberate.
   asserted: the test client throws on every real-action call, so any code path reaching for
   one fails the build.
 - **Don't like someone?** Right-click → **Hide**. It persists. "Unhide all" brings them back.
+- **It measures its own cost rather than promising there isn't one.** The clickbox — the
+  expensive part — is computed when you right-click and never per frame, so the only
+  per-frame work is sliding walking figures between tiles.
+  [`./gradlew runWithTimings`](#measuring-what-this-plugin-costs--gradlew-runwithtimings)
+  reports the distribution, and the acceptance thresholds are written down in advance.
 
 <!-- SCREENSHOT: right-click menu on a citizen showing Examine / Hide / Mute below the real
      options, with the coloured target text visible. Save as docs/img/menu.png and replace
@@ -134,11 +139,12 @@ What is new is everything that stops it dying the same way:
   `npcAppearanceId` and clone an existing NPC's models and colours instead of listing cache
   numbers nobody can look up. That is one indirection further from the geometry an artist
   reworks, it is a named constant in `gameval.NpcID`, and the audit above covers it — which
-  is the whole reason to prefer it. The 175 vendored figures keep their `modelIds` unchanged.
+  is the whole reason to prefer it. The vendored figures keep their `modelIds`; the one
+  exception is Rufus, who had no boots in his (see below).
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they are now
   anonymous barrow wights.
-- **367 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **397 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -150,14 +156,36 @@ Stated plainly, because you will find them anyway.
 - **The dataset is thin and lopsided.** 135 citizens for the whole game, and roughly a third
   of them are in one Varrock region. Falador and Nardah have almost nobody. Fixing this is
   content authoring, and it is the main work left.
-- **Some figures have gaps.** Rufus in Varrock square is missing boots — his record simply
-  never had that model id. Ours renders faithfully what was authored.
+- **A figure whose record was short a model is re-dressed rather than patched.** Rufus in
+  Varrock square had no footwear model in his twelve — the record simply never carried one.
+  Guessing which raw id to add could have given him a hat for feet, so he now wears
+  `NpcID.FARMER1` (the game's own generic "Farmer") through `npcAppearanceId` instead. That
+  replaces his whole appearance rather than patching it, so the twelve hand-picked ids and
+  their six recolour pairs are gone; he reads as an ordinary farming trader now, complete,
+  rather than as a distinctive barefoot one. He also stops seeding `Crowded` extras, because
+  an NPC-dressed citizen has no record palette to re-deal — two ambient bodies, 143 down to
+  141.
 - **Distant figures pop in** past ~16 tiles. See Render distance above.
 - **Smoothing needs RuneLite's own Animation Smoothing plugin** turned on. With it off,
   nothing in the game interpolates — real NPCs included — so our figures look equally steppy.
-- **The right-click guard has one hole.** It suppresses citizen entries on interface clicks by
-  looking for a "Walk here" option. A *minimap* right-click also carries one, so a citizen
-  projecting under the minimap could still be offered there.
+- **The right-click guard has one layout it cannot see.** It suppresses citizen entries on
+  interface clicks by looking for a "Walk here" option, and the minimap carries one of those
+  too — so the minimap panel is excluded by its own on-screen rectangle instead, using
+  RuneLite's own three component ids for it. The fourth layout, `TOPLEVEL_OSM`, has a
+  different id and is not covered; RuneLite's own minimap-anchored overlays do not handle it
+  either. On that layout a citizen projecting under the minimap can still be offered a
+  (harmless, local) Examine.
+- **There is no measured frame-time figure here yet — only the instrument that produces
+  one.** The predecessor's README promised "no lag or resource issues" and never measured
+  anything, so this one will not repeat the claim without a number. `./gradlew runWithTimings`
+  meters the three things this plugin actually costs — the per-tick visibility pass, model
+  building, and the per-frame interpolation pass — and reports a median, a 95th and a 99th
+  percentile with the active-object count beside them, every three minutes, into the client
+  log and into `~/.runelite/lively-cities/frame-timings.txt`. The thresholds it should be read
+  against are written down in advance, in `FrameTimings` and in the report's own header:
+  interpolation p99 at or under 0.5ms and visibility p99 at or under 2ms are fine; over 2ms
+  and over 8ms respectively are problems. The figure lands here once a human has played with
+  it on.
 - **Crowded adds derived figures, not authored ones.** They are silent, they do not wander,
   and they wear their source's colours rearranged. They are ambience, not characters.
 - **The cameo tiles have not been walked on.** The six were placed off the Grand Exchange's
@@ -183,9 +211,10 @@ Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires 
 the Gradle wrapper handles the rest.
 
 ```bash
-./gradlew build          # compile and run the 367 tests
-./gradlew run            # a dev client with the plugin loaded
-./gradlew auditCacheIds  # dev client + walk every cache id (see below)
+./gradlew build            # compile and run the 397 tests
+./gradlew run              # a dev client with the plugin loaded
+./gradlew auditCacheIds    # dev client + walk every cache id (see below)
+./gradlew runWithTimings   # dev client + measure our own frame cost (see below)
 ```
 
 `run-windows.sh` builds in WSL and launches the client natively on Windows using RuneLite's
@@ -219,8 +248,8 @@ and `RegionDataLoaderTest` already assert, over the shipped JSON alone:
   weight (the `npcAppearanceId` wins when a record carries both)
 - every `npcAppearanceId` is inside the same plausible range, which bites
   harder there: `gameval.NpcID`'s highest constant in 1.12.36 is 16346
-- the dataset's distinct-model-id count is pinned (currently 384) and its
-  distinct-`npcAppearanceId` count is pinned (currently 6) — if either test
+- the dataset's distinct-model-id count is pinned (currently 376) and its
+  distinct-`npcAppearanceId` count is pinned (currently 7) — if either test
   fails after you *intentionally* changed the dataset, update the pinned
   number in `ModelIdAuditTest`; if you did not touch the dataset, something
   else changed it
@@ -296,6 +325,64 @@ current cache — the exact failure mode that killed Citizens.
 Never ship a fix without re-running `auditCacheIds`: gc's own fix for Citizens
 was self-described as comprehensive only "for the most part," which is why
 that check exists at all rather than trusting a manual diff.
+
+### Measuring what this plugin costs — `./gradlew runWithTimings`
+
+Two people asked the predecessor's author about FPS on Reddit and got no
+answer, and its README said "no lag or resource issues" without ever having
+measured one. So the answer here is an instrument rather than a claim, and it
+is designed so that a real number falls out of ordinary play instead of out of
+a benchmark nobody runs.
+
+```
+./gradlew runWithTimings
+```
+
+Launches the same dev client `./gradlew run` does, with one extra system
+property. Then just play — walk into Varrock square, turn the density up, walk
+out again. Every three minutes (300 game ticks) the plugin writes a summary
+line to the client log and a cumulative report to:
+
+```
+~/.runelite/lively-cities/frame-timings.txt
+```
+
+Three meters, on three different clocks:
+
+| Meter | Clock | What it covers |
+|---|---|---|
+| `visibility pass` | once per game tick (600ms) | deciding who is on screen — **includes** model building |
+| `model build` | once per figure, first spawn | merging, recolouring and lighting one model |
+| `interpolation` | once per rendered frame | sliding walking figures between tiles, and nothing else |
+
+Each reports a median, a 95th and a 99th percentile, an exact maximum, and the
+active-object count recorded at that maximum — because "1ms at 8 objects" and
+"1ms at 76" are different claims. A mean is deliberately not the headline: one
+40ms model-building tick inside three minutes of 30µs ticks averages away to
+nothing and is still a visible hitch.
+
+**What the numbers should say**, written down before they were taken so the
+result cannot be graded on a curve afterwards. A frame at 60fps is 16.7ms.
+
+- **Interpolation p99 ≤ 0.5ms** is acceptable (3% of a frame). Over **2ms** is
+  a problem: it is the only per-frame work here, and it should be close to
+  nothing — the right-click clickbox, which is the expensive part, is computed
+  in `MenuOpened` and never per frame.
+- **Visibility pass p99 ≤ 2ms** is acceptable — it lands in one frame in
+  thirty-six. Over **8ms** is a problem: half a frame on a schedule is a
+  rhythmic stutter.
+- **Model building: no single build over 20ms**, and the burst that lands on
+  entering a dense region inside 100ms. Any single build over **50ms** is a
+  problem, and the fix is known rather than hypothetical — spread the burst
+  across ticks instead of spending the whole 80-object cap in one pass.
+
+It costs nothing when it is off, which is every shipped client: both
+`--developer-mode` and the system property have to be set, and with the meter
+disabled the timing calls do not even read the clock.
+
+Once measured, the figure belongs in **Known limitations** above (replacing the
+entry that currently says only that the instrument exists) and in the
+performance line of the hub PR body in `docs/SUBMISSION.md`.
 
 ---
 
