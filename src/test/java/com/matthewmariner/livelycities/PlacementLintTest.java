@@ -1,8 +1,10 @@
 package com.matthewmariner.livelycities;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import javax.annotation.Nullable;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
@@ -20,18 +22,26 @@ import static org.junit.Assert.assertTrue;
  * silent until a player noticed; this makes the same shape of mistake a red
  * test instead.
  *
- * <p><b>{@link #everyShippedCitizenThemeIsCompatibleWithItsRegion} is
- * currently red, on purpose.</b> It fails on the six Barrows Brothers
- * (region 14131), which is the confirmed, real offender: {@link EntityTheme}
- * tags each of them {@link Theme#UNIQUE_BOSS} on the strength of their own
- * examine text ("The ghost of &lt;Brother&gt;."), and {@link Theme#UNIQUE_BOSS}
- * is mapped to no region in {@link CityTheme} — see that enum's javadoc for
- * why. This is deliberately <b>not</b> silenced through
- * {@link PlacementExceptions}: that list is for placements judged fine on
- * inspection, and this one was not. The red assertion's message is the report
- * of exactly what is wrong; the fix (retag, move, or remove) is a data change
- * to the vendored {@code RegionData/*.json}, which is a separate, deliberate
- * decision this test does not make.
+ * <p><b>It found one real offender, and that offender has been fixed.</b> The
+ * six citizens in region 14131 were named after the Barrows Brothers, with
+ * "The ghost of &lt;Brother&gt;." examine text — the 303-upvote complaint about
+ * the predecessor. {@link EntityTheme} tagged them {@link Theme#UNIQUE_BOSS},
+ * which {@link CityTheme} maps to no region, so the lint went red. On
+ * 2026-08-23 they were renamed in the dataset to generic "Barrow wight"s
+ * (placements, models and animations untouched — only the identities) and
+ * retagged {@link Theme#MORYTANIA_UNDEAD}, which the Barrows region does
+ * claim. The lint is green because they are now honestly undead in Morytania,
+ * not because the check was relaxed: {@link PlacementExceptions} was
+ * deliberately <b>not</b> used, since that list is for placements judged fine
+ * on inspection and this one was not.
+ *
+ * <p><b>Standing limitation, worth knowing.</b> Nothing in the shipped data
+ * carries {@link Theme#UNIQUE_BOSS} any more, so the rule that catches a
+ * boss impersonator is live but currently unexercised by real content —
+ * {@link PlacementCompatibilityTest} is the only thing keeping it honest.
+ * A future dataset that reintroduces a named boss is caught only if someone
+ * also adds its uuid to {@link EntityTheme}, which is a manual step. That is
+ * the lint's weakest seam.
  */
 public class PlacementLintTest
 {
@@ -197,37 +207,50 @@ public class PlacementLintTest
 
 			Theme regionTheme = CityTheme.of(City.of(regionId));
 
-			for (EntityDefinition source : region.getEntities())
+			Map<UUID, EntityDefinition> sources = new HashMap<>();
+			for (EntityDefinition entity : region.getEntities())
 			{
-				for (EntityDefinition echo : CitizenEcho.echoesOf(source))
+				sources.put(entity.getUuid(), entity);
+			}
+
+			// The whole roster, which is how the scene derives them — an echo's tile
+			// depends on everything else standing in its region.
+			for (EntityDefinition echo : CitizenEcho.echoesOfRegion(region.getEntities()))
+			{
+				echoes++;
+				EntityDefinition source = sources.get(echo.getEchoSourceUuid());
+				assertTrue("every echo names a source from its own region file", source != null);
+
+				Theme echoTheme = EntityTheme.themeOf(echo.getUuid().toString());
+				if (echoTheme != Theme.GENERIC)
 				{
-					echoes++;
+					violations.add(echo.label() + " carries " + echoTheme
+						+ " — an echo has no authored identity to carry a theme with");
+				}
 
-					Theme echoTheme = EntityTheme.themeOf(echo.getUuid().toString());
-					if (echoTheme != Theme.GENERIC)
-					{
-						violations.add(echo.label() + " carries " + echoTheme
-							+ " — an echo has no authored identity to carry a theme with");
-					}
+				if (!PlacementCompatibility.isCompatible(echoTheme, regionTheme))
+				{
+					violations.add(echo.label() + ": " + echoTheme + " echo in a "
+						+ regionTheme + " region (" + cityLabel(City.of(regionId)) + ")");
+				}
 
-					if (!PlacementCompatibility.isCompatible(echoTheme, regionTheme))
-					{
-						violations.add(echo.label() + ": " + echoTheme + " echo in a "
-							+ regionTheme + " region (" + cityLabel(City.of(regionId)) + ")");
-					}
+				if (echo.getRegionId() != regionId)
+				{
+					violations.add(echo.label() + " left the file its source was filed under");
+				}
 
-					if (echo.getRegionId() != regionId)
-					{
-						violations.add(echo.label() + " left the file its source was filed under");
-					}
+				if (echo.getCityRegionId() != source.getTileRegionId())
+				{
+					violations.add(echo.label() + " is judged by region " + echo.getCityRegionId()
+						+ " rather than by its source's " + source.getTileRegionId());
+				}
 
-					if (RenderPolicy.tileDistance(
-						source.getWorldLocation(), echo.getWorldLocation())
-						> RenderPolicy.DATASET_OVERHANG_ALLOWANCE)
-					{
-						violations.add(echo.label() + " stands further from its source than the "
-							+ "overhang allowance, so it could be judged against another city");
-					}
+				if (RenderPolicy.tileDistance(
+					source.getWorldLocation(), echo.getWorldLocation())
+					> RenderPolicy.DATASET_OVERHANG_ALLOWANCE)
+				{
+					violations.add(echo.label() + " stands further from its source than the "
+						+ "overhang allowance, so it could be judged against another city");
 				}
 			}
 		}

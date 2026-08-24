@@ -7,14 +7,20 @@ import java.util.Map;
  * Deliberate oddities the placement lint would otherwise flag, each carrying
  * the one-line reason it is fine as-is.
  *
- * <p><b>What does not belong here.</b> This list is for placements the author
- * judged fine on inspection — not a place to quietly launder a confirmed bug
- * back to green. The six Barrows Brothers ({@code EntityTheme.Theme.UNIQUE_BOSS}
- * in region 14131) are <b>not</b> on this list on purpose: they are the
- * confirmed offender the lint exists to catch (see the placement lint report),
- * and {@code PlacementLintTest} is currently red on them until a fix is chosen
- * and applied to the data. Excepting them here would make the build green
- * without making the game any less wrong.
+ * <p><b>What does not belong here.</b> This list is for placements judged fine
+ * on inspection — not a place to quietly launder a confirmed bug back to green.
+ *
+ * <p>The six citizens in region 14131 are the worked example. They were named
+ * after the Barrows Brothers, carried "The ghost of &lt;Brother&gt;." examine
+ * text, and were tagged {@link Theme#UNIQUE_BOSS} — the confirmed offender this
+ * lint exists to catch. They were deliberately <b>never</b> added here. Instead
+ * they were fixed in the data on 2026-08-23: renamed to generic "Barrow wight"s
+ * and retagged {@link Theme#MORYTANIA_UNDEAD}, which the Barrows region does
+ * claim. The lint is green because the content changed, not because the check
+ * was told to look away.
+ *
+ * <p>That is the distinction worth preserving. An exception here would have made
+ * the build green while leaving the game exactly as wrong as it was.
  */
 final class PlacementExceptions
 {

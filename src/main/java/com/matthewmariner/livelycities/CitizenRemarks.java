@@ -128,11 +128,14 @@ final class CitizenRemarks
 	 *
 	 * <p>Staggered per citizen rather than synchronised, so a street does not
 	 * produce a chorus every {@code interval} ticks and then silence. With the
-	 * shipped defaults — a 60-tick interval and a 120-tick dwell — a synchronised
-	 * roll would mean every talker in view starting and stopping in lockstep, which
-	 * reads as a script firing rather than as people talking.
+	 * shipped defaults — a 100-tick (one minute) interval and an 8-tick (4.8 second)
+	 * dwell — a synchronised roll would mean every talker in view starting and
+	 * stopping in lockstep once a minute, which reads as a script firing rather than
+	 * as people talking.
 	 *
-	 * @param interval the configured roll interval in game ticks, at least 1
+	 * @param interval the roll interval in game ticks, already through
+	 *                 {@link CitizenChatter#effectiveIntervalTicks(int)}, so at least
+	 *                 {@link CitizenChatter#MIN_ROLL_INTERVAL_TICKS}
 	 */
 	boolean dueAt(int tick, int interval)
 	{

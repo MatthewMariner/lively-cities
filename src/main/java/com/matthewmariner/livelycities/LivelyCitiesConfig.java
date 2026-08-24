@@ -153,9 +153,10 @@ public interface LivelyCitiesConfig extends Config
 	@ConfigItem(
 		keyName = "remarkIntervalTicks",
 		name = "Chance every",
-		description = "How often each citizen gets a chance to say something. It is a chance, "
-			+ "not a turn — roughly one in four — so at the default a citizen with something "
-			+ "to say speaks about once every two and a half minutes. Higher means quieter.",
+		description = "How often each citizen gets a chance to say something, in game ticks. "
+			+ "One game tick is 0.6 seconds, so the default of 100 is one minute. It is a "
+			+ "chance, not a turn — roughly one in four — so at the default a citizen with "
+			+ "something to say speaks about once every four minutes. Higher means quieter.",
 		position = 2,
 		section = chatterSection
 	)
@@ -169,7 +170,11 @@ public interface LivelyCitiesConfig extends Config
 	@ConfigItem(
 		keyName = "remarkDwellTicks",
 		name = "Stays up for",
-		description = "How long a remark stays on screen once it appears.",
+		description = "How long a remark stays on screen once it appears, in game ticks. "
+			+ "One game tick is 0.6 seconds, so the default of 8 is just under five seconds "
+			+ "and the maximum of 30 is eighteen. A remark is always taken down before that "
+			+ "citizen's next chance to speak, so if you set this longer than \"Chance every\" "
+			+ "above it is shortened to one tick less — otherwise the text would never clear.",
 		position = 3,
 		section = chatterSection
 	)
@@ -199,8 +204,9 @@ public interface LivelyCitiesConfig extends Config
 		keyName = "maxConcurrentRemarks",
 		name = "At most on screen",
 		description = "How many remarks may be on screen at once. This is the setting that stops "
-			+ "a crowd becoming a wall of text — Varrock square holds forty citizens, and "
-			+ "without a cap roughly twenty of them would be talking at any moment.",
+			+ "a crowd becoming a wall of text — Varrock square holds forty citizens, and at "
+			+ "the tightest cadence the dials above allow, about nine of them would be talking "
+			+ "at any moment without a cap.",
 		position = 5,
 		section = chatterSection
 	)

@@ -55,18 +55,19 @@ import net.runelite.api.coords.WorldPoint;
  * not kept forever — see {@link #EVICTION_GRACE_SCOPE_CHANGES}.
  *
  * <p><b>Echoes live in {@link #built} beside the citizens they came from.</b>
- * {@link #ensureBuilt} asks {@link CitizenEcho} for a region's derived citizens as
- * it wraps the authored ones, whatever the density dial currently says, and
- * {@link #allowedByConfig} is what refuses them anywhere but
- * {@link CrowdDensity#CROWDED}. Building them unconditionally is what makes
+ * {@link #ensureBuilt} hands a region's whole authored roster to
+ * {@link CitizenEcho#echoesOfRegion} and wraps what comes back, whatever the density
+ * dial currently says, and {@link #allowedByConfig} is what refuses them anywhere
+ * but {@link CrowdDensity#CROWDED}. Building them unconditionally is what makes
  * "{@code CROWDED} inherits every constraint" a structural fact rather than a
  * checklist: an echo enters and leaves scope, is evicted, is deactivated on a
  * scene change and is torn down by exactly the code above, because there is no
- * separate collection for it to be missing from. The two places that <i>do</i>
- * treat it differently are both in {@link #updateVisibility}: its tile has to
- * satisfy {@link StandableGround} before it may spawn, and it sorts behind every
- * authored entity so the object cap can never spend an authored citizen's slot on
- * a derived one.
+ * separate collection for it to be missing from. Three things treat it differently,
+ * and each is written down where it happens: its tile has to satisfy
+ * {@link StandableGround} before it may spawn, it sorts behind every authored entity
+ * so the object cap can never spend an authored citizen's slot on a derived one
+ * (both in {@link #updateVisibility}), and its city checkbox is its source's rather
+ * than its own tile's ({@link EntityDefinition#getCityRegionId()}).
  *
  * <p><b>Two clocks.</b> {@link #onGameTick} is the per-game-tick pass: sync the
  * scope, decide who is visible, step the wanderers one tile.
@@ -858,10 +859,13 @@ class EntityScene
 	/**
 	 * Whether the config lets this entity be shown at all.
 	 *
-	 * <p>Both questions are asked of the entity's <b>tile</b> region and its own
-	 * uuid, not of the file it was loaded from. Which city a citizen is in is a
-	 * question about where it stands — the same reason scope membership is keyed
-	 * on the tile.
+	 * <p>Neither question is asked of the file the entity was loaded from. The hide
+	 * is asked of its own uuid; the city is asked of
+	 * {@link EntityDefinition#getCityRegionId()}, which for an authored entity is the
+	 * region of the tile it stands on — the same reason scope membership is keyed on
+	 * the tile — and for an echo is the region governing the citizen it was derived
+	 * from. Those differ for four shipped echoes, and asking the echo's own tile is
+	 * how they used to escape every checkbox: see {@code getCityRegionId()}.
 	 */
 	private boolean allowedByConfig(
 		EntityDefinition definition,
@@ -889,9 +893,13 @@ class EntityScene
 			return false;
 		}
 
-		int regionId = definition.getTileRegionId();
+		int regionId = definition.getCityRegionId();
 		if (City.of(regionId) == null && unmappedReported.add(regionId))
 		{
+			// Only ever an authored entity now: an echo is judged by its source's
+			// region, and a source is authored. So this line still means what it says —
+			// "a region file has landed without a checkbox" — rather than also firing
+			// for a derived citizen that stepped over a border.
 			log.warn("Lively Cities: region {} has no city in the City enum, so it cannot be switched off — "
 				+ "showing it anyway", regionId);
 		}
@@ -979,32 +987,37 @@ class EntityScene
 			return;
 		}
 
-		List<LivelyEntity> entities = new ArrayList<>(region.getEntityCount());
-		int echoes = 0;
-		for (EntityDefinition definition : region.getEntities())
+		List<EntityDefinition> authored = region.getEntities();
+		List<LivelyEntity> entities = new ArrayList<>(authored.size());
+		for (EntityDefinition definition : authored)
 		{
 			entities.add(new LivelyEntity(client, definition));
+		}
 
-			// Echoes are built whatever the density dial says, and gated in
-			// allowedByConfig instead. That is not laziness: it means an echo enters
-			// and leaves scope, is evicted, is torn down, and is despawned by exactly
-			// the same code as an authored citizen, so "CROWDED inherits every
-			// constraint" is structural rather than a list of places to remember. The
-			// cost of an unwanted echo is one wrapper with no model — LivelyEntity
-			// builds the model on its first spawn — so a FULL user pays a few hundred
-			// bytes per region in scope and nothing else.
-			for (EntityDefinition echo : CitizenEcho.echoesOf(definition))
-			{
-				entities.add(new LivelyEntity(client, echo));
-				echoes++;
-			}
+		// Echoes are built whatever the density dial says, and gated in
+		// allowedByConfig instead. That is not laziness: it means an echo enters
+		// and leaves scope, is evicted, is torn down, and is despawned by exactly
+		// the same code as an authored citizen, so "CROWDED inherits every
+		// constraint" is structural rather than a list of places to remember. The
+		// cost of an unwanted echo is one wrapper with no model — LivelyEntity
+		// builds the model on its first spawn — so a FULL user pays a few hundred
+		// bytes per region in scope and nothing else.
+		//
+		// The whole roster goes in at once because separation is a claim about a tile
+		// and everything standing near it: derived one citizen at a time, echoes stood
+		// inside other citizens and inside each other. This is the only caller, so the
+		// region file is always complete here — see CitizenEcho.echoesOfRegion.
+		List<EntityDefinition> echoes = CitizenEcho.echoesOfRegion(authored);
+		for (EntityDefinition echo : echoes)
+		{
+			entities.add(new LivelyEntity(client, echo));
 		}
 		built.put(regionId, entities);
 
-		if (echoes > 0)
+		if (!echoes.isEmpty())
 		{
 			log.debug("region {}: {} authored entity(ies) seeded {} echo(es) for the Crowded density",
-				regionId, region.getEntityCount(), echoes);
+				regionId, region.getEntityCount(), echoes.size());
 		}
 	}
 

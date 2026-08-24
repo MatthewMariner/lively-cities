@@ -2,6 +2,8 @@ package com.matthewmariner.livelycities;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -50,10 +52,11 @@ import net.runelite.api.coords.WorldPoint;
  *       every re-deal is the deal it started with — they seed nothing either;</li>
  *   <li>the remaining <b>76</b> seed {@link #MAX_ECHOES_PER_CITIZEN} echoes each
  *       where their palette supports two <i>distinct</i> re-deals, and one where it
- *       supports only one.</li>
+ *       supports only one — 144 echoes asked for, of which 143 find somewhere legal
+ *       to stand (see below).</li>
  * </ul>
- * That comes to <b>144 echoes against 129 authored citizens — 273 in total,
- * 2.12×</b>, which is the "roughly twice as many" the request asked for.
+ * That comes to <b>143 echoes against 129 authored citizens — 272 in total,
+ * 2.11×</b>, which is the "roughly twice as many" the request asked for.
  * {@code CitizenEchoTest} recomputes all of those numbers from the shipped files
  * rather than trusting this paragraph.
  *
@@ -64,9 +67,41 @@ import net.runelite.api.coords.WorldPoint;
  *
  * <h2>Where an echo stands</h2>
  *
- * <p><b>Placement is the hard part, and it is not a heuristic.</b> Most tiles near
- * a citizen are wall, counter, water or scenery. Two sources of known-good ground
- * are used, in this order:
+ * <p><b>Placement is decided for a whole region file at a time, not one citizen at
+ * a time.</b> {@link #echoesOfRegion} is the only entry point, and it is a roster in
+ * and a roster out for exactly one reason: separation is a claim about a tile and
+ * everything else standing near it, so a derivation that could only see one
+ * citizen's own lineage could only ever enforce it against that lineage. It could
+ * not, and did not: measured over the shipped files, per-citizen placement left 41
+ * pairs of rendered entities closer than {@link #MIN_SEPARATION_TILES} — 57 counted
+ * from each echo's own side of the pair — including three exact same-tile
+ * collisions, two of them echo on echo. That is the "twins standing in each other"
+ * failure in its most literal form, produced by the rule that exists to prevent it.
+ *
+ * <p>So this class keeps one set of claimed tiles per region: every authored
+ * entity's tile, seeded before any echo is placed, plus every echo tile as it is
+ * placed. A candidate tile is refused unless it is at least
+ * {@link #MIN_SEPARATION_TILES} from all of them, whoever they belong to.
+ *
+ * <p><b>What that costs.</b> An echo with nowhere legal left to stand is not derived
+ * at all: across the shipped files that is exactly one of the 144 asked for — the
+ * "Mysterious Old Man" in Varrock gets one echo instead of two — and it moves four
+ * others off a wander-box tile onto a ring offset the collision map then has to
+ * vouch for. Skipping is the same answer this class already gives an echo whose tile
+ * the collision map refuses, and for the same reason: the alternative is moving it
+ * somewhere nobody has vouched for.
+ *
+ * <p><b>Determinism survives it</b>, which it would not if the answer depended on
+ * the order the region file happens to list its citizens in. Sources are walked in
+ * ascending uuid order, so the roster is a set as far as the derivation is
+ * concerned: reordering the JSON, or a loader that read the two rosters the other
+ * way round, cannot move anybody. Region file scope is the right unit because it is
+ * the unit the scene builds in — {@link EntityScene#ensureBuilt} always has the
+ * whole file and never half of it — so the same crowd appears every session
+ * whatever order the player walks the regions in.
+ *
+ * <p>Within that, most tiles near a citizen are wall, counter, water or scenery, so
+ * two sources of known-good ground are used, in this order:
  *
  * <ol>
  *   <li><b>The source's authored wander box.</b> The 63 {@code WanderingCitizen}s
@@ -121,21 +156,28 @@ import net.runelite.api.coords.WorldPoint;
  * </ul>
  *
  * <p><b>Client-thread-free apart from {@link #isPlaceable}</b>, which reads the
- * live collision map. {@link #echoesOf} touches nothing but its argument, which is
- * what lets the tests derive the whole shipped roster's echoes without a game
- * running.
+ * live collision map. {@link #echoesOfRegion} touches nothing but its argument,
+ * which is what lets the tests derive the whole shipped roster's echoes without a
+ * game running.
  */
 final class CitizenEcho
 {
 	/**
-	 * The closest an echo may stand to its source, or to another echo of the same
-	 * source: two tiles, Chebyshev.
+	 * The closest an echo may stand to <b>anything else the plugin renders in its
+	 * region</b> — its source, another citizen, a market stall, or any other echo,
+	 * whoever seeded it: two tiles, Chebyshev.
 	 *
 	 * <p>Two rather than one because one is not a gap. Citizen models are roughly a
 	 * tile wide, so two of them on adjacent tiles interpenetrate and read as one
 	 * clipped body rather than as two people — which is the "twins" failure in its
 	 * most literal form. At two there is a whole empty tile between them and they
 	 * read as two people standing near each other.
+	 *
+	 * <p>It says nothing about two <i>authored</i> entities, and cannot: 44 pairs of
+	 * hand-placed entities in the shipped files are closer than this to each other,
+	 * including eight that share a tile exactly. A human put those there on purpose
+	 * (a stall and its owner, a pair of guards) and this feature does not get a vote
+	 * on authored content — it only has to avoid adding to it.
 	 */
 	static final int MIN_SEPARATION_TILES = 2;
 
@@ -145,7 +187,7 @@ final class CitizenEcho
 	 * <p>A judgement, not arithmetic. The palette of the richest shipped citizen
 	 * supports ten distinct re-deals; letting it spend all ten would put eleven
 	 * copies of one body in one doorway. Two is what turns 129 authored citizens
-	 * into 273 — the "twice as many" that was asked for — and it is the number the
+	 * into 272 — the "twice as many" that was asked for — and it is the number the
 	 * count in this class's javadoc is computed from.
 	 */
 	static final int MAX_ECHOES_PER_CITIZEN = 2;
@@ -189,23 +231,77 @@ final class CitizenEcho
 	/** Shared, so the 49 citizens that seed nothing do not each allocate a list. */
 	private static final List<EntityDefinition> NONE = Collections.emptyList();
 
+	/**
+	 * The order sources are considered in: ascending uuid.
+	 *
+	 * <p>Not the region file's own order, deliberately. Two citizens can want the
+	 * same tile and only the first one asked may have it, so whatever decides who is
+	 * asked first decides where somebody stands — and "whichever roster the loader
+	 * read first, in whatever order the JSON happened to list them" is not a
+	 * derivation, it is a coincidence that a re-export of the dataset would change.
+	 * The uuid is the one thing about a citizen that is fixed forever (see
+	 * {@link EntityDefinition#stableHash()}), so it is what orders them.
+	 */
+	private static final Comparator<EntityDefinition> BY_UUID =
+		Comparator.comparing(EntityDefinition::getUuid);
+
 	private CitizenEcho()
 	{
 	}
 
 	/**
-	 * Every echo one authored citizen seeds.
+	 * Every echo one region file's roster seeds, placed so that no two of them — and
+	 * no one of them and any authored entity — stand closer than
+	 * {@link #MIN_SEPARATION_TILES}.
 	 *
-	 * <p>Pure: the same definition in gives the same echoes out, field for field,
-	 * in the same order, in every session. Cheap enough to call from
-	 * {@code EntityScene}'s region build rather than caching, and called from
-	 * nowhere else.
+	 * <p>Pure: the same roster in gives the same echoes out, field for field, in the
+	 * same order, in every session, whatever order the roster is listed in. Cheap
+	 * enough to call from {@link EntityScene#ensureBuilt}'s region build rather than
+	 * caching, and called from nowhere else.
 	 *
-	 * @param source an authored entity, or an echo (which seeds nothing)
-	 * @return the echoes, oldest-index first; empty for anything that cannot seed
+	 * <p><b>The whole file, or it is not this method's answer.</b> Handing it a
+	 * subset produces echoes that are correctly separated from that subset and
+	 * possibly standing inside whatever was left out, which is the bug this signature
+	 * exists to make hard to write. {@code EntityScene} holds a region's roster as
+	 * one list and passes that list.
+	 *
+	 * @param roster every authored entity in one region file, in any order
+	 * @return the echoes, grouped by source in ascending source-uuid order and
+	 * oldest-index first within a source; empty if nothing in the roster can seed
 	 * one. Never null.
 	 */
-	static List<EntityDefinition> echoesOf(EntityDefinition source)
+	static List<EntityDefinition> echoesOfRegion(List<EntityDefinition> roster)
+	{
+		// Seeded with every authored tile before a single echo is placed, so the
+		// citizens a human positioned are the fixed points and the derived ones move
+		// around them rather than the other way round.
+		Occupancy occupied = new Occupancy();
+		for (int i = 0; i < roster.size(); i++)
+		{
+			occupied.claim(roster.get(i).getWorldLocation());
+		}
+
+		List<EntityDefinition> sources = new ArrayList<>(roster);
+		sources.sort(BY_UUID);
+
+		List<EntityDefinition> out = new ArrayList<>();
+		for (int i = 0; i < sources.size(); i++)
+		{
+			out.addAll(echoesOfSource(sources.get(i), occupied));
+		}
+
+		return out;
+	}
+
+	/**
+	 * Every echo one authored citizen seeds, given what is already standing in its
+	 * region.
+	 *
+	 * @param occupied the region's claimed tiles. Read for every candidate and
+	 *                 <b>added to</b> for every spot taken, which is what makes one
+	 *                 citizen's echoes visible to the next citizen's placement.
+	 */
+	private static List<EntityDefinition> echoesOfSource(EntityDefinition source, Occupancy occupied)
 	{
 		if (source.isEcho())
 		{
@@ -241,9 +337,12 @@ final class CitizenEcho
 
 		long sourceHash = source.stableHash();
 		int wanted = Math.min(deals.length, MAX_ECHOES_PER_CITIZEN);
-		List<Spot> spots = spotsFor(source, sourceHash, wanted);
+		List<Spot> spots = spotsFor(source, sourceHash, wanted, occupied);
 		if (spots.isEmpty())
 		{
+			// Nowhere legal to stand: every box tile and every ring tile is within
+			// MIN_SEPARATION_TILES of somebody already standing there. Skipped, not
+			// moved — the same answer isPlaceable gives a refused tile.
 			return NONE;
 		}
 
@@ -392,14 +491,18 @@ final class CitizenEcho
 	 * The tiles this source's echoes stand on, in echo order.
 	 *
 	 * <p>Candidates are offered box-first and then ring, and accepted greedily
-	 * subject to {@link #MIN_SEPARATION_TILES} from the source and from every echo
-	 * already placed. Nothing here consults the collision map — that happens at
-	 * spawn time, per session, in {@link #isPlaceable} — so this stays a pure
-	 * function of the source and can be asserted about offline.
+	 * subject to {@link #MIN_SEPARATION_TILES} from every tile the region has already
+	 * claimed — which is every authored entity in the file plus every echo placed so
+	 * far, this source's own siblings included. Nothing here consults the collision
+	 * map — that happens at spawn time, per session, in {@link #isPlaceable} — so
+	 * this stays a pure function of the roster and can be asserted about offline.
 	 *
+	 * @param occupied claimed as each spot is taken, so the next candidate and the
+	 *                 next citizen both see it
 	 * @return up to {@code wanted} spots; possibly fewer, and possibly empty
 	 */
-	private static List<Spot> spotsFor(EntityDefinition source, long sourceHash, int wanted)
+	private static List<Spot> spotsFor(
+		EntityDefinition source, long sourceHash, int wanted, Occupancy occupied)
 	{
 		WorldPoint anchor = source.getWorldLocation();
 		List<Spot> candidates = new ArrayList<>();
@@ -410,8 +513,9 @@ final class CitizenEcho
 		for (int i = 0; i < candidates.size() && picked.size() < wanted; i++)
 		{
 			Spot candidate = candidates.get(i);
-			if (isFarEnough(candidate.tile, anchor, picked))
+			if (occupied.isClear(candidate.tile))
 			{
+				occupied.claim(candidate.tile);
 				picked.add(candidate);
 			}
 		}
@@ -432,6 +536,11 @@ final class CitizenEcho
 	 * contains the source's tile, and it reaches no further than
 	 * {@link RenderPolicy#DATASET_OVERHANG_ALLOWANCE}. Nothing here re-checks any of
 	 * that.
+	 *
+	 * <p>The distance test below is a pre-filter and not the rule: it drops the tiles
+	 * nobody could use before they are rotated into a candidate order, so that the
+	 * rotation is over usable tiles. {@link Occupancy} is what actually decides, and
+	 * it decides against the whole region rather than against one tile.
 	 */
 	private static void appendBoxCandidates(
 		EntityDefinition source, long sourceHash, WorldPoint anchor, List<Spot> into)
@@ -471,11 +580,12 @@ final class CitizenEcho
 	 * The ring of tiles at exactly {@link #MIN_SEPARATION_TILES} from the source, in
 	 * a hash-rotated pass.
 	 *
-	 * <p>The fallback for the 66 citizens with no box, and the top-up for the two
-	 * shipped wanderers whose box is too small to hold two well-separated echoes.
-	 * These are candidates and nothing more: the ring says "this tile is the right
-	 * distance away", and {@link StandableGround} is what says whether anybody could
-	 * stand on it.
+	 * <p>The fallback for the 66 citizens with no box, and the top-up for the six
+	 * shipped wanderers whose box cannot hold two well-separated echoes — either
+	 * because it is too small, or because somebody else is already standing in the
+	 * part of it that would do. These are candidates and nothing more: the ring says
+	 * "this tile is the right distance away", and {@link StandableGround} is what says
+	 * whether anybody could stand on it.
 	 */
 	private static void appendRingCandidates(long sourceHash, WorldPoint anchor, List<Spot> into)
 	{
@@ -497,24 +607,6 @@ final class CitizenEcho
 		{
 			into.add(new Spot(ring.get((start + i) % ring.size()), false));
 		}
-	}
-
-	private static boolean isFarEnough(WorldPoint tile, WorldPoint anchor, List<Spot> placed)
-	{
-		if (RenderPolicy.tileDistance(anchor, tile) < MIN_SEPARATION_TILES)
-		{
-			return false;
-		}
-
-		for (int i = 0; i < placed.size(); i++)
-		{
-			if (RenderPolicy.tileDistance(placed.get(i).tile, tile) < MIN_SEPARATION_TILES)
-			{
-				return false;
-			}
-		}
-
-		return true;
 	}
 
 	/**
@@ -539,6 +631,65 @@ final class CitizenEcho
 			out.append(colour).append(',');
 		}
 		return out.toString();
+	}
+
+	/**
+	 * The tiles one region has already given away, and the separation test against
+	 * them.
+	 *
+	 * <p><b>A neighbourhood lookup rather than a distance loop</b>, because this is
+	 * asked once per candidate tile per citizen and a region's roster can be ninety
+	 * entities: "no claimed tile within {@link #MIN_SEPARATION_TILES}" is the same
+	 * question as "none of the {@code (2n-1)²} tiles around this one is claimed", and
+	 * the second is a handful of hash lookups instead of a walk of everything placed
+	 * so far. At the shipped separation of two that is nine lookups.
+	 *
+	 * <p>Planes are part of the key. Two citizens on the same {@code x,y} one storey
+	 * apart are not standing in each other, and the dataset really does stack them —
+	 * {@link RenderPolicy#tileDistance} ignores the plane, so it could not be used
+	 * for this on its own.
+	 */
+	private static final class Occupancy
+	{
+		private final Set<Long> claimed = new HashSet<>();
+
+		/** @return true if nothing is standing within {@link #MIN_SEPARATION_TILES} */
+		boolean isClear(WorldPoint tile)
+		{
+			int reach = MIN_SEPARATION_TILES - 1;
+			for (int dx = -reach; dx <= reach; dx++)
+			{
+				for (int dy = -reach; dy <= reach; dy++)
+				{
+					if (claimed.contains(key(tile.getX() + dx, tile.getY() + dy, tile.getPlane())))
+					{
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
+		void claim(WorldPoint tile)
+		{
+			claimed.add(key(tile.getX(), tile.getY(), tile.getPlane()));
+		}
+
+		/**
+		 * One tile as one long: twenty bits per axis, which is four times the width
+		 * of the world map, and the plane above them.
+		 *
+		 * <p>Sound because every coordinate that reaches here is positive:
+		 * {@link EntityDefinition} refuses a record whose {@code x} or {@code y} is
+		 * zero or less, and the only arithmetic done to one afterwards is the
+		 * {@code ±(MIN_SEPARATION_TILES - 1)} neighbourhood walk above. A negative
+		 * coordinate would spill into the next field's bits, which is why that
+		 * validation is the precondition rather than a formality.
+		 */
+		private static long key(int x, int y, int plane)
+		{
+			return ((long) plane << 40) | ((long) x << 20) | y;
+		}
 	}
 
 	/** One candidate tile and where the claim that it is walkable comes from. */

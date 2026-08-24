@@ -1,6 +1,7 @@
 package com.matthewmariner.livelycities;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,15 @@ public class CrowdedSceneTest
 {
 	private static final int VARROCK_SOUTH = 12852;
 	private static final int VARROCK_NORTH = 12853;
+
+	/** Piscatoris' one region file: 9272, x 2304..2367, y 3584..3647. */
+	private static final int PISCATORIS_HARBOUR = 9272;
+
+	/**
+	 * The region immediately south of it, y 3520..3583. No city claims it and no
+	 * region file ships for it, which is exactly why echoes could hide there.
+	 */
+	private static final int UNCLAIMED_SOUTH_OF_PISCATORIS = 9271;
 
 	private static final WorldPoint PLAYER = new WorldPoint(3225, 3360, 0);
 
@@ -165,7 +175,9 @@ public class CrowdedSceneTest
 		regions.file(VARROCK_SOUTH, source);
 		config.setCrowdDensity(CrowdDensity.CROWDED);
 
-		List<EntityDefinition> echoes = CitizenEcho.echoesOf(source);
+		// The region holds this one citizen, so deriving from a one-entry roster is
+		// deriving exactly what the scene derived.
+		List<EntityDefinition> echoes = CitizenEcho.echoesOfRegion(Collections.singletonList(source));
 		assertEquals(2, echoes.size());
 		WorldPoint doomed = echoes.get(0).getWorldLocation();
 		WorldPoint survivor = echoes.get(1).getWorldLocation();
@@ -277,8 +289,12 @@ public class CrowdedSceneTest
 	/**
 	 * The same claim against the real dataset, in the place it actually happens.
 	 *
-	 * <p>The densest neighbourhood in the shipped data holds 72 entities at the widest
-	 * render distance against a cap of 80, so {@code CROWDED} there is over the cap
+	 * <p>72 is the densest window <b>centred on an entity's own tile</b>, which is what
+	 * this test can position itself on. It is not the figure the cap is sized against:
+	 * a player may stand anywhere, and the densest window from an arbitrary tile holds
+	 * <b>76</b> (see {@link RenderPolicy#MAX_ACTIVE_OBJECTS}). Both are correct answers
+	 * to different questions, and conflating them is how "55/59/72/76" ended up in four
+	 * places meaning three things. Either way {@code CROWDED} is over the cap of 80
 	 * before it has spawned a dozen echoes — which is what the cap is for. Nothing is
 	 * hardcoded except the spot: the authored count is measured by running the same
 	 * pass at {@code FULL} first, so a data change moves both numbers together.
@@ -584,6 +600,89 @@ public class CrowdedSceneTest
 		assertEquals(8, scene.countActiveEchoes());
 	}
 
+	/**
+	 * <b>Unticking a city takes its echoes with it even when an echo has stepped over
+	 * a border into a region no city claims.</b>
+	 *
+	 * <p>Run against the real dataset, because the case only exists there and because
+	 * it is the case that used to escape. {@link City#isEnabled} answers {@code true}
+	 * for an unclaimed region on purpose — that is what lets a region file ship one
+	 * commit before its checkbox — so an echo judged by its own tile went through that
+	 * door: three of Piscatoris's echoes stand in region 9271, which no city claims and
+	 * which ships no file, and unticking Piscatoris left them standing in the empty
+	 * fields south of the village. They are judged by their source's city now, so they
+	 * go when it goes and come back when it comes back.
+	 */
+	@Test
+	public void untickingACityAlsoRemovesTheEchoesStandingInARegionNoCityClaims()
+	{
+		EntityScene real = new EntityScene(
+			client, new RegionDataLoader(TestGson.injected()), config, config.overrides());
+
+		// Piscatoris' harbour, and the unclaimed region immediately south of it. Both
+		// have to be in the scene: scope membership is keyed on the entity's own tile,
+		// so an echo standing in 9271 is only in scope while 9271 is loaded.
+		WorldPoint spot = new WorldPoint(2337, 3585, 0);
+		config.setCrowdDensity(CrowdDensity.CROWDED);
+
+		FakeWorldView view = FakeWorldView.around(spot, PISCATORIS_HARBOUR, UNCLAIMED_SOUTH_OF_PISCATORIS);
+		real.syncRegions(view);
+		real.updateVisibility(spot, view);
+
+		int strays = countActiveEchoesInUnclaimedRegions(real);
+		assertTrue("the fixture depends on real echoes crossing into region "
+				+ UNCLAIMED_SOUTH_OF_PISCATORIS + " — if the dataset moved, find the new case "
+				+ "rather than deleting this test", strays > 0);
+		assertTrue("and on their authored sources being on screen too",
+			real.countActiveAuthored() > 0);
+		assertNull("the region they stand in really is unclaimed",
+			City.of(UNCLAIMED_SOUTH_OF_PISCATORIS));
+
+		config.disableOnly(City.PISCATORIS);
+		real.onSettingsChanged(spot, view);
+
+		assertEquals("unticking Piscatoris has to take everything derived from Piscatoris "
+				+ "with it, wherever it ended up standing", 0, client.registeredCount());
+
+		config.enable(City.PISCATORIS);
+		real.onSettingsChanged(spot, view);
+
+		assertEquals("and ticking it again brings the same strays back",
+			strays, countActiveEchoesInUnclaimedRegions(real));
+	}
+
+	/**
+	 * The other half of that rule, which is <b>not</b> being changed: an
+	 * <i>authored</i> entity in a region no city claims still fails open.
+	 *
+	 * <p>{@code CityTest.aRegionNoCityClaimsIsStillShown} asserts it of the lookup;
+	 * this asserts it of the scene, with every checkbox in the plugin unticked, because
+	 * the fix above works by asking a different question of an echo and it would have
+	 * been just as easy to answer it wrongly for everybody.
+	 */
+	@Test
+	public void anAuthoredCitizenInARegionNoCityClaimsIsStillShownWithEveryCheckboxOff()
+	{
+		// Keldagrim: no region file, no City constant, and no plans for either.
+		int unclaimed = 11422;
+		assertNull("the fixture has to be genuinely unmapped", City.of(unclaimed));
+
+		WorldPoint tile = new WorldPoint(2860, 10150, 0);
+		assertEquals(unclaimed, RenderPolicy.regionIdOf(tile.getX(), tile.getY()));
+
+		regions.file(unclaimed, regions.recoloured(unclaimed, tile.getX(), tile.getY(), 6));
+		config.setCrowdDensity(CrowdDensity.CROWDED).disable(City.values());
+
+		FakeWorldView view = FakeWorldView.around(tile, unclaimed);
+		scene.syncRegions(view);
+		scene.onGameTick(tile, view);
+
+		assertEquals("an unmapped region fails open for the citizen a human placed there",
+			1, scene.countActiveAuthored());
+		assertEquals("and for the echoes it seeds, which answer to the same nothing",
+			2, scene.countActiveEchoes());
+	}
+
 	/** The cull radius is the echo's own, measured from where the echo stands. */
 	@Test
 	public void anEchoBeyondTheCullRadiusIsDeactivatedLikeAnythingElse()
@@ -599,6 +698,26 @@ public class CrowdedSceneTest
 		WorldPoint away = new WorldPoint(3225, 3355 - RenderPolicy.DEFAULT_CULL_RADIUS - 5, 0);
 		scene.updateVisibility(away, view);
 		assertEquals(0, client.registeredCount());
+	}
+
+	/**
+	 * How many echoes are on screen whose <i>own</i> tile is in a region no city
+	 * claims — the population that used to be unswitchable-off.
+	 */
+	private static int countActiveEchoesInUnclaimedRegions(EntityScene scene)
+	{
+		int n = 0;
+		for (LivelyEntity entity : scene.inScopeEntities())
+		{
+			EntityDefinition definition = entity.getDefinition();
+			if (definition.isEcho()
+				&& entity.isActive()
+				&& City.of(definition.getTileRegionId()) == null)
+			{
+				n++;
+			}
+		}
+		return n;
 	}
 
 	private static List<EntityDefinition> echoesInScope(EntityScene scene)

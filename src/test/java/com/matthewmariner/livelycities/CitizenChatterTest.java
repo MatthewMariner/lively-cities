@@ -2,6 +2,7 @@ package com.matthewmariner.livelycities;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.runelite.api.Constants;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Before;
 import org.junit.Test;
@@ -183,6 +184,201 @@ public class CitizenChatterTest
 		}
 
 		assertEquals("the remark comes down on the tick the dwell expires", 7, upFor);
+	}
+
+	// --- the units, and the saturation guard ---------------------------------
+	//
+	// Every constant in CitizenChatter is a wall-clock duration written in game
+	// ticks, and this plugin once shipped two of them in the wrong unit: a dwell of
+	// 120 that was the predecessor's *client* ticks (2.4 seconds) became 72 seconds,
+	// and an interval of 60 that was the predecessor's *seconds* became 36. Dwell
+	// exceeded interval, so a bubble could never expire before its citizen's next
+	// chance to speak and the overhead text saturated permanently — the one
+	// complaint the whole feature exists to answer, shipped as the default. The
+	// three tests below are the guard: the arithmetic, the whole configurable range,
+	// and the street actually going quiet again.
+
+	/**
+	 * The defaults, in milliseconds, checked against the client's own clock rather
+	 * than against a number in a comment.
+	 *
+	 * <p>{@link Constants} is the primary source for both tick lengths, so a build
+	 * against a client whose game tick was not 600ms would fail here rather than
+	 * quietly running the cadence at a different speed.
+	 */
+	@Test
+	public void theDefaultCadenceIsAMinuteApartAndAFewSecondsLong()
+	{
+		assertEquals("a game tick, which is the unit every constant in CitizenChatter is in",
+			600, Constants.GAME_TICK_LENGTH);
+		assertEquals("a client tick — thirty to a game tick, and the ratio the dwell was "
+				+ "once wrong by", 20, Constants.CLIENT_TICK_LENGTH);
+		assertEquals("which is exactly the factor that turned 2.4 seconds into 72",
+			30, Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
+
+		int intervalMillis = CitizenChatter.DEFAULT_ROLL_INTERVAL_TICKS * Constants.GAME_TICK_LENGTH;
+		assertEquals("a chance to speak once a minute, which is the predecessor's cadence "
+				+ "converted rather than copied", 60_000, intervalMillis);
+
+		int dwellMillis = CitizenChatter.DEFAULT_DWELL_TICKS * Constants.GAME_TICK_LENGTH;
+		assertTrue("a remark has to stay up long enough to read the longest shipped line "
+				+ "(11 words, about 3.3 seconds) and not much longer, was " + dwellMillis + "ms",
+			dwellMillis >= 3_000 && dwellMillis <= 10_000);
+
+		assertTrue("and it has to be comfortably shorter than the interval, not merely shorter: "
+				+ dwellMillis + "ms of every " + intervalMillis + "ms",
+			dwellMillis * 4 <= intervalMillis);
+
+		int maxDwellMillis = CitizenChatter.MAX_DWELL_TICKS * Constants.GAME_TICK_LENGTH;
+		assertTrue("even the far end of the dwell dial has to read as somebody saying something "
+				+ "rather than as a label stuck to their head — it was 600 ticks, six minutes, "
+				+ "while these numbers were being read as client ticks. Now " + maxDwellMillis + "ms",
+			maxDwellMillis <= 20_000);
+		assertTrue("and it has to stay above the tightest interval, so that asking for a "
+				+ "saturating pair is still something a user can do and the clamp that refuses "
+				+ "it is still live code",
+			CitizenChatter.MAX_DWELL_TICKS > CitizenChatter.MIN_ROLL_INTERVAL_TICKS);
+
+		assertTrue("the same has to hold at the ends of both sliders, or the ranges disagree "
+				+ "with the defaults they bracket",
+			CitizenChatter.MIN_DWELL_TICKS <= CitizenChatter.DEFAULT_DWELL_TICKS
+				&& CitizenChatter.DEFAULT_DWELL_TICKS <= CitizenChatter.MAX_DWELL_TICKS
+				&& CitizenChatter.MIN_ROLL_INTERVAL_TICKS <= CitizenChatter.DEFAULT_ROLL_INTERVAL_TICKS
+				&& CitizenChatter.DEFAULT_ROLL_INTERVAL_TICKS <= CitizenChatter.MAX_ROLL_INTERVAL_TICKS);
+	}
+
+	/**
+	 * <b>No pair of values the config can hold — from the sliders, from a hand-edited
+	 * {@code settings.properties}, or from a profile synced off another install — can
+	 * leave a remark up when its citizen's next roll comes round.</b>
+	 *
+	 * <p>Every combination, one tick past both ends of both ranges, because that is
+	 * the only way to state "no combination can saturate" as a test rather than as an
+	 * intention. Two {@code @Range} annotations cannot express this between them:
+	 * neither one can see the other's value.
+	 */
+	@Test
+	public void noCadenceTheConfigCanHoldLetsARemarkOutliveItsCitizensNextRoll()
+	{
+		assertTrue("the clamp must never have to push the dwell below its own minimum, "
+				+ "which needs the tightest interval to leave room for it",
+			CitizenChatter.MIN_ROLL_INTERVAL_TICKS - 1 >= CitizenChatter.MIN_DWELL_TICKS);
+
+		int clamped = 0;
+		for (int interval = CitizenChatter.MIN_ROLL_INTERVAL_TICKS - 5;
+			 interval <= CitizenChatter.MAX_ROLL_INTERVAL_TICKS + 5; interval++)
+		{
+			int effectiveInterval = CitizenChatter.effectiveIntervalTicks(interval);
+			assertTrue("interval " + interval + " clamped to " + effectiveInterval,
+				effectiveInterval >= CitizenChatter.MIN_ROLL_INTERVAL_TICKS
+					&& effectiveInterval <= CitizenChatter.MAX_ROLL_INTERVAL_TICKS);
+
+			for (int dwell = CitizenChatter.MIN_DWELL_TICKS - 5;
+				 dwell <= CitizenChatter.MAX_DWELL_TICKS + 5; dwell++)
+			{
+				int effectiveDwell = CitizenChatter.effectiveDwellTicks(dwell, interval);
+
+				assertTrue("dwell " + dwell + " with interval " + interval + " came out as "
+						+ effectiveDwell + " against an interval of " + effectiveInterval
+						+ " — a remark that outlives its citizen's next roll is the saturation bug",
+					effectiveDwell < effectiveInterval);
+				assertTrue("dwell " + dwell + " came out as " + effectiveDwell
+						+ ", outside its own range", effectiveDwell >= CitizenChatter.MIN_DWELL_TICKS
+					&& effectiveDwell <= CitizenChatter.MAX_DWELL_TICKS);
+
+				if (effectiveDwell != Math.max(CitizenChatter.MIN_DWELL_TICKS,
+					Math.min(CitizenChatter.MAX_DWELL_TICKS, dwell)))
+				{
+					clamped++;
+				}
+			}
+		}
+
+		assertTrue("the interval clamp has to actually bind somewhere, or this test is "
+				+ "asserting about unreachable code", clamped > 0);
+
+		assertEquals("the tightest interval a user can ask for, with the longest dwell: one "
+				+ "tick of silence between the bubble going and the next roll",
+			CitizenChatter.MIN_ROLL_INTERVAL_TICKS - 1,
+			CitizenChatter.effectiveDwellTicks(
+				CitizenChatter.MAX_DWELL_TICKS, CitizenChatter.MIN_ROLL_INTERVAL_TICKS));
+
+		assertEquals("and the shipped defaults are nowhere near it, so the clamp never "
+				+ "silently changes what the user asked for",
+			CitizenChatter.DEFAULT_DWELL_TICKS,
+			CitizenChatter.effectiveDwellTicks(
+				CitizenChatter.DEFAULT_DWELL_TICKS, CitizenChatter.DEFAULT_ROLL_INTERVAL_TICKS));
+	}
+
+	/**
+	 * The regression, at the level a player would have seen it: with the defaults and
+	 * a dozen talkative citizens standing next to you, the street is quiet far more
+	 * often than not.
+	 *
+	 * <p>With the saturating defaults this shipped with, {@code silentTicks} was zero
+	 * — every citizen that ever spoke was still speaking, forever. It takes a
+	 * thousand-tick run to see that, which is why manual QA did not: the off switches
+	 * all worked, and you had to stand and watch text accumulate for a minute.
+	 */
+	@Test
+	public void atTheDefaultsTheOverheadTextClearsInsteadOfPilingUp()
+	{
+		spawn(regions.talkingCrowd(VARROCK_NORTH, 3218, 3418, 12));
+
+		int silentTicks = 0;
+		int peak = 0;
+		for (int tick = 0; tick < 3000; tick++)
+		{
+			scene.onGameTick(PLAYER, view);
+			int talking = scene.countTalking();
+			peak = Math.max(peak, talking);
+			if (talking == 0)
+			{
+				silentTicks++;
+			}
+		}
+
+		assertTrue("twelve citizens with something to say have to say it sometime, or this "
+			+ "test proves nothing", peak > 0);
+		assertTrue("a " + CitizenChatter.DEFAULT_DWELL_TICKS + "-tick dwell inside a "
+				+ CitizenChatter.DEFAULT_ROLL_INTERVAL_TICKS + "-tick interval has to leave the "
+				+ "screen empty most of the time — it was empty on " + silentTicks + " of 3000 ticks",
+			silentTicks > 1500);
+	}
+
+	/**
+	 * And when a user asks for the saturating combination outright — the longest dwell
+	 * on the tightest cadence — the bubble still comes down.
+	 *
+	 * <p>Driven through the scene rather than through
+	 * {@link CitizenChatter#effectiveDwellTicks} so that the clamp is proved to be on
+	 * the path a config value actually travels, not merely available on a static
+	 * method nobody calls.
+	 */
+	@Test
+	public void theSaturatingCombinationIsClampedOnThePathTheConfigTravels()
+	{
+		EntityDefinition talker = regions.talker(VARROCK_NORTH, 3220, 3421, "Busy today.");
+		spawn(talker);
+		config.setRemarkIntervalTicks(CitizenChatter.MIN_ROLL_INTERVAL_TICKS)
+			.setRemarkDwellTicks(CitizenChatter.MAX_DWELL_TICKS);
+
+		CitizenRemarks remarks = remarksOf(talker);
+		int startedAt = runUntilTalking(remarks);
+
+		int upFor = 0;
+		while (remarks.isTalking())
+		{
+			scene.onGameTick(PLAYER, view);
+			upFor++;
+			assertTrue("a dwell of " + CitizenChatter.MAX_DWELL_TICKS + " on an interval of "
+					+ CitizenChatter.MIN_ROLL_INTERVAL_TICKS + " has to be clamped, not honoured "
+					+ "(started at " + startedAt + ")",
+				upFor < CitizenChatter.MIN_ROLL_INTERVAL_TICKS);
+		}
+
+		assertEquals("the remark comes down one tick before the next roll",
+			CitizenChatter.MIN_ROLL_INTERVAL_TICKS - 1, upFor);
 	}
 
 	/**

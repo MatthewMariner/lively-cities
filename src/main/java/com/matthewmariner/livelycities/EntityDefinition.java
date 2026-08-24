@@ -42,6 +42,7 @@ public final class EntityDefinition
 	private final UUID uuid;
 	private final int regionId;
 	private final int tileRegionId;
+	private final int cityRegionId;
 	private final EntityType type;
 	private final String name;
 	private final String examineText;
@@ -83,6 +84,7 @@ public final class EntityDefinition
 		UUID uuid,
 		int regionId,
 		int tileRegionId,
+		int cityRegionId,
 		EntityType type,
 		@Nullable String name,
 		@Nullable String examineText,
@@ -106,6 +108,7 @@ public final class EntityDefinition
 		this.uuid = uuid;
 		this.regionId = regionId;
 		this.tileRegionId = tileRegionId;
+		this.cityRegionId = cityRegionId;
 		this.type = type;
 		this.name = name;
 		this.examineText = examineText;
@@ -205,6 +208,9 @@ public final class EntityDefinition
 			uuid,
 			fileRegionId,
 			tileRegionId,
+			// An authored entity answers to the city containing the tile it stands on,
+			// and it is the only kind of entity that answers for itself.
+			tileRegionId,
 			type,
 			record.name,
 			record.examineText,
@@ -229,11 +235,13 @@ public final class EntityDefinition
 	 *
 	 * <p>Every decision behind the arguments is {@link CitizenEcho}'s; this method
 	 * only assembles them, so that the one place that may construct an
-	 * {@link EntityDefinition} stays this class. What it does add is the two things
+	 * {@link EntityDefinition} stays this class. What it does add is the three things
 	 * that are properties of <i>being</i> a definition rather than of being an echo:
 	 * the tile's own region id (recomputed, because an echo can stand a few tiles
-	 * over a region border exactly like the shipped "Dark wizard" does), and the
-	 * {@link EntityType#StationaryCitizen} type.
+	 * over a region border exactly like the shipped "Dark wizard" does), the region
+	 * whose city checkbox governs it (its <b>source's</b> — see
+	 * {@link #getCityRegionId()}, and it is emphatically not the recomputed one), and
+	 * the {@link EntityType#StationaryCitizen} type.
 	 *
 	 * <p><b>The type is forced rather than inherited</b>, and that is the whole of
 	 * "echoes do not wander": {@link CitizenWalk#forDefinition} needs a
@@ -273,6 +281,8 @@ public final class EntityDefinition
 			uuid,
 			source.regionId,
 			RenderPolicy.regionIdOf(tile.getX(), tile.getY()),
+			// Its source's city, not its own tile's. See getCityRegionId().
+			source.cityRegionId,
 			EntityType.StationaryCitizen,
 			name,
 			examineText,
@@ -648,6 +658,29 @@ public final class EntityDefinition
 	public int getTileRegionId()
 	{
 		return tileRegionId;
+	}
+
+	/**
+	 * The region whose {@link City} checkbox governs this entity.
+	 *
+	 * <p>For an authored entity this is {@link #getTileRegionId()} — which city a
+	 * hand-placed citizen belongs to is a question about where it stands.
+	 *
+	 * <p><b>For an echo it is its source's, and that is not the same question.</b>
+	 * {@link City#isEnabled} fails open for a region no city claims, deliberately, so
+	 * that a new region file can ship one commit before its checkbox. Judging an echo
+	 * by its own tile therefore let four shipped echoes out through that door: three
+	 * derived from Piscatoris citizens land in region 9271 and one derived from a
+	 * Camelot citizen lands in 10806, neither of which any city claims and neither of
+	 * which ships a region file — so unticking Piscatoris or Camelot left them
+	 * standing in an empty village. An echo is a derivative of one authored citizen
+	 * and has no independent existence: whatever switches that citizen off switches it
+	 * off too. The fail-open rule is untouched for the authored entity that earns it,
+	 * and {@code CitizenEchoTest} asserts both halves over the shipped files.
+	 */
+	public int getCityRegionId()
+	{
+		return cityRegionId;
 	}
 
 	public EntityType getType()

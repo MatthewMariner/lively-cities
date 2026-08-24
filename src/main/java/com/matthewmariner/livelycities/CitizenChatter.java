@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Constants;
 import net.runelite.api.coords.WorldPoint;
 
 /**
@@ -21,8 +22,8 @@ import net.runelite.api.coords.WorldPoint;
  * <ul>
  *   <li>{@link LivelyCitiesConfig#overheadText()} — the hard off switch. False
  *       means no rolls at all <i>and</i> every remark already up is cleared, so
- *       turning it off is silence now rather than silence in two minutes when the
- *       last dwell expires.</li>
+ *       turning it off is silence now rather than silence when the last dwell
+ *       expires.</li>
  *   <li>{@link CitizenOverrides} — the per-citizen mute, at the granularity people
  *       actually complained at.</li>
  *   <li>{@link LivelyCitiesConfig#remarkIntervalTicks()} and
@@ -32,12 +33,15 @@ import net.runelite.api.coords.WorldPoint;
  *       crowd becoming a wall of text.</li>
  * </ul>
  *
- * <p><b>The defaults are the predecessor's timings</b>, which are the one thing
- * about its chatter that was reported as feeling right: roll every 60 ticks, only
- * within 15 tiles, dwell 120 ticks. What is new is that all four are dials, that
- * there is a cap at all, and that the roll is a per-citizen chance rather than a
- * certainty — with a 60-tick roll and a 120-tick dwell, a citizen that spoke on
- * every roll would be talking permanently.
+ * <p><b>The defaults are the predecessor's timings converted into this plugin's
+ * clock</b>, which is the one thing about its chatter that was reported as feeling
+ * right: a chance once a minute, only within 15 tiles, a remark readable for a few
+ * seconds. Its numbers were <i>not</i> in the same units as ours and the conversion
+ * is written out on each constant below — see {@link #DEFAULT_ROLL_INTERVAL_TICKS}
+ * and {@link #DEFAULT_DWELL_TICKS}, and {@link #effectiveDwellTicks} for the clamp
+ * that makes a saturating combination unreachable however the numbers are edited.
+ * What is new is that all four are dials, that there is a cap at all, and that the
+ * roll is a per-citizen chance rather than a certainty.
  *
  * <p><b>The pass order is deliberate.</b> Expire, then count, then roll, then
  * admit nearest-first up to the cap. Expiring first means a citizen whose remark
@@ -64,10 +68,28 @@ import net.runelite.api.coords.WorldPoint;
 final class CitizenChatter
 {
 	/**
-	 * Game ticks between a citizen's chances to say something: 60, i.e. 36
-	 * seconds. The predecessor's cadence.
+	 * Milliseconds in one game tick: {@link Constants#GAME_TICK_LENGTH}, 600.
+	 *
+	 * <p>Named here, and used in the arithmetic below rather than in prose, because
+	 * every timing constant in this class is a wall-clock duration expressed in game
+	 * ticks and <b>the units are exactly what got this wrong once already</b>. The
+	 * client's other clock is the <i>client</i> tick,
+	 * {@link Constants#CLIENT_TICK_LENGTH} = 20ms — thirty of them to a game tick —
+	 * and reading one figure as the other is a thirtyfold error in a number nobody
+	 * looks at twice.
 	 */
-	static final int DEFAULT_ROLL_INTERVAL_TICKS = 60;
+	static final int TICK_MILLIS = Constants.GAME_TICK_LENGTH;
+
+	/**
+	 * Game ticks between a citizen's chances to say something: 100, i.e. one minute.
+	 *
+	 * <p><b>Converted from the predecessor's cadence, not copied from it.</b> Its
+	 * roll interval was 60 <b>wall-clock seconds</b>, which is
+	 * {@code 60000 / 600 = 100} of this plugin's game ticks. An earlier revision
+	 * shipped the bare figure {@code 60} as game ticks — 36 seconds — which is the
+	 * interval half of the unit error described on {@link #DEFAULT_DWELL_TICKS}.
+	 */
+	static final int DEFAULT_ROLL_INTERVAL_TICKS = 60_000 / TICK_MILLIS;
 
 	/** The tightest cadence worth offering: once every 10 ticks, i.e. 6 seconds. */
 	static final int MIN_ROLL_INTERVAL_TICKS = 10;
@@ -80,13 +102,52 @@ final class CitizenChatter
 	static final int MAX_ROLL_INTERVAL_TICKS = 600;
 
 	/**
-	 * How long a remark stays on screen: 120 ticks, 72 seconds. Also the
-	 * predecessor's figure.
+	 * How long a remark stays on screen: 8 game ticks, i.e. 4.8 seconds.
+	 *
+	 * <p><b>This is the constant the unit error landed on.</b> The predecessor's
+	 * dwell was 120 <b>client</b> ticks —
+	 * {@code 120 * 20ms} = 2.4 seconds — and it shipped here as 120 <b>game</b>
+	 * ticks, {@code 120 * 600ms} = 72 seconds: exactly thirty times too long,
+	 * because that is the ratio of the two clocks. Worse than long, it was longer
+	 * than the roll interval it shipped beside (36 seconds), so a bubble could never
+	 * expire before its citizen's next chance to speak and the overhead text
+	 * saturated permanently — which is the one complaint this whole feature exists to
+	 * answer.
+	 *
+	 * <p><b>Where 8 comes from.</b> Not from the 2.4-second conversion, which is the
+	 * predecessor's number and is too short to read: the longest line in the shipped
+	 * dataset is 11 words, which needs about 3.3 seconds at an unhurried 200 words a
+	 * minute, and a bubble that appears while the player is looking somewhere else
+	 * needs a second or so on top before anybody starts reading it. Call it 4.8
+	 * seconds, i.e. {@code 4800 / 600} = 8 game ticks. The median shipped line is 5
+	 * words, so the typical remark is up for roughly twice as long as it takes to
+	 * read. It is 8% of {@link #DEFAULT_ROLL_INTERVAL_TICKS}, which is what
+	 * "comfortably shorter than the interval" means here.
 	 */
-	static final int DEFAULT_DWELL_TICKS = 120;
+	static final int DEFAULT_DWELL_TICKS = 4_800 / TICK_MILLIS;
 
+	/**
+	 * The shortest dwell worth offering: 5 ticks, 3 seconds. Below this the longest
+	 * shipped remark is off the screen before it can be read.
+	 */
 	static final int MIN_DWELL_TICKS = 5;
-	static final int MAX_DWELL_TICKS = 600;
+
+	/**
+	 * The longest: 30 ticks, 18 seconds.
+	 *
+	 * <p>A judgement, and a much smaller one than it used to be. 18 seconds is over
+	 * five times what the longest shipped line needs, which covers anyone who reads
+	 * slowly or wants to screenshot it; past that a bubble stops reading as somebody
+	 * saying something and starts reading as a label stuck to their head. The
+	 * previous ceiling was 600 ticks — six minutes — which was only ever plausible
+	 * while these numbers were being read as client ticks.
+	 *
+	 * <p>It is deliberately still <i>above</i> {@link #MIN_ROLL_INTERVAL_TICKS}, so
+	 * the pair {@code (dwell 30, interval 10)} remains something a user can ask for
+	 * and {@link #effectiveDwellTicks} remains a clamp that really fires rather than
+	 * unreachable code.
+	 */
+	static final int MAX_DWELL_TICKS = 30;
 
 	/**
 	 * Tiles from the player inside which a citizen may start talking: 15, the
@@ -100,11 +161,14 @@ final class CitizenChatter
 	/**
 	 * Remarks on screen at once: 3.
 	 *
-	 * <p>This is the number that stops "ambience" being "a wall of text". Varrock
-	 * square holds 40 citizens inside a 25-tile square; without a cap, a 60-tick
-	 * roll at {@link #REMARK_CHANCE_PERCENT} over a 120-tick dwell puts roughly
-	 * twenty bubbles on screen at once, which is the complaint restated rather than
-	 * answered.
+	 * <p>This is the number that stops "ambience" being "a wall of text", and it is
+	 * the guard that holds whatever the cadence dials are set to. Varrock square
+	 * holds 40 citizens inside a 25-tile square; at the tightest cadence the dials
+	 * allow — a 10-tick roll and the 9-tick dwell {@link #effectiveDwellTicks} leaves
+	 * of it — a {@link #REMARK_CHANCE_PERCENT} chance puts about nine bubbles on
+	 * screen at once without a cap, and the saturating combination this class used to
+	 * default to put every one of those 40 up and left them there. Three is the
+	 * number that makes both of those the same, bounded thing.
 	 */
 	static final int DEFAULT_MAX_CONCURRENT = 3;
 
@@ -121,8 +185,8 @@ final class CitizenChatter
 	 * they get a chance ({@code remarkIntervalTicks}) and how many can be on screen
 	 * ({@code maxConcurrentRemarks}), and a third multiplier interacting with both
 	 * would make neither predictable. A quarter, so a citizen with something to say
-	 * speaks roughly once every four intervals — about once every two and a half
-	 * minutes at the default cadence.
+	 * speaks roughly once every four intervals — about once every four minutes at the
+	 * default one-minute cadence.
 	 */
 	static final int REMARK_CHANCE_PERCENT = 25;
 
@@ -170,8 +234,8 @@ final class CitizenChatter
 			return 0;
 		}
 
-		int dwell = clamp(config.remarkDwellTicks(), MIN_DWELL_TICKS, MAX_DWELL_TICKS);
-		int interval = clamp(config.remarkIntervalTicks(), MIN_ROLL_INTERVAL_TICKS, MAX_ROLL_INTERVAL_TICKS);
+		int interval = effectiveIntervalTicks(config.remarkIntervalTicks());
+		int dwell = effectiveDwellTicks(config.remarkDwellTicks(), config.remarkIntervalTicks());
 		int radius = clamp(config.chatterRadius(), MIN_RADIUS_TILES, RenderPolicy.MAX_CULL_RADIUS);
 		int cap = clamp(config.maxConcurrentRemarks(), MIN_MAX_CONCURRENT, MAX_MAX_CONCURRENT);
 
@@ -299,6 +363,51 @@ final class CitizenChatter
 	int getTick()
 	{
 		return tick;
+	}
+
+	/**
+	 * The roll interval this class will actually use for a configured value.
+	 *
+	 * @param requested whatever the config holds, from the slider or from a
+	 *                  hand-edited profile
+	 * @return the value inside {@link #MIN_ROLL_INTERVAL_TICKS} ..
+	 * {@link #MAX_ROLL_INTERVAL_TICKS}, so {@link CitizenRemarks#dueAt} can never be
+	 * handed a zero to take a modulo of
+	 */
+	static int effectiveIntervalTicks(int requested)
+	{
+		return clamp(requested, MIN_ROLL_INTERVAL_TICKS, MAX_ROLL_INTERVAL_TICKS);
+	}
+
+	/**
+	 * The dwell this class will actually use, which depends on the interval.
+	 *
+	 * <p><b>A dwell at least as long as the interval saturates the screen, so it is
+	 * not merely a bad setting — it is an unreachable one.</b> The pass expires a
+	 * remark before it asks whether the citizen is due, so at {@code dwell == interval}
+	 * a citizen that keeps rolling successfully is never silent for a single tick, and
+	 * above it the bubble is still up when the next roll comes round and the text
+	 * never clears at all. That is precisely the state this plugin's headline feature
+	 * exists to prevent, and it shipped as the default once already, so the guard
+	 * lives here rather than in the range of either slider: both values also arrive
+	 * from a hand-edited {@code settings.properties} and from a profile synced off
+	 * another install, and neither {@code @Range} can see the other's value.
+	 *
+	 * <p>One tick of silence is the least it can subtract and still be honest, so
+	 * that is what it subtracts; the shipped defaults are nowhere near the clamp
+	 * (8 of 100). {@link #MIN_ROLL_INTERVAL_TICKS} is 10, so the clamped value can
+	 * never fall below {@link #MIN_DWELL_TICKS} — {@code CitizenChatterTest} asserts
+	 * that relationship rather than leaving it as a comment.
+	 *
+	 * @return a dwell inside {@link #MIN_DWELL_TICKS} .. {@link #MAX_DWELL_TICKS}
+	 * that is also strictly less than {@link #effectiveIntervalTicks(int)} of
+	 * {@code requestedInterval}
+	 */
+	static int effectiveDwellTicks(int requestedDwell, int requestedInterval)
+	{
+		int interval = effectiveIntervalTicks(requestedInterval);
+		int dwell = clamp(requestedDwell, MIN_DWELL_TICKS, MAX_DWELL_TICKS);
+		return Math.min(dwell, interval - 1);
 	}
 
 	private static void silence(List<LivelyEntity> entities)

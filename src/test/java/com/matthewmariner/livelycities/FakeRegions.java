@@ -22,6 +22,13 @@ import static org.junit.Assert.assertNotNull;
  */
 final class FakeRegions extends RegionDataLoader
 {
+	/**
+	 * How far apart {@link #recolouredCrowd} puts its citizens: four tiles. See that
+	 * method — it is the tightest grid in which every citizen can still seed its full
+	 * complement of echoes, given that separation is judged against the whole region.
+	 */
+	static final int CROWD_SPACING_TILES = 4;
+
 	private final Map<Integer, RegionDefinition> regions = new HashMap<>();
 	private final List<Integer> loadCalls = new ArrayList<>();
 	private int uuids;
@@ -92,12 +99,25 @@ final class FakeRegions extends RegionDataLoader
 	 */
 	EntityDefinition recoloured(int fileRegionId, int x, int y, int pairs)
 	{
+		return recoloured(fileRegionId, x, y, 0, pairs);
+	}
+
+	/**
+	 * {@link #recoloured(int, int, int, int)} on a given storey.
+	 *
+	 * <p>Needed rather than convenient: {@link CitizenEcho} keeps one set of claimed
+	 * tiles per region and the plane is part of a tile's identity there, so "a citizen
+	 * upstairs does not block a placement downstairs" is a claim that needs two
+	 * storeys in one fixture to state at all.
+	 */
+	EntityDefinition recoloured(int fileRegionId, int x, int y, int plane, int pairs)
+	{
 		EntityRecord record = new EntityRecord();
 		record.entityType = "StationaryCitizen";
 		record.name = "Recoloured citizen " + (++uuids);
 		record.uuid = String.format("00000000-0000-4000-8000-%012d", uuids);
 		record.examineText = "A citizen with a wardrobe.";
-		record.worldLocation = point(x, y, 0);
+		record.worldLocation = point(x, y, plane);
 		record.modelIds = new int[]{100};
 
 		record.modelRecolorFind = new int[pairs];
@@ -149,20 +169,32 @@ final class FakeRegions extends RegionDataLoader
 	}
 
 	/**
-	 * A row of {@link #recoloured} citizens on consecutive tiles, spaced so their
-	 * echoes have somewhere to go.
+	 * A grid of {@link #recoloured} citizens, spaced so their echoes have somewhere
+	 * to go.
 	 *
-	 * <p>Three tiles apart rather than adjacent: an echo stands
-	 * {@link CitizenEcho#MIN_SEPARATION_TILES} from its source, so a shoulder-to-
-	 * shoulder row would put every echo on top of the next citizen and the fixture
-	 * would be testing tile collisions instead of the crowd dial.
+	 * <p><b>{@link #CROWD_SPACING_TILES} tiles apart rather than adjacent</b>, and
+	 * that number is load-bearing. An echo has to stand at least
+	 * {@link CitizenEcho#MIN_SEPARATION_TILES} from <i>everything</i> the plugin
+	 * renders in its region — every authored citizen and every other echo, not just
+	 * its own source and sibling — so a shoulder-to-shoulder row would leave the
+	 * middle of the crowd with nowhere legal to put anybody and the fixture would be
+	 * testing tile contention instead of the crowd dial. Four tiles leaves the strip
+	 * between two columns exactly two tiles from both of them, which is the tightest
+	 * grid where every citizen in it can still seed its full
+	 * {@link CitizenEcho#MAX_ECHOES_PER_CITIZEN}. Three could not: at three the whole
+	 * interior of the grid is within one tile of somebody, and the tests that expect
+	 * {@code 2 * count} echoes found one echo missing from the middle.
 	 */
 	List<EntityDefinition> recolouredCrowd(int fileRegionId, int x, int y, int count, int pairs)
 	{
 		List<EntityDefinition> out = new ArrayList<>(count);
 		for (int i = 0; i < count; i++)
 		{
-			out.add(recoloured(fileRegionId, x + (i % 4) * 3, y + (i / 4) * 3, pairs));
+			out.add(recoloured(
+				fileRegionId,
+				x + (i % 4) * CROWD_SPACING_TILES,
+				y + (i / 4) * CROWD_SPACING_TILES,
+				pairs));
 		}
 		return out;
 	}
