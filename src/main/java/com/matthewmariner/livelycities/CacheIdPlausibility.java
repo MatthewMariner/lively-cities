@@ -6,7 +6,8 @@ package com.matthewmariner.livelycities;
  *
  * <p><b>This is not, and cannot be, the real check.</b> Whether an id actually
  * resolves is a question only a live client can answer — that is the whole
- * reason {@link CacheIdAudit} exists. What this class catches is the class of
+ * reason {@code CacheIdAudit} exists — in the test source set, since it has no
+ * caller a shipped client can reach. What this class catches is the class of
  * mistake a live client would never be asked about: a negative sentinel, a
  * transposed digit, a pasted hashcode or hour-of-epoch that landed in a
  * {@code modelIds} array by accident. Those are wrong by orders of magnitude,
@@ -48,7 +49,7 @@ package com.matthewmariner.livelycities;
  * <p><b>Deliberately not tied to a config or a live measurement.</b> Tightening
  * this to chase the cache's real size would make the offline audit's pass/fail
  * depend on facts the audit cannot see, which is precisely the failure mode
- * {@link CacheIdAudit} exists to own instead.
+ * {@code CacheIdAudit} exists to own instead.
  */
 final class CacheIdPlausibility
 {

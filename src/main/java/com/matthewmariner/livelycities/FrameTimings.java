@@ -15,6 +15,15 @@ import javax.inject.Singleton;
  * number, so this is instrumentation rather than a benchmark: a real figure falls
  * out of ordinary play, on a cadence, into the log and into a file.
  *
+ * <p><b>This class measures; it does not write.</b> Everything here is counters and
+ * text — {@link #summaryLine()} and {@link #toReportText()} hand out finished
+ * {@code String}s and nothing else. The cadence is read here and acted on by
+ * {@code LivelyCitiesDevReportsPlugin}, which lives in the test source set and never
+ * ships, because filesystem I/O in the shipped jar costs the Plugin Hub submission its
+ * automated review (riktenx, plugin-hub#12366 and #13208). So in a hub user's client
+ * nothing calls {@link #onGameTick()} at all: the meters exist, the gate below keeps
+ * them empty, and there is no reporting branch anywhere in {@code src/main} to look at.
+ *
  * <p><b>Three meters, and the split is the whole point</b>, because they run on
  * different clocks and only one of them competes with the frame rate:
  * <ul>
@@ -114,19 +123,17 @@ final class FrameTimings
 	/**
 	 * Set by {@code ./gradlew runWithTimings} and by nothing else. Read with
 	 * {@link Boolean#getBoolean}, a plain JVM system property — the same mechanism,
-	 * for the same reasons, as {@code LivelyCitiesPlugin.CACHE_AUDIT_SYSTEM_PROPERTY}.
+	 * for the same reasons, as
+	 * {@code LivelyCitiesDevReportsPlugin.CACHE_AUDIT_SYSTEM_PROPERTY}.
 	 */
 	static final String SYSTEM_PROPERTY = "livelycities.frameTimings";
-
-	/** Under {@code ~/.runelite/lively-cities/}. */
-	static final String REPORT_FILE_NAME = "frame-timings.txt";
 
 	/**
 	 * Game ticks between reports: 300, i.e. three minutes.
 	 *
-	 * <p>Short enough that a quick look around a city produces a file, long enough
+	 * <p>Short enough that a quick look around a city produces a report, long enough
 	 * that the log line is not something a developer starts scrolling past. The report
-	 * is cumulative and each write overwrites the last, so the file is always the whole
+	 * is cumulative and each write overwrites the last, so it is always the whole
 	 * session so far rather than a window — which means a client that is killed rather
 	 * than closed still leaves a report behind, at most three minutes stale.
 	 */
@@ -303,8 +310,11 @@ final class FrameTimings
 	/**
 	 * Advances the report clock by one game tick.
 	 *
-	 * @return true if a report is due now. Always false when disabled, so the caller's
-	 * reporting path is dead code for an ordinary user.
+	 * <p>The only caller is {@code LivelyCitiesDevReportsPlugin} in the test source set,
+	 * so in a shipped client this is never called and {@link #getTicks()} stays at zero.
+	 *
+	 * @return true if a report is due now. Always false when disabled, so even that
+	 * caller's reporting path is closed unless both halves of the gate are set.
 	 */
 	boolean onGameTick()
 	{
@@ -351,9 +361,11 @@ final class FrameTimings
 	/**
 	 * The whole session as stable, diffable plain text.
 	 *
-	 * <p>Built on the client thread and handed to a background thread to write, so the
-	 * text is a snapshot rather than a view of counters that are still moving — the
-	 * same split {@code CacheIdAudit} uses.
+	 * <p>Built on the client thread and handed to a background thread to write — by
+	 * {@code LivelyCitiesDevReportsPlugin}, in the test source set — so the text is a
+	 * snapshot rather than a view of counters that are still moving. The same split
+	 * {@code CacheIdAudit} uses, and the seam that lets all the file handling live
+	 * outside the shipped jar.
 	 */
 	String toReportText()
 	{

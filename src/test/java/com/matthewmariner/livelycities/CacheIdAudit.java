@@ -20,11 +20,31 @@ import net.runelite.api.Client;
  * only ground truth for whether an id is still valid, and all require a real,
  * cache-loaded client — there is no
  * offline substitute (see {@link CacheIdPlausibility}, which is as far as pure
- * data invariants can go). {@code LivelyCitiesPlugin} only ever calls
- * {@link #run} when {@code developerMode} is on <b>and</b> the
- * {@code livelycities.validateCacheIds} system property is set — which
- * {@code ./gradlew test} never does — so this class is never exercised by the
- * normal build. The Gradle {@code auditCacheIds} task sets both.
+ * data invariants can go). The only caller of {@link #run} is
+ * {@code LivelyCitiesDevReportsPlugin}, which lives in the test source set and is
+ * loaded only by {@code ./gradlew auditCacheIds} — and even there only when
+ * {@code developerMode} is on <b>and</b> the {@code livelycities.validateCacheIds}
+ * system property is set, which {@code ./gradlew test} never does. So this class is
+ * never exercised by the normal build, and never reachable at all in a shipped client.
+ *
+ * <p><b>This class lives in the test source set, with the plugin that calls it.</b>
+ * It moved for the second half of the same argument that moved {@link ReportWriter}:
+ * the first half was that filesystem I/O in {@code src/main} costs the submission its
+ * automated review (riktenx, plugin-hub#12366 and #13208), which taking the file away
+ * settled. What it did not settle is that the audit then shipped with no reachable
+ * caller at all — three classes of a hub user's jar, counting {@link DatasetIds} and
+ * {@link Report}, for a capability nothing in {@code src/main} invokes. "The jar was
+ * paying for capabilities its users cannot invoke" is the whole argument, and it
+ * applies here whether or not a file is involved.
+ *
+ * <p><b>{@link FrameTimings} deliberately did not come with it.</b> That one is
+ * measured into by {@code EntityScene} on the hot path, so it has a real shipped
+ * caller; only its <i>reporting</i> left. This has none — the cache walk is started by
+ * {@code LivelyCitiesDevReportsPlugin} and by {@code CacheIdAuditTest}, and by nothing
+ * else — which is what makes moving it free rather than a hole in the render path.
+ *
+ * <p>{@link Report#toReportText()} still produces a {@code String} and stops there;
+ * writing it is {@code LivelyCitiesDevReportsPlugin}'s and {@link ReportWriter}'s.
  *
  * <p><b>Everything else here is plain data-in/data-out</b>, and is exercised by
  * {@code CacheIdAuditTest} against {@code FakeClient} — the algorithm that
@@ -33,9 +53,6 @@ import net.runelite.api.Client;
  */
 final class CacheIdAudit
 {
-	/** Under {@code ~/.runelite/lively-cities/} — see {@link ReportWriter}. */
-	static final String REPORT_FILE_NAME = "model-id-audit.txt";
-
 	/**
 	 * {@code LivelyAnimation.BeeIdle}'s id. {@code client.loadAnimation(0)}
 	 * returns null by design in every cache state — the real

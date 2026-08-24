@@ -20,9 +20,11 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * The one piece of this plugin that touches a filesystem. Points at a throwaway
- * temp directory rather than the real {@code ~/.runelite} — the same discipline
- * this project already applies to region data fixtures.
+ * The one piece of this project that touches a filesystem — and, since the move, one
+ * that lives in the test source set beside the class it tests rather than in the jar
+ * the Plugin Hub builds. Points at a throwaway temp directory rather than the real
+ * {@code ~/.runelite}, the same discipline this project already applies to region data
+ * fixtures.
  *
  * <p>The fixtures are still cache-audit reports, because that is the report with a
  * fixture already built; what is under test is the writing, and the writer has not
@@ -30,6 +32,13 @@ import static org.junit.Assert.assertTrue;
  */
 public class ReportWriterTest
 {
+	/**
+	 * Taken from the production constant rather than spelled out again, so a rename
+	 * cannot leave this file asserting about a file name nobody writes.
+	 */
+	private static final String REPORT_FILE_NAME =
+		LivelyCitiesDevReportsPlugin.CACHE_AUDIT_REPORT_FILE_NAME;
+
 	private File tempRoot;
 
 	@Before
@@ -50,9 +59,9 @@ public class ReportWriterTest
 		File outputDir = new File(tempRoot, "lively-cities");
 		CacheIdAudit.Report report = emptyReport();
 
-		File written = ReportWriter.write(outputDir, CacheIdAudit.REPORT_FILE_NAME, report.toReportText());
+		File written = ReportWriter.write(outputDir, REPORT_FILE_NAME, report.toReportText());
 
-		assertEquals(new File(outputDir, CacheIdAudit.REPORT_FILE_NAME), written);
+		assertEquals(new File(outputDir, REPORT_FILE_NAME), written);
 		assertTrue(written.isFile());
 		String contents = new String(Files.readAllBytes(written.toPath()), java.nio.charset.StandardCharsets.UTF_8);
 		assertEquals(report.toReportText(), contents);
@@ -79,9 +88,9 @@ public class ReportWriterTest
 	{
 		File outputDir = new File(tempRoot, "lively-cities");
 
-		ReportWriter.write(outputDir, CacheIdAudit.REPORT_FILE_NAME, emptyReport().toReportText());
+		ReportWriter.write(outputDir, REPORT_FILE_NAME, emptyReport().toReportText());
 		File secondReportFile = ReportWriter.write(
-			outputDir, CacheIdAudit.REPORT_FILE_NAME, reportWithOneFailure().toReportText());
+			outputDir, REPORT_FILE_NAME, reportWithOneFailure().toReportText());
 
 		String contents = new String(Files.readAllBytes(secondReportFile.toPath()), java.nio.charset.StandardCharsets.UTF_8);
 		assertEquals("a stale failing id from a fixed run must not linger in the file",
@@ -106,14 +115,15 @@ public class ReportWriterTest
 		String[] left = outputDir.list();
 		assertNotNull(left);
 		assertEquals("only the report may survive the write: " + Arrays.toString(left),
-			Collections.singletonList(CacheIdAudit.REPORT_FILE_NAME),
+			Collections.singletonList(REPORT_FILE_NAME),
 			Arrays.asList(left));
 	}
 
 	/**
 	 * Two writers on one path never produce a file that is neither report.
 	 *
-	 * <p><b>The window this closes is new.</b> {@code reportFrameTimings()} is reachable
+	 * <p><b>The window this closes is new.</b>
+	 * {@code LivelyCitiesDevReportsPlugin.reportFrameTimings()} is reachable
 	 * from two places — the 300-tick cadence and {@code shutDown} — and both dispatch
 	 * through {@code CompletableFuture.runAsync}, so closing the client as a periodic
 	 * report begins puts two writers on {@code frame-timings.txt} at once. The old
@@ -137,8 +147,8 @@ public class ReportWriterTest
 
 		// One complete report to start from, so "the file does not exist yet" is not
 		// one of the states the reader has to tolerate.
-		ReportWriter.write(outputDir, CacheIdAudit.REPORT_FILE_NAME, first);
-		File report = new File(outputDir, CacheIdAudit.REPORT_FILE_NAME);
+		ReportWriter.write(outputDir, REPORT_FILE_NAME, first);
+		File report = new File(outputDir, REPORT_FILE_NAME);
 
 		AtomicBoolean writing = new AtomicBoolean(true);
 		List<String> torn = Collections.synchronizedList(new ArrayList<>());
@@ -174,7 +184,7 @@ public class ReportWriterTest
 		{
 			for (int round = 0; round < ROUNDS; round++)
 			{
-				ReportWriter.write(outputDir, CacheIdAudit.REPORT_FILE_NAME,
+				ReportWriter.write(outputDir, REPORT_FILE_NAME,
 					round % 2 == 0 ? second : first);
 			}
 		}
@@ -211,7 +221,7 @@ public class ReportWriterTest
 	{
 		try
 		{
-			return ReportWriter.write(outputDir, CacheIdAudit.REPORT_FILE_NAME, emptyReport().toReportText());
+			return ReportWriter.write(outputDir, REPORT_FILE_NAME, emptyReport().toReportText());
 		}
 		catch (IOException e)
 		{

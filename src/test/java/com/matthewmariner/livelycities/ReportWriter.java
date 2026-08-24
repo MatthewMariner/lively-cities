@@ -13,18 +13,34 @@ import java.nio.file.StandardCopyOption;
 /**
  * Writes one of this plugin's developer reports to disk.
  *
- * <p><b>The only class in the plugin that touches a filesystem</b>, and it is kept
- * that way on purpose: there is exactly one place that has to obey
- * {@code AGENTS.md}'s file-I/O rule (write only under the caller-supplied
- * directory — every caller passes a subdirectory of {@code RuneLite.RUNELITE_DIR})
- * and the threading rule (never on the client thread — {@code LivelyCitiesPlugin}
- * calls this from a background thread, after the client-thread pass that produced
- * the text has already finished).
+ * <p><b>This class lives in the test source set, and that is the point.</b> It is the
+ * only class in the project that touches a filesystem, and {@code src/test/java} is
+ * not packaged into the jar the Plugin Hub builds — so the shipped plugin contains no
+ * {@code java.io.File}, no {@code java.nio.file}, and nothing that can write anywhere.
+ * A hub maintainer put the reason plainly on
+ * <a href="https://github.com/runelite/plugin-hub/pull/12366">plugin-hub#12366</a>:
+ * "file i/o will make your plugin require manually review. if you can not use it your
+ * plugin can be automatically reviewed." The capability itself is not lost — both
+ * {@code ./gradlew runWithTimings} and {@code ./gradlew auditCacheIds} run on
+ * {@code sourceSets.test.runtimeClasspath}, so {@link LivelyCitiesDevReportsPlugin}
+ * and this writer are on the classpath of exactly the two launches that want them, and
+ * of nothing a hub user can ever start. That arrangement is the one riktenx suggested
+ * on <a href="https://github.com/runelite/plugin-hub/pull/13208">plugin-hub#13208</a>:
+ * "you can either add a separate debug plugin in the test source set (which won't ship
+ * with your plugin and won't get looked at but you can use it during development) or
+ * just remove it".
+ *
+ * <p>Two rules still apply here and are unchanged by the move: write only under the
+ * caller-supplied directory — every caller passes a subdirectory of
+ * {@code RuneLite.RUNELITE_DIR} — and never on the client thread, which
+ * {@link LivelyCitiesDevReportsPlugin} guarantees by dispatching to a background thread
+ * after the client-thread pass that produced the text has already finished.
  *
  * <p>It takes finished text rather than a report object so that the second caller
  * did not have to be a second writer. {@code CacheIdAudit} and {@link FrameTimings}
- * both produce a stable, sorted, diffable {@code String} on the client thread and
- * hand it here; adding a third is a file name and nothing else. It was called
+ * both produce a stable, sorted, diffable {@code String} on the client thread — both
+ * still in {@code src/main}, because measuring and auditing are not file I/O — and hand
+ * it here; adding a third is a file name and nothing else. It was called
  * {@code CacheAuditReportWriter} while it had one caller.
  */
 final class ReportWriter
@@ -47,7 +63,8 @@ final class ReportWriter
 	 * target.</b> {@code new FileOutputStream(file)} truncates in place, so the report
 	 * spends the whole write as a partial file — and since {@link FrameTimings} arrived
 	 * this method has two callers that can be in flight at once. The frame report is
-	 * dispatched both from the 300-tick cadence in {@code onGameTick} and from
+	 * dispatched both from the 300-tick cadence in
+	 * {@link LivelyCitiesDevReportsPlugin#onGameTick} and from that plugin's
 	 * {@code shutDown}, each through {@code CompletableFuture.runAsync} on the common
 	 * pool, so a client closed just as a periodic report begins puts two writers on one
 	 * path with nothing between them. Truncating writers interleave into a file that is
@@ -67,9 +84,12 @@ final class ReportWriter
 	 *
 	 * @param outputDir the plugin's own subdirectory, created if it does not
 	 *                  exist yet
-	 * @param fileName  the report's file name, owned by whichever class produced the
-	 *                  text — see {@code CacheIdAudit.REPORT_FILE_NAME} and
-	 *                  {@link FrameTimings#REPORT_FILE_NAME}
+	 * @param fileName  the report's file name — see
+	 *                  {@link LivelyCitiesDevReportsPlugin#CACHE_AUDIT_REPORT_FILE_NAME}
+	 *                  and {@link LivelyCitiesDevReportsPlugin#FRAME_REPORT_FILE_NAME}.
+	 *                  Both constants live with the writer rather than with the two
+	 *                  classes that produce the text, because after the move
+	 *                  {@code src/main} names no files at all.
 	 * @param text      the finished report, already a snapshot
 	 * @return the file written
 	 */

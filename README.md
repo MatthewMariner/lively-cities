@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-397-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-411-brightgreen)](#development)
 
 </div>
 
@@ -144,7 +144,7 @@ What is new is everything that stops it dying the same way:
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they are now
   anonymous barrow wights.
-- **397 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **411 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -211,7 +211,7 @@ Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires 
 the Gradle wrapper handles the rest.
 
 ```bash
-./gradlew build            # compile and run the 397 tests
+./gradlew build            # compile and run the 411 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)
@@ -220,6 +220,22 @@ the Gradle wrapper handles the rest.
 `run-windows.sh` builds in WSL and launches the client natively on Windows using RuneLite's
 own bundled JRE — faster than WSLg, and no Windows JDK needed. It defaults to an isolated
 `user.home` so your real profiles are never written to.
+
+### Where the two reports are written from
+
+Both `auditCacheIds` and `runWithTimings` write a file, and neither of them ships. The
+*measuring* and the *auditing* are in `src/main` — counters, the cache walk, and the plain
+text they produce. The *writing* is in `src/test/java`, in a second RuneLite plugin
+(`LivelyCitiesDevReportsPlugin`) that only the dev tasks above ever load, because all three
+run on `sourceSets.test.runtimeClasspath`. Nothing changes about the tooling; it simply is
+not in the jar the Plugin Hub builds.
+
+That split is there because the hub's automated reviewer will not look at a plugin that does
+file I/O — see [docs/SUBMISSION.md](docs/SUBMISSION.md#no-filesystem-writes-in-the-shipped-jar)
+for the maintainer's own words and the two PRs they come from. What can be checked, and is
+checked by a test, is narrow and literal: **no class in `src/main` names a filesystem API.**
+The dataset is still read with `getResourceAsStream` off the classpath, which is not a
+filesystem access and which the plugin cannot ship without.
 
 ### After an OSRS update: checking the dataset still resolves
 
@@ -340,8 +356,8 @@ a benchmark nobody runs.
 
 Launches the same dev client `./gradlew run` does, with one extra system
 property. Then just play — walk into Varrock square, turn the density up, walk
-out again. Every three minutes (300 game ticks) the plugin writes a summary
-line to the client log and a cumulative report to:
+out again. Every three minutes (300 game ticks) the developer-only reporting
+plugin writes a summary line to the client log and a cumulative report to:
 
 ```
 ~/.runelite/lively-cities/frame-timings.txt

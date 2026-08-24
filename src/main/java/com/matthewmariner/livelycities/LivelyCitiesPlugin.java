@@ -1,12 +1,8 @@
 package com.matthewmariner.livelycities;
 
 import com.google.inject.Provides;
-import java.io.File;
-import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import javax.inject.Named;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Constants;
@@ -19,7 +15,6 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
-import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -82,20 +77,6 @@ public class LivelyCitiesPlugin extends Plugin
 	private static final int CLIENT_TICKS_PER_GAME_TICK =
 		Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
 
-	/**
-	 * Set on {@code ./gradlew auditCacheIds} (never on {@code ./gradlew run} or
-	 * {@code ./gradlew test}) to ask {@link #runDeveloperCacheAudit()} to run
-	 * once at startup. Read with {@link Boolean#getBoolean}, a plain JVM system
-	 * property — no new argument parsing, no reflection.
-	 *
-	 * <p>Checked in addition to {@link #developerMode}, not instead of it: this
-	 * is what stops the one-off validation pass from running on every ordinary
-	 * {@code ./gradlew run} session — it is a real client-cache walk over every
-	 * id the dataset references, which is exactly the kind of work a developer
-	 * wants on demand, not on every restart.
-	 */
-	static final String CACHE_AUDIT_SYSTEM_PROPERTY = "livelycities.validateCacheIds";
-
 	// Package-private rather than private so the tests in this package can wire
 	// their own fakes in. Guice injects a package-private field exactly as it
 	// injects a private one, so this costs the runtime nothing — and the
@@ -109,9 +90,6 @@ public class LivelyCitiesPlugin extends Plugin
 
 	@Inject
 	EntityScene scene;
-
-	@Inject
-	RegionDataLoader regionDataLoader;
 
 	@Inject
 	OverlayRegistry overlayRegistry;
@@ -131,29 +109,24 @@ public class LivelyCitiesPlugin extends Plugin
 	/**
 	 * The stopwatch, off for every ordinary launch — see {@link FrameTimings}.
 	 *
-	 * <p>Injected here as well as into {@link EntityScene} because the two halves live
-	 * in different places: the scene owns the measuring, and this class owns the
-	 * cadence and the file, which is where {@code RuneLite.RUNELITE_DIR} and the
-	 * background thread are. Guice hands both the same {@code @Singleton}.
+	 * <p><b>Nothing in this class reads it, and that is deliberate.</b> The measuring
+	 * happens in {@link EntityScene}, which Guice hands the same {@code @Singleton};
+	 * the <i>reporting</i> — the cadence, {@code RuneLite.RUNELITE_DIR} and the
+	 * background thread that writes a file — moved to the test source set, because
+	 * filesystem I/O in a shipped jar costs the Plugin Hub submission its automated
+	 * review. See {@code LivelyCitiesDevReportsPlugin}, which is loaded only by
+	 * {@code ./gradlew runWithTimings} and {@code ./gradlew auditCacheIds}.
+	 *
+	 * <p>This field is how that plugin reaches <i>this</i> stopwatch rather than a
+	 * second one. It declares {@code @PluginDependency(LivelyCitiesPlugin.class)}, so
+	 * RuneLite builds its injector as a child of this plugin's and binds this instance
+	 * into it; it then reads this field. Resolving {@code FrameTimings} from its own
+	 * injector instead would work only as long as Guice keeps hoisting the just-in-time
+	 * binding to the root injector, and the failure mode if it ever did not is a report
+	 * full of zeros rather than an error.
 	 */
 	@Inject
 	FrameTimings frameTimings;
-
-	/**
-	 * True when the client was launched with {@code --developer-mode} — the same
-	 * {@code RuneLiteProperties} launcher flag {@code ./gradlew run} already
-	 * passes for this project (see {@code build.gradle}). Bound by
-	 * {@code RuneLiteModule} for every launch, developer or not, so this is
-	 * always resolvable and defaults to {@code false} when a test constructs the
-	 * plugin directly instead of through Guice.
-	 *
-	 * <p>Gates {@link #runDeveloperCacheAudit()} the same way the plan's L4.3
-	 * authoring mode is gated: a dev-only capability compiled into the shipped
-	 * jar is fine, a dev-only capability that a normal user can trigger is not.
-	 */
-	@Inject
-	@Named("developerMode")
-	boolean developerMode;
 
 	/**
 	 * {@code getGameCycle()} at the last game tick we processed.
@@ -171,6 +144,30 @@ public class LivelyCitiesPlugin extends Plugin
 	 */
 	private int cycleAtLastTick;
 
+	/**
+	 * Whether the most recent {@link GameTick} was one {@link #tick()} ran a full pass
+	 * on, rather than one it returned early from.
+	 *
+	 * <p><b>Read by the developer-only reporter, and by nothing here.</b>
+	 * {@code frameTimings.onGameTick()} used to be the last statement of
+	 * {@link #tick()}, after its early exit — so the population the frame report
+	 * described was "ticks this plugin processed", which is the population it claims to
+	 * describe. Moving the cadence to {@code LivelyCitiesDevReportsPlugin} put it on its
+	 * own {@code GameTick} subscriber, where "did the pass happen?" is no longer implied
+	 * by "am I running", so the reporter has to ask.
+	 *
+	 * <p>Cleared in {@link #shutDown()}, which is the case that makes this a flag rather
+	 * than an assumption: the reporter is a separate plugin and stays on when this one
+	 * is toggled off, and a flag left true would let the 300-tick cadence keep firing —
+	 * rewriting the report from samples nothing is adding to any more.
+	 *
+	 * <p>The reporter can only ever see the current tick's value because it subscribes
+	 * at {@code priority = -1f} and therefore runs after this class. At any other
+	 * priority it reads the previous tick's, which is what
+	 * {@code FrameTimingsTest.theReportIncludesTheTickThatTriggeredIt} exists to catch.
+	 */
+	private boolean processedGameTick;
+
 	@Override
 	protected void startUp()
 	{
@@ -185,152 +182,20 @@ public class LivelyCitiesPlugin extends Plugin
 		// that will never come.
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
-			clientThread.invoke(this::tick);
+			// The braces are load-bearing, and this is not a style choice.
+			// ClientThread overloads invoke() on Runnable and BooleanSupplier, and the
+			// two mean different things: a BooleanSupplier is re-queued every tick
+			// until it returns true. When tick() was void, `this::tick` bound to the
+			// Runnable overload. Giving it a boolean return — for the reporting
+			// cadence, nothing to do with this line — silently rebound it to
+			// BooleanSupplier and turned one first pass into a retry loop, with no
+			// warning and no character of this call site changed. A block lambda whose
+			// body is a bare statement has no value, so only Runnable fits.
+			clientThread.invoke(() ->
+			{
+				tick();
+			});
 		}
-
-		// Both flags, deliberately: developerMode alone is true for every
-		// ordinary `./gradlew run`, and the cache id audit is a deliberate,
-		// on-demand action, not something a normal dev session should pay for.
-		if (developerMode && Boolean.getBoolean(CACHE_AUDIT_SYSTEM_PROPERTY))
-		{
-			clientThread.invoke(this::runDeveloperCacheAudit);
-		}
-
-		if (frameTimings.isEnabled())
-		{
-			// Said out loud, because a measurement running silently is a measurement
-			// somebody forgets is running — and because "is it actually on?" is the
-			// first question when the report file turns out to be empty.
-			log.info("Lively Cities: frame timings are on ({} is set) — a summary every {} game "
-					+ "tick(s), and a report in ~/.runelite/lively-cities/{}",
-				FrameTimings.SYSTEM_PROPERTY, FrameTimings.REPORT_INTERVAL_TICKS,
-				FrameTimings.REPORT_FILE_NAME);
-		}
-	}
-
-	/**
-	 * The cache-backed half of the durability tooling: walks every distinct
-	 * model id, merged-object id and animation id
-	 * {@code RegionData/*.json} references and asks the live client whether each
-	 * one still resolves — see {@code CacheIdAudit}'s javadoc for why this
-	 * cannot run in the normal test suite.
-	 *
-	 * <p>Runs once, from the client thread (required — every model/animation
-	 * load in this plugin goes through the client), and only ever on demand: see
-	 * {@link #CACHE_AUDIT_SYSTEM_PROPERTY}.
-	 *
-	 * <p>Package-private and non-final so a test can override it the same way
-	 * {@code LivelyCitiesPluginLifecycleTest} overrides {@code EntityScene}'s
-	 * entry points — the developer-mode gate above is what is under test there,
-	 * not the audit's own logic, which {@code CacheIdAuditTest} covers directly
-	 * against {@code FakeClient}.
-	 */
-	void runDeveloperCacheAudit()
-	{
-		log.info("Lively Cities: {} is set, running the cache id audit", CACHE_AUDIT_SYSTEM_PROPERTY);
-
-		CacheIdAudit.DatasetIds dataset = CacheIdAudit.collect(regionDataLoader);
-		CacheIdAudit.Report report = CacheIdAudit.run(client, dataset);
-
-		log.info("Lively Cities cache id audit: {} model id(s) checked ({} failing), "
-				+ "{} merged-object id(s) checked ({} failing), {} animation id(s) checked "
-				+ "({} failing, {} known permanently null)",
-			dataset.modelIds.size(), report.failingModelIds.size(),
-			dataset.mergedObjectIds.size(), report.failingMergedObjectIds.size(),
-			dataset.animationIdsByName.size(), report.failingAnimations.size(),
-			report.knownPermanentNullAnimations.size());
-
-		// Disk I/O never happens on the client thread. The text is built here, where
-		// the report was, so what crosses the thread boundary is a finished snapshot
-		// rather than an object still holding collections.
-		writeReportAsync(reportDir(), CacheIdAudit.REPORT_FILE_NAME, report.toReportText(),
-			"cache id audit");
-	}
-
-	/**
-	 * Hands one finished report to a background thread.
-	 *
-	 * <p>Package-private and non-final so a test can run it inline and see what it was
-	 * handed — the same seam, for the same reason, as {@link #reportFrameTimings()} and
-	 * {@link #runDeveloperCacheAudit()}, one level further down. It exists because the
-	 * <b>file name</b> is the one argument at these call sites that nothing else could
-	 * check. {@link ReportWriter} has been parameterised by file name since it grew a
-	 * second caller, so each caller now names its own constant — and passing
-	 * {@code CacheIdAudit.REPORT_FILE_NAME} from the frame-timing path compiles,
-	 * type-checks, and silently makes the frame report overwrite the model id audit.
-	 * Two callers, two constants, and until this seam existed neither constant appeared
-	 * in a single assertion.
-	 *
-	 * @param what what to call it in the log line, so a failure names the report that
-	 *             failed rather than "a report"
-	 */
-	CompletableFuture<Void> writeReportAsync(File outputDir, String fileName, String text, String what)
-	{
-		return CompletableFuture.runAsync(() -> writeReport(outputDir, fileName, text, what));
-	}
-
-	/**
-	 * Writes one finished report. Background thread only — see {@link ReportWriter}.
-	 */
-	private static void writeReport(File outputDir, String fileName, String text, String what)
-	{
-		try
-		{
-			File file = ReportWriter.write(outputDir, fileName, text);
-			log.info("Lively Cities {} report written to {}", what, file);
-		}
-		catch (IOException e)
-		{
-			log.warn("Lively Cities {}: could not write the report under {}", what, outputDir, e);
-		}
-	}
-
-	/**
-	 * The plugin's own subdirectory of {@code ~/.runelite}.
-	 *
-	 * <p>Resolved per call rather than held in a static, because
-	 * {@code RuneLite.RUNELITE_DIR} is a static that a test never wants written to and
-	 * that neither report is on a hot path for.
-	 */
-	private static File reportDir()
-	{
-		return new File(RuneLite.RUNELITE_DIR, "lively-cities");
-	}
-
-	/**
-	 * The frame-timing cadence: one info line and one file, every
-	 * {@link FrameTimings#REPORT_INTERVAL_TICKS} game ticks.
-	 *
-	 * <p>The text is built here, on the client thread, and written on a background one
-	 * — the same split {@link #runDeveloperCacheAudit()} uses, and for the same two
-	 * reasons: disk I/O never happens on the client thread, and a report handed over as
-	 * finished text is a snapshot rather than a view of counters that are still moving.
-	 *
-	 * <p>Unreachable for an ordinary user: {@link FrameTimings#onGameTick()} returns
-	 * false forever unless both halves of its gate are set.
-	 *
-	 * <p><b>Nothing is written when there is nothing to say.</b> {@link #shutDown()}
-	 * calls this unconditionally, so without the {@code hasSamples()} guard a client
-	 * that was started and closed without the stopwatch ever taking a sample would
-	 * replace a real report with a file that says "no samples" three times over.
-	 *
-	 * <p>Package-private and non-final so a test can override it and count the calls —
-	 * the same seam, for the same reason, as {@link #runDeveloperCacheAudit()}. What
-	 * needs asserting is <i>when</i> this runs, and under which file name
-	 * ({@link #writeReportAsync}); that it can write a file is {@code ReportWriterTest}'s,
-	 * against a temp directory rather than the real {@code ~/.runelite}.
-	 */
-	void reportFrameTimings()
-	{
-		if (!frameTimings.hasSamples())
-		{
-			return;
-		}
-
-		log.info(frameTimings.summaryLine());
-
-		writeReportAsync(reportDir(), FrameTimings.REPORT_FILE_NAME, frameTimings.toReportText(),
-			"frame timings");
 	}
 
 	@Override
@@ -346,10 +211,10 @@ public class LivelyCitiesPlugin extends Plugin
 		// the teardown whose whole job is to leave nothing behind.
 		citizenMenu.forget();
 
-		// The tail of the session, before the scene is torn down. A no-op unless the
-		// stopwatch is on, and non-blocking either way — the periodic report is the one
-		// to rely on if the client is killed rather than closed.
-		reportFrameTimings();
+		// The developer-only reporter is a separate plugin and does not stop when this
+		// one does. Left true, its 300-tick cadence would go on firing over a scene
+		// nobody is measuring any more.
+		processedGameTick = false;
 
 		// Not blocking: invoke() runs inline on the client thread and defers
 		// otherwise. The count lands in the log either way.
@@ -387,7 +252,21 @@ public class LivelyCitiesPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		tick();
+		processedGameTick = tick();
+	}
+
+	/**
+	 * Whether the most recent {@link GameTick} reached the scene — see
+	 * {@link #processedGameTick}.
+	 *
+	 * <p>Package-private, and the developer-only reporter in the test source set is its
+	 * only caller. It is a plain getter rather than a listener hook on purpose: nothing
+	 * in {@code src/main} may hold a sink, a nullable writer or a "reporting enabled"
+	 * branch, which is the arrangement the whole move exists to produce.
+	 */
+	boolean processedGameTick()
+	{
+		return processedGameTick;
 	}
 
 	/**
@@ -520,14 +399,18 @@ public class LivelyCitiesPlugin extends Plugin
 	 * The one place that touches the scene per game tick, and the only writer of
 	 * {@link #cycleAtLastTick}. Runs on the client thread — GameTick is posted
 	 * from it, and {@link #startUp()} routes through {@link ClientThread}.
+	 *
+	 * @return true if a full pass ran; false if there was no player or no world view
+	 * yet and this tick did nothing. {@link #processedGameTick} is the only reader,
+	 * and it is why this returns anything at all.
 	 */
-	private void tick()
+	private boolean tick()
 	{
 		final WorldPoint playerLocation = playerLocation();
 		final WorldView worldView = client.getTopLevelWorldView();
 		if (playerLocation == null || worldView == null)
 		{
-			return;
+			return false;
 		}
 
 		// Restarting the interpolation clock is a game-tick-only act: the frame
@@ -537,13 +420,7 @@ public class LivelyCitiesPlugin extends Plugin
 
 		scene.syncRegions(worldView);
 		scene.onGameTick(playerLocation, worldView);
-
-		// After the pass it is timing, so the tick that triggers a report is a tick the
-		// report already includes. Returns false forever unless the stopwatch is on.
-		if (frameTimings.onGameTick())
-		{
-			reportFrameTimings();
-		}
+		return true;
 	}
 
 	/**

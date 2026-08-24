@@ -850,7 +850,7 @@ public final class EntityDefinition
 	 *
 	 * <p>Read in two places, and each is a rule rather than a convenience:
 	 * {@link LivelyEntity#loadParts()} sources the model parts and the recolours from
-	 * it instead of from this record when it is set, and {@link CacheIdAudit} walks it
+	 * it instead of from this record when it is set, and {@code CacheIdAudit} walks it
 	 * so an NPC id that stops resolving after a game update is reported like any other
 	 * cache id. The second is the whole reason for preferring it over raw model ids —
 	 * a mechanism that could not be audited would be a new way to die quietly.

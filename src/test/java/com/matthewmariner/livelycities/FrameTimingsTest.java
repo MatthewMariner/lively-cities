@@ -11,6 +11,8 @@ import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameTick;
+import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.overlay.Overlay;
 import org.junit.After;
 import org.junit.Before;
@@ -184,14 +186,21 @@ public class FrameTimingsTest
 		assertTrue("./gradlew runWithTimings has to pass --developer-mode too, or the"
 				+ " system property is set for a client that ignores it",
 			withTimings.contains("--developer-mode"));
+		assertTrue("./gradlew runWithTimings has to run on the TEST runtime classpath, or"
+				+ " LivelyCitiesDevReportsPlugin — the half that writes the file — is not on"
+				+ " the classpath at all and the client measures into nothing",
+			withTimings.contains("sourceSets.test.runtimeClasspath"));
 
 		String audit = taskBlock(buildScript, "auditCacheIds");
 		assertTrue("./gradlew auditCacheIds has to set "
-				+ LivelyCitiesPlugin.CACHE_AUDIT_SYSTEM_PROPERTY,
-			audit.contains(
-				"systemProperty '" + LivelyCitiesPlugin.CACHE_AUDIT_SYSTEM_PROPERTY + "'"));
+				+ LivelyCitiesDevReportsPlugin.CACHE_AUDIT_SYSTEM_PROPERTY,
+			audit.contains("systemProperty '"
+				+ LivelyCitiesDevReportsPlugin.CACHE_AUDIT_SYSTEM_PROPERTY + "'"));
 		assertTrue("./gradlew auditCacheIds has to pass --developer-mode too",
 			audit.contains("--developer-mode"));
+		assertTrue("./gradlew auditCacheIds has to run on the TEST runtime classpath, or the"
+				+ " plugin that triggers the walk and writes the report is not loaded",
+			audit.contains("sourceSets.test.runtimeClasspath"));
 	}
 
 	/**
@@ -355,21 +364,28 @@ public class FrameTimingsTest
 	}
 
 	/**
-	 * The plugin reports on that cadence and never otherwise — and never at all when
-	 * the stopwatch is off, which is every shipped client.
+	 * The reporter reports on that cadence and never otherwise — and never at all when
+	 * the stopwatch is off.
+	 *
+	 * <p>The subject is {@link LivelyCitiesDevReportsPlugin} rather than
+	 * {@link LivelyCitiesPlugin} since the reporting moved to the test source set: a
+	 * shipped client does not merely fail to reach this path, it does not contain it.
+	 * What is still worth pinning is the cadence itself, and the "off" case is still
+	 * worth pinning with it — {@code ./gradlew run} loads this reporter too, and it must
+	 * write nothing there.
 	 */
 	@Test
 	public void thePluginReportsOnTheCadenceAndNeverWhenTheStopwatchIsOff()
 	{
-		CountingPlugin quiet = plugin(FrameTimings.off());
+		CountingReporter quiet = reporter(FrameTimings.off());
 		for (int i = 0; i < FrameTimings.REPORT_INTERVAL_TICKS + 5; i++)
 		{
 			quiet.onGameTick(new GameTick());
 		}
-		assertEquals("an ordinary client must never reach the reporting path",
+		assertEquals("an ordinary developer client must never reach the reporting path",
 			0, quiet.reports);
 
-		CountingPlugin measuring = plugin(new FrameTimings(true, true));
+		CountingReporter measuring = reporter(new FrameTimings(true, true));
 		for (int i = 0; i < FrameTimings.REPORT_INTERVAL_TICKS - 1; i++)
 		{
 			measuring.onGameTick(new GameTick());
@@ -378,6 +394,98 @@ public class FrameTimingsTest
 
 		measuring.onGameTick(new GameTick());
 		assertEquals(1, measuring.reports);
+	}
+
+	/**
+	 * The reporter's tick runs <b>after</b> the plugin's, on a real {@link EventBus}.
+	 *
+	 * <p><b>Why this is a behavioural test and not a one-line annotation read.</b> The
+	 * only thing keeping "the tick that triggers a report is a tick the report already
+	 * includes" true is {@code @Subscribe(priority = -1f)} on
+	 * {@link LivelyCitiesDevReportsPlugin#onGameTick} — a floating-point annotation
+	 * argument whose sign is the entire contract. Review found that <i>deleting</i> it
+	 * left the suite green and, worse, that <i>flipping it to {@code +1f}</i> — which
+	 * inverts the property its six-line javadoc asserts — also left the suite green.
+	 * Reading the annotation back would need reflection, which this project bans in
+	 * tests; so instead both plugins go on a real bus and the ordering is observed.
+	 *
+	 * <p>{@code EventBus} sorts subscribers by
+	 * {@code Comparator.comparingDouble(Subscriber::getPriority).reversed()} — highest
+	 * first — so a negative priority sorts last. The plugin's handler records a
+	 * visibility sample; the reporter's handler captures the sample count at the moment
+	 * it runs. After means one, before means zero.
+	 */
+	@Test
+	public void theReporterSeesTheTickTheStopwatchJustMeasured()
+	{
+		FrameTimings timings = new FrameTimings(true, true);
+		EntityScene scene = sceneWith(timings, 5);
+
+		final long[] seenByReporter = {-1L};
+
+		// The capture hangs off the first thing the reporter's own handler does, so
+		// what is being timed is the real @Subscribe on the real class — not a
+		// priority written into this fixture, which would only be testing EventBus.
+		LivelyCitiesPlugin owner = new LivelyCitiesPlugin()
+		{
+			@Override
+			boolean processedGameTick()
+			{
+				seenByReporter[0] = timings.sampleCount(FrameTimings.Pass.VISIBILITY);
+				return true;
+			}
+		};
+		owner.frameTimings = timings;
+
+		LivelyCitiesDevReportsPlugin reporter = new LivelyCitiesDevReportsPlugin();
+		reporter.livelyCities = owner;
+
+		EventBus bus = new EventBus();
+		bus.register(reporter);
+		// See TickPassRunner: its name, not its registration order, is what makes this
+		// test faithful. EventBus breaks priority ties on the subscriber's class name,
+		// so an anonymous subscriber declared here would sort ahead of the reporter for
+		// free and this would pass with no priority at all.
+		bus.register(new TickPassRunner(scene, PLAYER, view));
+
+		bus.post(new GameTick());
+
+		assertEquals("the reporter's handler has to run after the pass it measures —"
+				+ " a positive priority would make this 0",
+			1L, seenByReporter[0]);
+	}
+
+	/**
+	 * A tick the plugin did not process does not advance the cadence.
+	 *
+	 * <p><b>This is the population the report describes</b>, and keeping it right is the
+	 * whole reason {@link LivelyCitiesPlugin#processedGameTick()} exists. Before the
+	 * reporting moved to the test source set, {@code frameTimings.onGameTick()} was the
+	 * last statement of {@code LivelyCitiesPlugin.tick()} — <i>after</i> its "no player
+	 * or no world view yet" early return — so a tick that did no work never counted.
+	 * Splitting the two classes made it far too easy to count every tick instead, and
+	 * the difference is not academic: with Lively Cities toggled off and this reporter
+	 * left running, a counting-every-tick cadence would go on rewriting
+	 * {@code frame-timings.txt} out of samples nobody is producing any more.
+	 *
+	 * <p>The stopwatch is on and the tick count is well past the interval, so the only
+	 * thing standing between this and a report is the gate.
+	 */
+	@Test
+	public void aTickThePluginDidNotProcessDoesNotAdvanceTheCadence()
+	{
+		CountingReporter idle = wireReporter(
+			new CountingReporter(), new FrameTimings(true, true), false);
+
+		for (int i = 0; i < FrameTimings.REPORT_INTERVAL_TICKS * 2; i++)
+		{
+			idle.onGameTick(new GameTick());
+		}
+
+		assertEquals("no report, because the plugin processed none of those ticks",
+			0, idle.reports);
+		assertEquals("and the stopwatch must not have counted them either",
+			0L, idle.stopwatch().getTicks());
 	}
 
 	/**
@@ -391,12 +499,16 @@ public class FrameTimingsTest
 	 * <p>Deleting the call from {@code shutDown()} left the whole suite green before
 	 * this test existed: {@code LivelyCitiesPluginLifecycleTest} does exercise
 	 * {@code shutDown()}, but every plugin it builds carries {@code FrameTimings.off()},
-	 * so the report was a no-op there whether it was called or not.
+	 * so the report was a no-op there whether it was called or not. Since the reporting
+	 * moved to the test source set the {@code shutDown()} in question is
+	 * {@link LivelyCitiesDevReportsPlugin}'s, which is the whole of that plugin's
+	 * teardown — so deleting it now leaves a plugin whose shutdown does nothing at all,
+	 * and this is still the only thing that would notice.
 	 */
 	@Test
 	public void theTailOfTheSessionIsReportedOnTheWayOut()
 	{
-		CountingPlugin plugin = plugin(new FrameTimings(true, true));
+		CountingReporter plugin = reporter(new FrameTimings(true, true));
 
 		plugin.shutDown();
 
@@ -415,15 +527,15 @@ public class FrameTimingsTest
 	 * ever read after the fact, so a developer would find the empty one and conclude
 	 * the instrument was broken.
 	 *
-	 * <p>This goes one level below {@link CountingPlugin}: the question is not whether
+	 * <p>This goes one level below {@link CountingReporter}: the question is not whether
 	 * {@code reportFrameTimings()} ran — it did — but whether it decided to write.
 	 */
 	@Test
 	public void aStopwatchWithNothingToSayWritesNoReportAtAll()
 	{
-		ReportingPlugin plugin = reportingPlugin(new FrameTimings(true, true));
+		RecordingReporter plugin = recordingReporter(new FrameTimings(true, true));
 		assertFalse("the fixture is pointless unless the meters really are empty",
-			plugin.frameTimings.hasSamples());
+			plugin.stopwatch().hasSamples());
 
 		plugin.reportFrameTimings();
 
@@ -438,27 +550,29 @@ public class FrameTimingsTest
 	 * <p><b>This is the assertion that did not exist.</b> {@code ReportWriter} took a
 	 * file name as an argument the moment it grew a second caller, which left each
 	 * caller naming its own constant and nothing checking which one. Swapping
-	 * {@link FrameTimings#REPORT_FILE_NAME} for {@code CacheIdAudit.REPORT_FILE_NAME}
-	 * on that line compiles, type-checks, and leaves all 397 tests green while the
+	 * {@link LivelyCitiesDevReportsPlugin#FRAME_REPORT_FILE_NAME} for
+	 * {@link LivelyCitiesDevReportsPlugin#CACHE_AUDIT_REPORT_FILE_NAME}
+	 * on that line compiles, type-checks, and leaves the whole suite green while the
 	 * frame report quietly destroys {@code model-id-audit.txt} every 300 ticks —
 	 * destroying, in particular, the output of the one piece of tooling that has to run
-	 * against a live cache and therefore cannot be re-derived from a test run.
-	 * {@code FrameTimings.REPORT_FILE_NAME} appeared in no assertion anywhere before
-	 * this.
+	 * against a live cache and therefore cannot be re-derived from a test run. Neither
+	 * constant appeared in an assertion anywhere before this, and the move put them in
+	 * the same class, four lines apart, which does not make the mistake harder.
 	 */
 	@Test
 	public void theFrameReportIsWrittenUnderItsOwnNameAndNeverTheAudits()
 	{
 		FrameTimings timings = new FrameTimings(true, true);
-		ReportingPlugin plugin = reportingPlugin(timings);
+		RecordingReporter plugin = recordingReporter(timings);
 		timings.recordElapsed(FrameTimings.Pass.VISIBILITY, 900L, 3);
 
 		plugin.reportFrameTimings();
 
 		assertEquals("one report, written once",
-			java.util.Collections.singletonList(FrameTimings.REPORT_FILE_NAME), plugin.fileNames);
+			java.util.Collections.singletonList(LivelyCitiesDevReportsPlugin.FRAME_REPORT_FILE_NAME),
+			plugin.fileNames);
 		assertNotEquals("the frame report must never be written over the cache id audit's",
-			CacheIdAudit.REPORT_FILE_NAME, plugin.fileNames.get(0));
+			LivelyCitiesDevReportsPlugin.CACHE_AUDIT_REPORT_FILE_NAME, plugin.fileNames.get(0));
 		assertEquals("and what it writes has to be the frame report's own text",
 			timings.toReportText(), plugin.texts.get(0));
 	}
@@ -854,56 +968,61 @@ public class FrameTimingsTest
 		return scene;
 	}
 
-	private CountingPlugin plugin(FrameTimings timings)
+	private static CountingReporter reporter(FrameTimings timings)
 	{
-		return wire(new CountingPlugin(), timings);
+		return wireReporter(new CountingReporter(), timings);
 	}
 
-	private ReportingPlugin reportingPlugin(FrameTimings timings)
+	private static RecordingReporter recordingReporter(FrameTimings timings)
 	{
-		return wire(new ReportingPlugin(), timings);
+		return wireReporter(new RecordingReporter(), timings);
 	}
 
 	/**
-	 * Everything {@link LivelyCitiesPlugin} needs before any of its entry points can be
-	 * called, which is a smaller list than it looks: the fields are package-private and
-	 * {@code overlayRegistry} is an interface precisely so this method can exist — see
-	 * the identical helper in {@code LivelyCitiesPluginLifecycleTest}.
+	 * Everything {@link LivelyCitiesDevReportsPlugin} needs before its cadence and its
+	 * shutdown can be called, which is one thing: the stopwatch.
 	 *
-	 * <p>{@code citizenMenu} is here because {@code shutDown()} calls
-	 * {@code citizenMenu.forget()} before it reports, so a fixture without one cannot
-	 * reach the line these tests are about.
+	 * <p>It is handed over through a real {@link LivelyCitiesPlugin} rather than set on
+	 * the reporter directly, because that is exactly how the reporter reaches it in a
+	 * client — {@code @PluginDependency} binds the running plugin into the reporter's
+	 * injector, and {@code stopwatch()} reads its field. Wiring it any other way here
+	 * would leave that hop untested.
 	 */
-	private <T extends LivelyCitiesPlugin> T wire(T plugin, FrameTimings timings)
+	private static <T extends LivelyCitiesDevReportsPlugin> T wireReporter(T plugin, FrameTimings timings)
 	{
-		plugin.client = client;
-		plugin.clientThread = new InlineClientThread();
-		plugin.scene = new EntityScene(client, regions, config, config.overrides(), timings);
-		plugin.citizenMenu = new CitizenMenu(client, plugin.scene, config.overrides());
-		plugin.frameTimings = timings;
-		plugin.overlayRegistry = new OverlayRegistry()
+		return wireReporter(plugin, timings, true);
+	}
+
+	/**
+	 * @param processingTicks what the owning plugin says it did with the tick. The
+	 * reporter's cadence only counts ticks the plugin actually processed — see
+	 * {@link LivelyCitiesDevReportsPlugin#onGameTick} — so a fixture that left this
+	 * false would report nothing and every cadence assertion below would pass for the
+	 * wrong reason.
+	 */
+	private static <T extends LivelyCitiesDevReportsPlugin> T wireReporter(
+		T plugin, FrameTimings timings, boolean processingTicks)
+	{
+		LivelyCitiesPlugin owner = new LivelyCitiesPlugin()
 		{
 			@Override
-			public void add(Overlay overlay)
+			boolean processedGameTick()
 			{
-			}
-
-			@Override
-			public void remove(Overlay overlay)
-			{
+				return processingTicks;
 			}
 		};
-		client.setGameState(GameState.LOGGED_IN);
+		owner.frameTimings = timings;
+		plugin.livelyCities = owner;
 		return plugin;
 	}
 
 	/**
-	 * The plugin with the report itself taken out — the same seam
-	 * {@code LivelyCitiesPluginCacheAuditTest} uses for the cache audit, and for the
-	 * same reason: what is under test is when the report runs, not that a file lands on
-	 * a real user's disk.
+	 * The reporter with the report itself taken out — the same seam
+	 * {@code DevReportsCacheAuditTest} uses for the cache audit, and for the same
+	 * reason: what is under test is when the report runs, not that a file lands on a
+	 * real user's disk.
 	 */
-	private static final class CountingPlugin extends LivelyCitiesPlugin
+	private static final class CountingReporter extends LivelyCitiesDevReportsPlugin
 	{
 		private int reports;
 
@@ -915,14 +1034,14 @@ public class FrameTimingsTest
 	}
 
 	/**
-	 * The plugin with the <i>disk</i> taken out but the report left in — one level
-	 * below {@link CountingPlugin}, which replaces the whole method.
+	 * The reporter with the <i>disk</i> taken out but the report left in — one level
+	 * below {@link CountingReporter}, which replaces the whole method.
 	 *
 	 * <p>What that buys is the two things the counting seam is blind to: whether
 	 * {@code reportFrameTimings()} decided to write anything at all, and what file name
 	 * it chose. Both are decisions the method makes and neither leaves any other trace.
 	 */
-	private static final class ReportingPlugin extends LivelyCitiesPlugin
+	private static final class RecordingReporter extends LivelyCitiesDevReportsPlugin
 	{
 		private final java.util.List<String> fileNames = new java.util.ArrayList<>();
 		private final java.util.List<String> texts = new java.util.ArrayList<>();
@@ -934,19 +1053,6 @@ public class FrameTimingsTest
 			fileNames.add(fileName);
 			texts.add(text);
 			return java.util.concurrent.CompletableFuture.completedFuture(null);
-		}
-	}
-
-	/**
-	 * The real {@link net.runelite.client.callback.ClientThread}, minus the thread —
-	 * see the identical class in {@code LivelyCitiesPluginLifecycleTest}.
-	 */
-	private static final class InlineClientThread extends net.runelite.client.callback.ClientThread
-	{
-		@Override
-		public void invoke(Runnable runnable)
-		{
-			runnable.run();
 		}
 	}
 }

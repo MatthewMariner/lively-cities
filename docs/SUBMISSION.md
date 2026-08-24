@@ -14,6 +14,7 @@ Nothing below requires new work. When the content lands, re-run the checks and f
 |---|---|---|
 | Tests | `./gradlew clean test` | all green |
 | Offline dataset audit | *(part of the above)* | green |
+| No filesystem API in `src/main` | *(part of the above — `ShippedSourceTest`)* | green; see [below](#no-filesystem-writes-in-the-shipped-jar) |
 | Cache ids still resolve | `./gradlew auditCacheIds` | no failing ids outside the known-permanent-null section |
 | Frame cost measured | `./gradlew runWithTimings`, then play for a few minutes | a real figure in `~/.runelite/lively-cities/frame-timings.txt`, inside the thresholds the README states — and **written into the README and the PR body below**, replacing the placeholder sentence |
 | Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight ~/Workspaces/osrs/lively-cities` | `Result: PASS` |
@@ -42,18 +43,78 @@ cp -r gradle gradlew "$S/"
 ( cd "$S" && ./gradlew compileJava )
 ```
 
-Last verified **2026-08-24: BUILD SUCCESSFUL, 67 classes**, run against the working tree
+Last verified **2026-08-24: BUILD SUCCESSFUL, 63 classes**, run against the working tree
 rather than a commit so the uncommitted work was included. Our source uses Gson and Guice,
 which look like third-party dependencies but arrive transitively through the client — worth
 re-proving rather than assuming, so **re-run this after any new import.**
 
-The 63 → 67 accounting, since a class count that cannot be explained is not evidence of
-anything: `NpcAppearance` (added with the cameos), then `FrameTimings` plus its two nested
-types. `ReportWriter` is a rename of `CacheAuditReportWriter`, so it is not a new class.
+The 63 → 67 → 66 → 63 accounting, since a class count that cannot be explained is not
+evidence of anything:
+
+- **63 → 67.** `NpcAppearance` arrived with the cameos; `FrameTimings` and its two nested
+  types arrived with the stopwatch. (`ReportWriter` was a rename of
+  `CacheAuditReportWriter`, so it was never a new class.)
+- **67 → 66.** `ReportWriter` left `src/main` for the test source set.
+- **66 → 63.** `CacheIdAudit` and its two nested types followed it. Nothing in the shipped
+  jar called them once the reporting moved, and a cache-walker with no reachable caller is
+  weight the hub builds, serves and reviews for nobody.
+
+Landing back on 63 is a coincidence worth stating rather than a target: the jar is the size
+it was before any of the developer tooling existed, and it now contains none of it. See
+[No filesystem writes in the shipped jar](#no-filesystem-writes-in-the-shipped-jar).
 
 Note the recipe above uses `git archive HEAD`, which silently omits uncommitted changes — if
 you are verifying work in progress, copy `src/main` from the working tree instead, or the
 build you prove is not the build you are filing.
+
+---
+
+## No filesystem writes in the shipped jar
+
+**What changed (2026-08-24).** Everything that wrote a file moved out of `src/main` and into
+`src/test/java`. `ReportWriter` moved verbatim — same `.part` draft, same `ATOMIC_MOVE` with a
+plain-replace fallback — and the two things that called it are now a second RuneLite plugin,
+`LivelyCitiesDevReportsPlugin`, which lives in the test source set. `src/main` keeps the
+measuring and the auditing: `FrameTimings` still owns the histograms and the cadence,
+`CacheIdAudit` still owns the cache walk, and both still produce the same plain text. They
+just hand out a `String` and stop there.
+
+Nothing about the tooling changed. `./gradlew runWithTimings` and `./gradlew auditCacheIds`
+both already ran on `sourceSets.test.runtimeClasspath`, so the reporter is on the classpath of
+exactly those launches and of nothing a hub user can start. Both still produce their reports in
+`~/.runelite/lively-cities/`.
+
+**Why.** riktenx, reviewing [plugin-hub#12366](https://github.com/runelite/plugin-hub/pull/12366):
+
+> file i/o will make your plugin require manually review. if you can not use it your plugin can
+> be automatically reviewed.
+
+and, on [plugin-hub#13208](https://github.com/runelite/plugin-hub/pull/13208), the shape to use
+instead:
+
+> you can either add a separate debug plugin in the test source set (which won't ship with your
+> plugin and won't get looked at but you can use it during development) or just remove it
+
+Both diagnostics are gated behind `--developer-mode` **and** a JVM system property, so no hub
+user could ever reach them. The jar was paying manual-review latency, and a smaller pool of
+reviewers, for capabilities its users cannot invoke.
+
+**What we can and cannot claim.** The claim is narrow and literal: **no class in `src/main`
+names a filesystem API** — no `java.io.File`, no `java.nio.file.*`, no `FileWriter` or
+`FileOutputStream`, nothing that opens a path. `ShippedSourceTest` scans every shipped source
+file and fails the build if one reappears, so it stays true rather than having been true once.
+
+It is **not** a claim that the submission will pass automated review. The reviewer's rule set is
+private — riktenx again, on 12366: *"i cannot share that code"* — so whether it treats a
+classpath `InputStream` as file I/O cannot be checked from outside this repo. `RegionDataLoader`
+still imports `java.io` and still calls `getClassLoader().getResourceAsStream(...)`, because a
+plugin that ships a dataset has to read it and there is no other way to; that pattern is close to
+universal on the hub. If the reviewer flags it, the fallback is the same as it always was: a
+maintainer reads the diff. An unverifiable claim about clearing an automated gate would be the
+predecessor's unmeasured-performance mistake in new clothes.
+
+**Do not put this in the PR body as a selling point.** It is a property of the code, and the
+build either proves it or does not.
 
 ---
 

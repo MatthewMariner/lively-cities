@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import net.runelite.api.GameState;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.ui.overlay.Overlay;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,20 +14,29 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 /**
- * The developer-mode gate on {@link LivelyCitiesPlugin#runDeveloperCacheAudit()}
+ * The developer-mode gate on {@link LivelyCitiesDevReportsPlugin#runCacheAudit()}
  * — <b>not</b> the audit's own logic, which {@code CacheIdAuditTest} covers
  * directly against {@link FakeClient} without needing a plugin at all.
  *
- * <p>{@code ./gradlew test} must never run a real cache walk, so both halves of
- * the gate — {@code developerMode} and
- * {@link LivelyCitiesPlugin#CACHE_AUDIT_SYSTEM_PROPERTY} — are proven
+ * <p>Was {@code LivelyCitiesPluginCacheAuditTest}. The gate did not change; the class it
+ * guards did. The trigger and the file both moved out of {@code src/main} and into the
+ * test source set, so the shipped jar has no filesystem I/O in it — see
+ * {@link LivelyCitiesDevReportsPlugin}'s javadoc for why. The gate is still checked, and
+ * still checked as an AND, even though nothing a hub user runs can load this class:
+ * {@code ./gradlew run} loads it too, and an ordinary dev session must not pay for a
+ * full cache walk.
+ *
+ * <p>{@code ./gradlew test} must never run a real cache walk, so both halves —
+ * {@code developerMode} and
+ * {@link LivelyCitiesDevReportsPlugin#CACHE_AUDIT_SYSTEM_PROPERTY} — are proven
  * independently: either one missing has to mean nothing runs.
  *
- * <p>The game state is pinned away from {@code LOGGED_IN} throughout, so
- * {@code startUp()}'s other branch ({@code tick()}, which needs a real scene)
- * never fires — this file is only about the audit branch.
+ * <p>The game state is pinned away from {@code LOGGED_IN} throughout, matching the
+ * client this plugin starts in; nothing in {@code startUp()} depends on it any more,
+ * but a fixture that quietly stopped resembling the real thing is not worth the two
+ * lines saved.
  */
-public class LivelyCitiesPluginCacheAuditTest
+public class DevReportsCacheAuditTest
 {
 	private FakeClient client;
 	private InlineClientThread clientThread;
@@ -42,27 +50,25 @@ public class LivelyCitiesPluginCacheAuditTest
 
 		// Belt and braces: a leftover from a crashed prior run must not leak
 		// into a test that asserts the gate is closed.
-		System.clearProperty(LivelyCitiesPlugin.CACHE_AUDIT_SYSTEM_PROPERTY);
+		System.clearProperty(LivelyCitiesDevReportsPlugin.CACHE_AUDIT_SYSTEM_PROPERTY);
 	}
 
 	@After
 	public void tearDown()
 	{
-		System.clearProperty(LivelyCitiesPlugin.CACHE_AUDIT_SYSTEM_PROPERTY);
+		System.clearProperty(LivelyCitiesDevReportsPlugin.CACHE_AUDIT_SYSTEM_PROPERTY);
 	}
 
 	@Test
 	public void theAuditDoesNotRunWhenDeveloperModeIsOff()
 	{
-		System.setProperty(LivelyCitiesPlugin.CACHE_AUDIT_SYSTEM_PROPERTY, "true");
+		System.setProperty(LivelyCitiesDevReportsPlugin.CACHE_AUDIT_SYSTEM_PROPERTY, "true");
 		CountingPlugin plugin = plugin();
 		plugin.developerMode = false;
 
 		plugin.startUp();
 
-		assertEquals("the system property alone must not be enough — "
-				+ "this is what stops a real user's client from ever running it",
-			0, plugin.auditRuns);
+		assertEquals("the system property alone must not be enough", 0, plugin.auditRuns);
 	}
 
 	@Test
@@ -81,7 +87,7 @@ public class LivelyCitiesPluginCacheAuditTest
 	@Test
 	public void theAuditRunsExactlyOnceWhenBothFlagsAreSet()
 	{
-		System.setProperty(LivelyCitiesPlugin.CACHE_AUDIT_SYSTEM_PROPERTY, "true");
+		System.setProperty(LivelyCitiesDevReportsPlugin.CACHE_AUDIT_SYSTEM_PROPERTY, "true");
 		CountingPlugin plugin = plugin();
 		plugin.developerMode = true;
 
@@ -100,7 +106,7 @@ public class LivelyCitiesPluginCacheAuditTest
 	@Test
 	public void aPluginNobodyConfiguredNeverRunsTheAudit()
 	{
-		System.setProperty(LivelyCitiesPlugin.CACHE_AUDIT_SYSTEM_PROPERTY, "true");
+		System.setProperty(LivelyCitiesDevReportsPlugin.CACHE_AUDIT_SYSTEM_PROPERTY, "true");
 		CountingPlugin plugin = plugin();
 
 		plugin.startUp();
@@ -115,11 +121,10 @@ public class LivelyCitiesPluginCacheAuditTest
 	 * <p>The mirror of {@code FrameTimingsTest}'s
 	 * {@code theFrameReportIsWrittenUnderItsOwnNameAndNeverTheAudits}, and it exists for
 	 * the same reason: {@link ReportWriter} takes the file name as an argument, so each
-	 * of its two callers names its own constant and until now nothing checked which one
-	 * either of them passed. This is the cheaper direction of the two failures — a frame
-	 * report is one dev session away from being regenerated, while the audit needs a
-	 * live cache — but an unasserted constant is an unasserted constant, and the two
-	 * call sites are four lines apart.
+	 * of its two callers names its own constant and nothing else checks which one. This
+	 * is the cheaper direction of the two failures — a frame report is one dev session
+	 * away from being regenerated, while the audit needs a live cache — but an unasserted
+	 * constant is an unasserted constant, and the two call sites are in one class now.
 	 *
 	 * <p>The audit itself runs for real here, against an empty {@link FakeRegions} and
 	 * {@link FakeClient}: no cache is touched, the report comes out empty, and what is
@@ -133,19 +138,20 @@ public class LivelyCitiesPluginCacheAuditTest
 		plugin.clientThread = clientThread;
 		plugin.regionDataLoader = new FakeRegions();
 
-		plugin.runDeveloperCacheAudit();
+		plugin.runCacheAudit();
 
 		assertEquals("one report, written once",
-			Collections.singletonList(CacheIdAudit.REPORT_FILE_NAME), plugin.fileNames);
+			Collections.singletonList(LivelyCitiesDevReportsPlugin.CACHE_AUDIT_REPORT_FILE_NAME),
+			plugin.fileNames);
 		assertNotEquals("the cache id audit must never be written over the frame report's file",
-			FrameTimings.REPORT_FILE_NAME, plugin.fileNames.get(0));
+			LivelyCitiesDevReportsPlugin.FRAME_REPORT_FILE_NAME, plugin.fileNames.get(0));
 	}
 
 	/**
 	 * The plugin with the disk taken out but the audit left in — see the identically
-	 * shaped {@code ReportingPlugin} in {@code FrameTimingsTest}.
+	 * shaped {@code RecordingReporter} in {@code FrameTimingsTest}.
 	 */
-	private static final class RecordingPlugin extends LivelyCitiesPlugin
+	private static final class RecordingPlugin extends LivelyCitiesDevReportsPlugin
 	{
 		private final List<String> fileNames = new ArrayList<>();
 
@@ -164,35 +170,21 @@ public class LivelyCitiesPluginCacheAuditTest
 		plugin.client = client;
 		plugin.clientThread = clientThread;
 
-		// startUp() also registers the overhead-text overlay. Nothing in this file
-		// is about that, but a null registry would make every test here fail for a
-		// reason that has nothing to do with the gate under test.
-		plugin.overlayRegistry = new OverlayRegistry()
-		{
-			@Override
-			public void add(Overlay overlay)
-			{
-			}
-
-			@Override
-			public void remove(Overlay overlay)
-			{
-			}
-		};
-
-		// Same reasoning as the registry above: startUp() asks the stopwatch whether it
-		// is on, and a null one would fail every test here for a reason that is not the
-		// gate under test.
-		plugin.frameTimings = FrameTimings.off();
+		// startUp() also asks the stopwatch whether it is on, so that it can say so in
+		// the log. A reporter with no plugin behind it would NPE there and fail every
+		// test in this file for a reason that is not the gate under test.
+		LivelyCitiesPlugin owner = new LivelyCitiesPlugin();
+		owner.frameTimings = FrameTimings.off();
+		plugin.livelyCities = owner;
 		return plugin;
 	}
 
-	private static final class CountingPlugin extends LivelyCitiesPlugin
+	private static final class CountingPlugin extends LivelyCitiesDevReportsPlugin
 	{
 		int auditRuns;
 
 		@Override
-		void runDeveloperCacheAudit()
+		void runCacheAudit()
 		{
 			auditRuns++;
 		}
