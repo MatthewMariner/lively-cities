@@ -15,8 +15,17 @@ Nothing below requires new work. When the content lands, re-run the checks and f
 | Tests | `./gradlew clean test` | all green |
 | Offline dataset audit | *(part of the above)* | green |
 | No filesystem API in `src/main` | *(part of the above — `ShippedSourceTest`)* | green; see [below](#no-filesystem-writes-in-the-shipped-jar) |
-| Cache ids still resolve | `./gradlew auditCacheIds` | no failing ids outside the known-permanent-null section |
-| Frame cost measured | `./gradlew runWithTimings`, then play for a few minutes | a real figure in `~/.runelite/lively-cities/frame-timings.txt`, inside the thresholds the README states — and **written into the README and the PR body below**, replacing the placeholder sentence |
+| Cache ids still resolve | `./run-windows.sh --audit` | no failing ids outside the known-permanent-null section |
+| Frame cost measured | `./run-windows.sh --timings`, then play for a few minutes | a real figure in `frame-timings.txt`, inside the thresholds the README states — and **written into the README and the PR body below**, replacing the placeholder sentence |
+
+**Use `run-windows.sh`, not the Gradle tasks, on a WSL machine.** They do the same thing, but
+`./gradlew auditCacheIds` and `./gradlew runWithTimings` launch a *Linux-side* client whose
+`user.home` is `~`, so they read `~/.runelite/credentials.properties` — a different file from
+the one the Jagex Launcher writes at `C:\Users\<you>\.runelite\`. The client then logs in as
+whatever stale character that WSL copy names, and no amount of relaunching in the launcher
+changes it, because nothing carries the Windows file across the boundary. RuneLite refreshes
+the stale token at startup, so the file even looks freshly written. `run-windows.sh` copies
+the Windows credentials in on every run; that is why it gets the character you picked.
 | Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight ~/Workspaces/osrs/lively-cities` | `Result: PASS` |
 | Compiles under the hub's own build | see [Verifying the hub build](#verifying-the-hub-build) | `BUILD SUCCESSFUL` |
 | Screenshots in the README | — | *deliberately deferred (2026-08-24) — the page ships with placeholders* |

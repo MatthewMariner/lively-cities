@@ -16,7 +16,20 @@
 #                                 #   but RuneLite picks the character from its own saved session,
 #                                 #   and it WILL write to the profile it logs into
 #   ./run-windows.sh --no-build   # skip the gradle step, relaunch the existing jar
+#   ./run-windows.sh --timings    # frame-time stopwatch on; play a few minutes, read the report
+#   ./run-windows.sh --audit      # walk every cache id the dataset needs, write a report, and say so
 #
+# The last two are the same capabilities as `./gradlew runWithTimings` and
+# `./gradlew auditCacheIds` — and on this machine they are the ones to use.
+# Those Gradle tasks run a *Linux-side* client whose user.home is ~, so they read
+# ~/.runelite/credentials.properties: a different file from the one the Jagex
+# Launcher writes at C:\Users\<you>\.runelite\. Relaunching a character in the
+# launcher cannot change what they log in as, because nothing carries a Windows
+# credentials file across the WSL boundary. Observed 2026-08-24: the Gradle task
+# logged in as a stale account while the launcher had a different character
+# selected, and RuneLite then refreshed the stale token on startup so the file
+# looked freshly written. This script copies the Windows credentials in on every
+# run, which is why it gets the character you actually picked.
 set -euo pipefail
 
 WIN_USER="${WIN_USER:-matth}"
@@ -32,11 +45,15 @@ JAR_NAME="lively-cities-all.jar"
 # throwaway test client, so the safe mode is the default and the other is opt-in.
 isolated=1
 build=1
+timings=0
+audit=0
 for arg in "$@"; do
 	case "$arg" in
 		--isolated) isolated=1 ;;
 		--real-home) isolated=0 ;;
 		--no-build) build=0 ;;
+		--timings) timings=1 ;;
+		--audit) audit=1 ;;
 		*) echo "unknown option: $arg" >&2; exit 2 ;;
 	esac
 done
@@ -123,6 +140,36 @@ if [ "$isolated" = 1 ]; then
 	echo "==> isolated: user.home -> ${STAGE_WIN}\\home (profiles untouched, cache seeded)"
 else
 	echo "==> using your real C:\\Users\\${WIN_USER}\\.runelite (profiles, hub plugins, cache)"
+fi
+
+# The two dev-only capabilities. Each needs BOTH its system property and
+# --developer-mode, which is passed unconditionally below — the same AND gate the
+# Gradle tasks satisfy, and the reason neither can be switched on by a hub user.
+# Property names are duplicated from build.gradle on purpose: this launcher does
+# not go through Gradle at all. FrameTimingsTest greps this file so the two
+# cannot drift apart silently.
+if [ "$timings" = 1 ]; then
+	jvm_args+=(-Dlivelycities.frameTimings=true)
+fi
+if [ "$audit" = 1 ]; then
+	jvm_args+=(-Dlivelycities.validateCacheIds=true)
+fi
+
+# Where the reports land. In isolated mode user.home is redirected, so they do
+# NOT appear in your real ~/.runelite — saying so here is cheaper than hunting
+# for a file that was written correctly somewhere else.
+if [ "$timings" = 1 ] || [ "$audit" = 1 ]; then
+	if [ "$isolated" = 1 ]; then
+		report_dir_win="${STAGE_WIN}\\home\\.runelite\\lively-cities"
+		report_dir_unix="${STAGE_UNIX}/home/.runelite/lively-cities"
+	else
+		report_dir_win="C:\\Users\\${WIN_USER}\\.runelite\\lively-cities"
+		report_dir_unix="${WIN_HOME_UNIX}/.runelite/lively-cities"
+	fi
+	[ "$timings" = 1 ] && echo "==> frame timings ON — play a few minutes; a report lands every 3 min"
+	[ "$audit" = 1 ] && echo "==> cache id audit ON — runs once at startup, no play needed"
+	echo "==> reports: ${report_dir_win}"
+	echo "    (from WSL: ${report_dir_unix})"
 fi
 
 echo "==> launching"

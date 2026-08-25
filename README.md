@@ -215,7 +215,17 @@ the Gradle wrapper handles the rest.
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)
+
+./run-windows.sh --audit    # the same walk, on a Windows-side client
+./run-windows.sh --timings  # the same measurement, on a Windows-side client
 ```
+
+**On WSL, prefer the `run-windows.sh` forms.** The Gradle tasks launch a Linux-side client
+whose `user.home` is `~`, so they read `~/.runelite/credentials.properties` rather than the
+one the Jagex Launcher writes under `C:\Users\<you>\`. The result is a client logged in as a
+stale character that relaunching in the launcher cannot fix — and since RuneLite refreshes
+that token on startup, the file looks current. `run-windows.sh` copies the Windows
+credentials in every run, and is faster besides.
 
 `run-windows.sh` builds in WSL and launches the client natively on Windows using RuneLite's
 own bundled JRE — faster than WSLg, and no Windows JDK needed. It defaults to an isolated

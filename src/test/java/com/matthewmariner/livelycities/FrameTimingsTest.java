@@ -201,6 +201,28 @@ public class FrameTimingsTest
 		assertTrue("./gradlew auditCacheIds has to run on the TEST runtime classpath, or the"
 				+ " plugin that triggers the walk and writes the report is not loaded",
 			audit.contains("sourceSets.test.runtimeClasspath"));
+
+		// And the Windows launcher, which does not go through Gradle at all and so
+		// duplicates both property names. It is the launcher to use on this machine —
+		// the Gradle tasks run a Linux-side client that reads a different
+		// credentials.properties than the Jagex Launcher writes, and log in as the
+		// wrong character — so a typo here is not a typo in a convenience script.
+		File launcher = new File("run-windows.sh");
+		assertTrue("expected to find " + launcher.getAbsolutePath(), launcher.isFile());
+
+		String script = new String(
+			Files.readAllBytes(launcher.toPath()), StandardCharsets.UTF_8);
+
+		assertTrue("run-windows.sh --timings has to set "
+				+ FrameTimings.SYSTEM_PROPERTY,
+			script.contains("-D" + FrameTimings.SYSTEM_PROPERTY + "=true"));
+		assertTrue("run-windows.sh --audit has to set "
+				+ LivelyCitiesDevReportsPlugin.CACHE_AUDIT_SYSTEM_PROPERTY,
+			script.contains(
+				"-D" + LivelyCitiesDevReportsPlugin.CACHE_AUDIT_SYSTEM_PROPERTY + "=true"));
+		assertTrue("run-windows.sh has to pass --developer-mode, or both properties are"
+				+ " set for a client that ignores them",
+			script.contains("--developer-mode"));
 	}
 
 	/**
