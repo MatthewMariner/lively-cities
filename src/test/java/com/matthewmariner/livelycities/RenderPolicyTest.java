@@ -116,6 +116,79 @@ public class RenderPolicyTest
 		assertFalse(RenderPolicy.hasCapacity(cap + 1));
 	}
 
+	@Test
+	public void theBuildBudgetStopsExactlyAtItsCap()
+	{
+		int budget = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS;
+
+		assertTrue(RenderPolicy.hasBuildBudget(0));
+		assertTrue(RenderPolicy.hasBuildBudget(budget - 1));
+		assertFalse(RenderPolicy.hasBuildBudget(budget));
+		assertFalse(RenderPolicy.hasBuildBudget(budget + 1));
+	}
+
+	/**
+	 * The build budget is the arithmetic it says it is, and one more build would break
+	 * the threshold it was derived from.
+	 *
+	 * <p><b>Both halves, because only the second one is a test.</b> Asserting the cap is
+	 * three restates the constant; what makes it a claim about the measurement is that
+	 * four does not fit. The figures are the ones from the 300-tick Varrock run: a
+	 * visibility pass with no building in it took 124µs at the median, one model build
+	 * cost 570µs at the mean, and the pass's pre-registered acceptable threshold is 2ms.
+	 *
+	 * <p>Deliberately recomputed from {@code RenderPolicy}'s own constants rather than
+	 * from literals, so a re-measurement moves the cap and this test with it — and a
+	 * hand-typed cap that no longer follows from the figures beside it goes red.
+	 */
+	@Test
+	public void theBuildBudgetIsTheLargestOneTheMeasuredPassCostAllows()
+	{
+		int budget = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS;
+		int overhead = RenderPolicy.MEASURED_PASS_OVERHEAD_MICROS;
+		int perBuild = RenderPolicy.MEASURED_MEAN_MODEL_BUILD_MICROS;
+		int acceptable = RenderPolicy.VISIBILITY_BUDGET_MICROS;
+
+		assertEquals("the measured figures the cap is derived from: 124us of pass overhead, "
+				+ "570us a build, against a 2ms acceptable threshold",
+			3, budget);
+
+		assertTrue("a pass that spends its whole budget has to land inside the threshold: "
+				+ (overhead + budget * perBuild) + "us against " + acceptable + "us",
+			overhead + budget * perBuild <= acceptable);
+
+		assertTrue("and one more build has to break it, or the cap is lower than the data "
+				+ "allows and citizens are being made to wait for nothing: "
+				+ (overhead + (budget + 1) * perBuild) + "us against " + acceptable + "us",
+			overhead + (budget + 1) * perBuild > acceptable);
+	}
+
+	/**
+	 * The two ceilings are not the same ceiling.
+	 *
+	 * <p>They are one word apart in English — "how many at once" — and they bound
+	 * completely different things: {@link RenderPolicy#MAX_ACTIVE_OBJECTS} bounds objects
+	 * the client has registered, which a pass spends and refunds as the player walks;
+	 * {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS} bounds work one pass may do. A
+	 * change that fed one to the other's guard would compile and would be silently wrong
+	 * in both directions at once — three citizens visible in Varrock, or eighty models
+	 * built in a tick, depending which way round it went.
+	 */
+	@Test
+	public void theCrowdCapAndTheBuildBudgetAreDifferentNumbersWithDifferentGuards()
+	{
+		assertTrue("if these ever coincide, every assertion that tells them apart starts "
+				+ "passing for the wrong reason",
+			RenderPolicy.MAX_ACTIVE_OBJECTS != RenderPolicy.MAX_MODEL_BUILDS_PER_PASS);
+
+		// At a count between the two, one guard says yes and the other says no.
+		int between = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS + 1;
+		assertTrue("there is still room for more objects at " + between,
+			RenderPolicy.hasCapacity(between));
+		assertFalse("but no budget for another build at " + between,
+			RenderPolicy.hasBuildBudget(between));
+	}
+
 	/**
 	 * If the cap drops below the densest neighbourhood the dataset actually
 	 * contains, real content starts getting culled in Varrock — the busiest

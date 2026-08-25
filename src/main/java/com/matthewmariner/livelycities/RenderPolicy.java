@@ -34,6 +34,89 @@ public final class RenderPolicy
 	public static final int MAX_ACTIVE_OBJECTS = 80;
 
 	/**
+	 * The visibility pass's own acceptance threshold, in microseconds: 2ms.
+	 *
+	 * <p>Not invented here — it is the "acceptable" figure {@link FrameTimings}
+	 * registered in its javadoc, in the report header and in the README <i>before</i>
+	 * anything was measured. Restated as a number so the build budget below can be
+	 * arithmetic against it rather than a guess that happens to agree with it.
+	 */
+	static final int VISIBILITY_BUDGET_MICROS = 2_000;
+
+	/**
+	 * What a visibility pass costs when it builds nothing: 124µs.
+	 *
+	 * <p>The measured median pass, 300 game ticks in Varrock (331 samples, 371 model
+	 * builds). The median is the right term for "the pass minus its building": most
+	 * passes build nothing, and a single median model build is 478µs — four times this
+	 * — so a pass at the median plainly contains no build.
+	 */
+	static final int MEASURED_PASS_OVERHEAD_MICROS = 124;
+
+	/**
+	 * What building one model costs: 570µs, the measured mean over 371 builds.
+	 *
+	 * <p>The <b>mean</b> rather than the median (478µs) or the p99 (1.50ms), and which
+	 * one is used decides the cap, so it is worth saying why. The budget below bounds a
+	 * <i>sum</i> of up to {@link #MAX_MODEL_BUILDS_PER_PASS} draws, and the expected
+	 * value of a sum is the sum of the means whatever the shape of the distribution.
+	 * Budgeting on the median would understate a right-skewed tail; budgeting on the
+	 * p99 would assume every build in a burst lands in the worst one percent, which
+	 * yields a cap of 1 and a city that takes 48 seconds to populate.
+	 */
+	static final int MEASURED_MEAN_MODEL_BUILD_MICROS = 570;
+
+	/**
+	 * Hard ceiling on the number of models one visibility pass may <b>build</b>: three.
+	 *
+	 * <p><b>Not the same thing as {@link #MAX_ACTIVE_OBJECTS}, and conflating them is
+	 * the mistake this constant exists to avoid.</b> That one is a ceiling on how many
+	 * objects the client may have registered at once — a memory and draw-call bound,
+	 * spent down and refunded as the player walks. This one is a ceiling on how much
+	 * <i>work</i> a single pass may do, spent and refunded every 600ms. A pass may
+	 * activate eighty objects and build three of them; the other seventy-seven are
+	 * models it already holds, and reactivating one is free.
+	 *
+	 * <p><b>Where the three comes from.</b> The visibility figure is inclusive of model
+	 * building, so a pass costs its own overhead plus whatever it built:
+	 *
+	 * <pre>
+	 *   pass = MEASURED_PASS_OVERHEAD_MICROS + builds x MEASURED_MEAN_MODEL_BUILD_MICROS
+	 *   3 builds: 124 + 3 x 570 = 1834us  <= 2000us  (acceptable)
+	 *   4 builds: 124 + 4 x 570 = 2404us  >  2000us  (over)
+	 * </pre>
+	 *
+	 * So three is the largest cap whose full-budget pass, at the measured mean cost of a
+	 * build, still lands inside the pre-registered acceptable threshold — and the
+	 * expression below is that sentence rather than the number 3 typed in.
+	 *
+	 * <p><b>What it does not promise.</b> A pass that spends its whole budget on three
+	 * p99 builds costs {@code 124 + 3 x 1500 = 4.62ms}: over "acceptable", still inside
+	 * the 8ms "a problem" line. And no per-pass cap can help the other tail at all — the
+	 * worst single build measured was 15.45ms, so a pass containing it costs at least
+	 * that however low the cap goes. What the cap removes is the burst: the worst pass
+	 * measured was 53.73ms, which was roughly forty builds landing in one tick on the
+	 * way into Varrock.
+	 *
+	 * <p><b>What it costs.</b> A cold walk into the densest shipped neighbourhood — 76
+	 * entities inside {@link #MAX_CULL_RADIUS} — now fills over {@code ceil(76 / 3)} =
+	 * 26 passes, about 15 seconds, instead of one 53ms stutter. Nearest first, so the
+	 * ones that arrive last are the ones furthest away.
+	 *
+	 * <p>Not a config dial, for {@link #MAX_ACTIVE_OBJECTS}'s reason: a guard rather
+	 * than a preference. {@code RenderPolicyTest} recomputes the arithmetic above, so
+	 * a re-measurement moves the cap by editing the measured figures rather than by
+	 * picking a new number.
+	 */
+	public static final int MAX_MODEL_BUILDS_PER_PASS = Math.max(
+		// A floor of one, because a budget of zero is not a slower plugin — it is a
+		// plugin that never spawns anything, and integer division makes that one bad
+		// re-measurement away.
+		1,
+		(VISIBILITY_BUDGET_MICROS - MEASURED_PASS_OVERHEAD_MICROS)
+			/ MEASURED_MEAN_MODEL_BUILD_MICROS);
+
+	/**
 	 * The cull radius a fresh install gets: a Chebyshev tile radius around the
 	 * player, outside which entities are deactivated rather than merely hidden.
 	 *
@@ -243,5 +326,22 @@ public final class RenderPolicy
 	public static boolean hasCapacity(int plannedCount)
 	{
 		return plannedCount < MAX_ACTIVE_OBJECTS;
+	}
+
+	/**
+	 * The other budget, and deliberately a second method rather than a second argument
+	 * to {@link #hasCapacity(int)} — see {@link #MAX_MODEL_BUILDS_PER_PASS} for why the
+	 * two must not be conflated.
+	 *
+	 * @param builtThisPass how many models this pass has already <b>finished</b>
+	 *                      building. Counted on completion rather than on intent:
+	 *                      a spawn the client could not satisfy (a cold model cache)
+	 *                      built nothing, so it must not spend a budget that exists to
+	 *                      bound the cost of building.
+	 * @return true if one more may be built
+	 */
+	public static boolean hasBuildBudget(int builtThisPass)
+	{
+		return builtThisPass < MAX_MODEL_BUILDS_PER_PASS;
 	}
 }

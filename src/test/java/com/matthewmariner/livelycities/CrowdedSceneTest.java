@@ -80,7 +80,7 @@ public class CrowdedSceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
-		scene.onGameTick(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 
 		assertEquals("every authored citizen", 6, scene.countActiveAuthored());
 		assertEquals("and nothing else at all", 0, scene.countActiveEchoes());
@@ -97,11 +97,11 @@ public class CrowdedSceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
-		scene.onGameTick(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		int authoredAtFull = client.registeredCount();
 
 		config.setCrowdDensity(CrowdDensity.CROWDED);
-		scene.onGameTick(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 
 		assertEquals("not one authored citizen may be lost on the way up",
 			authoredAtFull, scene.countActiveAuthored());
@@ -122,7 +122,7 @@ public class CrowdedSceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
-		scene.onGameTick(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		assertEquals(8, scene.countActiveEchoes());
 
 		config.setCrowdDensity(CrowdDensity.FULL);
@@ -150,6 +150,10 @@ public class CrowdedSceneTest
 		{
 			config.setCrowdDensity(density);
 			scene.onSettingsChanged(PLAYER, view);
+
+			// The dial takes effect on the click; the crowd it admits still arrives
+			// three models a pass, so give it the passes before counting.
+			VisibilityPasses.settle(scene, PLAYER, view);
 
 			if (density == CrowdDensity.CROWDED)
 			{
@@ -231,7 +235,7 @@ public class CrowdedSceneTest
 		}
 
 		scene.syncRegions(view);
-		scene.onGameTick(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 
 		int checked = 0;
 		for (LivelyEntity entity : scene.inScopeEntities())
@@ -273,13 +277,13 @@ public class CrowdedSceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
-		scene.onGameTick(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		int authoredAtFull = client.registeredCount();
 		assertEquals("all forty authored citizens fit under the cap on their own",
 			40, authoredAtFull);
 
 		config.setCrowdDensity(CrowdDensity.CROWDED);
-		scene.onGameTick(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 
 		assertEquals("forty citizens and eighty echoes cannot all fit, so the cap binds",
 			cap, client.registeredCount());
@@ -316,7 +320,7 @@ public class CrowdedSceneTest
 
 		FakeWorldView view = FakeWorldView.around(spot, VARROCK_NORTH, VARROCK_SOUTH, 12597);
 		real.syncRegions(view);
-		real.updateVisibility(spot, view);
+		VisibilityPasses.settle(real, spot, view);
 
 		int authoredAtFull = client.registeredCount();
 		assertEquals("FULL admits no echoes anywhere", 0, real.countActiveEchoes());
@@ -325,7 +329,7 @@ public class CrowdedSceneTest
 			authoredAtFull > 0 && authoredAtFull < RenderPolicy.MAX_ACTIVE_OBJECTS);
 
 		config.setCrowdDensity(CrowdDensity.CROWDED);
-		real.updateVisibility(spot, view);
+		VisibilityPasses.settle(real, spot, view);
 
 		assertEquals("CROWDED in Varrock hits the cap", RenderPolicy.MAX_ACTIVE_OBJECTS,
 			client.registeredCount());
@@ -568,7 +572,7 @@ public class CrowdedSceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
-		scene.onGameTick(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		assertEquals(10, scene.countActiveEchoes());
 
 		WorldPoint elsewhere = new WorldPoint(3600, 3200, 0);
@@ -591,7 +595,7 @@ public class CrowdedSceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
-		scene.onGameTick(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		assertEquals(8, scene.countActiveEchoes());
 
 		config.disableOnly(City.VARROCK);
@@ -631,7 +635,7 @@ public class CrowdedSceneTest
 
 		FakeWorldView view = FakeWorldView.around(spot, PISCATORIS_HARBOUR, UNCLAIMED_SOUTH_OF_PISCATORIS);
 		real.syncRegions(view);
-		real.updateVisibility(spot, view);
+		VisibilityPasses.settle(real, spot, view);
 
 		int strays = countActiveEchoesInUnclaimedRegions(real);
 		assertTrue("the fixture depends on real echoes crossing into region "

@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-411-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-423-brightgreen)](#development)
 
 </div>
 
@@ -144,7 +144,7 @@ What is new is everything that stops it dying the same way:
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they are now
   anonymous barrow wights.
-- **411 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **423 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -175,17 +175,24 @@ Stated plainly, because you will find them anyway.
   different id and is not covered; RuneLite's own minimap-anchored overlays do not handle it
   either. On that layout a citizen projecting under the minimap can still be offered a
   (harmless, local) Examine.
-- **There is no measured frame-time figure here yet — only the instrument that produces
-  one.** The predecessor's README promised "no lag or resource issues" and never measured
-  anything, so this one will not repeat the claim without a number. `./gradlew runWithTimings`
-  meters the three things this plugin actually costs — the per-tick visibility pass, model
-  building, and the per-frame interpolation pass — and reports a median, a 95th and a 99th
-  percentile with the active-object count beside them, every three minutes, into the client
-  log and into `~/.runelite/lively-cities/frame-timings.txt`. The thresholds it should be read
-  against are written down in advance, in `FrameTimings` and in the report's own header:
-  interpolation p99 at or under 0.5ms and visibility p99 at or under 2ms are fine; over 2ms
-  and over 8ms respectively are problems. The figure lands here once a human has played with
-  it on.
+- **Figures walking into Varrock arrive over a few game ticks rather than all at once**, and
+  that is deliberate. It came out of the first real measurement — 300 game ticks in Varrock,
+  a human playing, `./gradlew runWithTimings`. Two of the three pre-registered thresholds
+  passed comfortably: per-frame interpolation came in at a 99th percentile of **7µs** against
+  a 0.5ms bar, and no single model build came near the 20ms bar (worst 15.45ms, p99 1.50ms).
+  The visibility pass **failed**: a 99th percentile past 11ms and a worst tick of **53.73ms**,
+  against a bar of 8ms — three dropped frames, i.e. a visible hitch. The split meters said
+  why: 371 models were built across 331 ticks, so the spike was never one slow model, it was
+  forty ordinary ones landing in the same tick on the way into the square. So a pass now
+  builds at most **three** models and the rest wait for the next one, nearest first. Three is
+  arithmetic off those figures, not a round number: a pass with no building in it measured
+  124µs and a build measured 570µs on average, so `124 + 3 × 570 = 1.83ms` fits inside the 2ms
+  "acceptable" line and a fourth build (2.40ms) would not. The cost is that the densest corner
+  of Varrock takes about fifteen seconds to fill from cold instead of one stutter, and the
+  report now prints how many builds were held over so the next measurement can be read against
+  this one. **What no per-pass cap can fix**: one unusually slow model is still one unusually
+  slow tick — the worst build measured, 15.45ms, is inside the "acceptable single build" bar
+  and would still put its tick over the 8ms pass bar on its own.
 - **Crowded adds derived figures, not authored ones.** They are silent, they do not wander,
   and they wear their source's colours rearranged. They are ambience, not characters.
 - **The cameo tiles have not been walked on.** The six were placed off the Grand Exchange's
@@ -211,7 +218,7 @@ Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires 
 the Gradle wrapper handles the rest.
 
 ```bash
-./gradlew build            # compile and run the 411 tests
+./gradlew build            # compile and run the 423 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)
@@ -381,6 +388,13 @@ Three meters, on three different clocks:
 | `model build` | once per figure, first spawn | merging, recolouring and lighting one model |
 | `interpolation` | once per rendered frame | sliding walking figures between tiles, and nothing else |
 
+Plus one counter that is not a timing: **model builds held over**, i.e. how many
+figures a pass declined to build because it had already built its three (see
+**What the first measurement said** below). A cold model cache is *not* counted
+there — that is a build the client could not satisfy rather than one this plugin
+chose to postpone, and the two have to stay legible apart or the report starts
+describing a burst it did not measure.
+
 Each reports a median, a 95th and a 99th percentile, an exact maximum, and the
 active-object count recorded at that maximum — because "1ms at 8 objects" and
 "1ms at 76" are different claims. A mean is deliberately not the headline: one
@@ -406,9 +420,44 @@ It costs nothing when it is off, which is every shipped client: both
 `--developer-mode` and the system property have to be set, and with the meter
 disabled the timing calls do not even read the clock.
 
-Once measured, the figure belongs in **Known limitations** above (replacing the
-entry that currently says only that the instrument exists) and in the
-performance line of the hub PR body in `docs/SUBMISSION.md`.
+#### What the first measurement said
+
+300 game ticks in Varrock, a human playing, client 1.12.36:
+
+| Meter | median | p95 | p99 | max | verdict |
+|---|---|---|---|---|---|
+| visibility pass (331 samples) | 124µs | 2.80ms | ≥11.00ms | 53.73ms | **fails** (bar: p99 ≤ 2ms, > 8ms is a problem) |
+| model build (371 samples) | 478µs | 1.00ms | 1.50ms | 15.45ms | passes (bar: no single build > 20ms) |
+| interpolation (9384 samples) | 1µs | 3µs | 7µs | 308µs | passes by ~70× |
+
+The visibility figure is inclusive of model building, and 371 builds across 331
+passes is what the failure was: not one slow model but dozens in a single tick,
+which is what walking into Varrock square looks like from in here.
+
+So `RenderPolicy.MAX_MODEL_BUILDS_PER_PASS` caps a pass at three builds and the
+rest wait for the next pass, nearest first — a figure appearing 600ms later is
+imperceptible, a 53ms stutter is not. **Three is derived, not chosen:**
+
+```
+pass cost  =  124µs overhead  +  builds × 570µs mean build
+3 builds:  124 + 3 × 570 = 1834µs  ≤ 2000µs   acceptable
+4 builds:  124 + 4 × 570 = 2404µs  > 2000µs   over
+```
+
+Those three figures are constants in `RenderPolicy`, and `RenderPolicyTest`
+recomputes the cap from them — so a fresh measurement moves the cap by editing
+what was measured rather than by picking a new number.
+
+What it does *not* claim: a pass whose three builds all land in the top 1% costs
+`124 + 3 × 1500 = 4.62ms`, over "acceptable" and inside the 8ms problem line; and
+one pathological build is one pathological tick whatever the cap is, since the
+worst measured build (15.45ms) exceeds the pass threshold on its own. The
+thresholds themselves do not fully reconcile on that point — a 20ms build is
+"acceptable" while the pass containing it is "a problem" — and that is recorded
+in `FrameTimings`' javadoc rather than quietly adjusted.
+
+The performance line of the hub PR body in `docs/SUBMISSION.md` still needs the
+figure above.
 
 ---
 

@@ -81,6 +81,33 @@ import javax.inject.Singleton;
  *       80-object cap in one pass.</li>
  * </ul>
  *
+ * <h2>What the numbers actually said, and what changed because of it</h2>
+ *
+ * <p>300 game ticks in Varrock, a human playing, client 1.12.36. Interpolation passed
+ * by seventy times (p99 7µs against a 0.5ms bar) and no single model build came near
+ * the 20ms bar (max 15.45ms, p99 1.50ms). <b>The visibility pass failed</b>: p99 in the
+ * overflow bucket at ≥11ms and a worst pass of 53.73ms, against a bar of 8ms.
+ *
+ * <p>The split above is what made that diagnosable rather than a mystery. 371 builds
+ * landed across 331 passes, and since the visibility figure is inclusive of building,
+ * the spike was never one slow model — it was <i>forty</i> ordinary ones inside one
+ * game tick, which is what walking into Varrock square looks like from here.
+ *
+ * <p>So the fix named above is now implemented rather than named:
+ * {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS} caps a pass at three builds and the
+ * rest wait a tick, nearest first. Three is arithmetic off these figures rather than a
+ * round number — see that constant. {@link #recordBuildsDeferred(int)} counts what the
+ * cap held back, so the next report can be read against this one instead of against a
+ * memory of it.
+ *
+ * <p><b>One thing the thresholds above do not reconcile</b>, recorded here rather than
+ * quietly adjusted: they call a single 20ms model build acceptable and a visibility p99
+ * over 8ms a problem, while every build happens <i>inside</i> a visibility pass. A lone
+ * 20ms build is therefore an acceptable build inside a problem pass, and no per-pass
+ * cap can be the thing that fixes that — the measured worst build, 15.45ms, is already
+ * in the gap. What the cap addresses is the burst, which is what the measurement showed
+ * the problem to be.
+ *
  * <p>Once measured, the figure belongs in the README's Known limitations section and
  * in the performance sentence of {@code docs/SUBMISSION.md}'s PR body — both of which
  * currently say the measurement exists rather than what it said.
@@ -147,6 +174,26 @@ final class FrameTimings
 
 	private long ticks;
 	private int ticksSinceReport;
+
+	/**
+	 * How many model builds {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS} has held over
+	 * to a later pass, and over how many passes.
+	 *
+	 * <p>Counters rather than a fourth {@link Meter}: a deferral has no duration. It is
+	 * the absence of work, and the whole point of recording it is that the model-build
+	 * meter's sample count no longer accounts for every entity that wanted a model — so
+	 * without this the report would show a suspiciously quiet burst and no reason for it.
+	 *
+	 * <p><b>Counts budget deferrals and nothing else.</b> A spawn the client could not
+	 * satisfy — a cold model cache — is also a build that did not happen, and it is
+	 * deliberately invisible here as it always was: it records no sample and no deferral,
+	 * because it neither timed anything nor was held back by anything. The two are
+	 * different events and a reader has to be able to tell "we chose not to build this
+	 * yet" from "we asked and the cache said no". {@code FrameTimingsTest} pins both
+	 * directions.
+	 */
+	private long buildsDeferred;
+	private long passesWithDeferredBuilds;
 
 	/**
 	 * The shipping gate: both halves, or off.
@@ -225,6 +272,32 @@ final class FrameTimings
 	void recordFrame(long startedAt, int walkers)
 	{
 		record(Pass.INTERPOLATION, startedAt, walkers);
+	}
+
+	/**
+	 * @param deferred how many model builds this visibility pass held over to a later
+	 *                 one. Zero on almost every pass and ignored, so "passes with
+	 *                 deferrals" counts the bursts rather than the ticks.
+	 */
+	void recordBuildsDeferred(int deferred)
+	{
+		if (enabled && deferred > 0)
+		{
+			buildsDeferred += deferred;
+			passesWithDeferredBuilds++;
+		}
+	}
+
+	/** @return how many model builds the per-pass budget has held over this session */
+	long getBuildsDeferred()
+	{
+		return buildsDeferred;
+	}
+
+	/** @return how many visibility passes held at least one build over */
+	long getPassesWithDeferredBuilds()
+	{
+		return passesWithDeferredBuilds;
 	}
 
 	private void record(Pass pass, long startedAt, int companionCount)
@@ -355,7 +428,22 @@ final class FrameTimings
 	String summaryLine()
 	{
 		return "Lively Cities frame timings after " + ticks + " game tick(s) — "
-			+ visibility.summary() + "; " + modelBuild.summary() + "; " + interpolation.summary();
+			+ visibility.summary() + "; " + modelBuild.summary()
+			+ "; " + deferralSummary() + "; " + interpolation.summary();
+	}
+
+	/**
+	 * The build budget's own line, in the same shape as a meter's.
+	 *
+	 * <p>Printed even when it is zero, which is the useful case: "the budget held
+	 * nothing back" and "nobody wired the budget up" are different answers, and a line
+	 * that only appears when it fires cannot tell them apart.
+	 */
+	private String deferralSummary()
+	{
+		return "model builds held over by the " + RenderPolicy.MAX_MODEL_BUILDS_PER_PASS
+			+ "-per-pass budget: " + buildsDeferred
+			+ " (over " + passesWithDeferredBuilds + " pass(es))";
 	}
 
 	/**
@@ -383,10 +471,24 @@ final class FrameTimings
 		sb.append("# model build over 20ms. A problem: interpolation p99 > 2ms, visibility\n");
 		sb.append("# p99 > 8ms, or any single model build over 50ms. See FrameTimings' javadoc\n");
 		sb.append("# for where those thresholds come from.\n");
+		sb.append("#\n");
+		sb.append("# A pass builds at most ").append(RenderPolicy.MAX_MODEL_BUILDS_PER_PASS)
+			.append(" model(s); the rest wait for the next one, nearest\n");
+		sb.append("# first. 'held over' below counts those. It does NOT count a build the client\n");
+		sb.append("# could not satisfy — a cold model cache asks, gets nothing, and is retried;\n");
+		sb.append("# that has never appeared in this report and still does not.\n");
 		sb.append('\n');
 
 		visibility.appendTo(sb);
 		modelBuild.appendTo(sb);
+
+		sb.append("# model builds held over by the per-pass build budget\n");
+		sb.append("budget:    ").append(RenderPolicy.MAX_MODEL_BUILDS_PER_PASS)
+			.append(" build(s) per visibility pass\n");
+		sb.append("held over: ").append(buildsDeferred)
+			.append("  (over ").append(passesWithDeferredBuilds).append(" pass(es))\n");
+		sb.append('\n');
+
 		interpolation.appendTo(sb);
 
 		return sb.toString();

@@ -53,7 +53,7 @@ public class EntitySceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
-		scene.updateVisibility(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		assertEquals("the fixture should have spawned", 5, client.registeredCount());
 
 		// Walk far enough that the scene covers a different region entirely.
@@ -71,7 +71,7 @@ public class EntitySceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
-		scene.updateVisibility(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		assertEquals(4, client.registeredCount());
 
 		assertEquals("shutdown reports what it deactivated", 4, scene.shutdown());
@@ -130,7 +130,7 @@ public class EntitySceneTest
 		WorldPoint north = new WorldPoint(3212, 3372, 0);
 		FakeWorldView view = FakeWorldView.around(north, VARROCK_SOUTH);
 		scene.syncRegions(view);
-		scene.updateVisibility(north, view);
+		VisibilityPasses.settle(scene, north, view);
 
 		assertEquals("the crowd is bigger than the cap", cap + 40, scene.getInScopeCount());
 		assertEquals(cap, client.registeredCount());
@@ -140,12 +140,220 @@ public class EntitySceneTest
 		// against the iteration order, so the newly wanted entities come up
 		// before the ones being dropped. That is exactly where a single fused
 		// deactivate/activate loop transiently holds far more than the cap.
+		//
+		// It also takes more than one pass now: the southern rows have no models yet,
+		// and RenderPolicy.MAX_MODEL_BUILDS_PER_PASS builds three of them per pass. That
+		// does not weaken this test — the peak is sampled on every pass by FakeClient,
+		// so a fused loop would be caught on whichever pass it over-registered on, and
+		// there are now twenty-eight chances instead of one.
 		WorldPoint south = new WorldPoint(3212, 3348, 0);
-		scene.updateVisibility(south, view);
+		VisibilityPasses.settle(scene, south, view);
 
 		assertEquals(cap, client.registeredCount());
 		assertTrue("the two positions must actually want different entities",
 			client.peakRegistered() >= cap);
+		assertEquals("the client must never hold more than the cap, mid-pass included",
+			cap, client.peakRegistered());
+	}
+
+	// --- The build budget -----------------------------------------------------
+	//
+	// Measured, not supposed: 300 game ticks in Varrock put the visibility pass's p99
+	// in the histogram's overflow bucket at >=11ms and its worst pass at 53.73ms,
+	// against a pre-registered "a problem" line of 8ms. Individual builds were fine
+	// (p99 1.50ms) — 371 of them simply landed across 331 passes, so walking into
+	// Varrock square built dozens inside one game tick. These four tests are the fix:
+	// a pass builds at most RenderPolicy.MAX_MODEL_BUILDS_PER_PASS models, nearest
+	// first, and the rest arrive on later passes.
+
+	@Test
+	public void aPassBuildsNoMoreThanItsBudgetAndTheRestArriveOnLaterPasses()
+	{
+		int budget = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS;
+
+		// Three full passes and a fourth with a single citizen left in it, so the last
+		// pass is one where the budget is deliberately not spent — a version that built
+		// exactly `budget` every pass regardless would overshoot the crowd there.
+		int crowd = budget * 3 + 1;
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3220, 3355, crowd));
+
+		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(view);
+
+		for (int pass = 1; pass <= 4; pass++)
+		{
+			client.resetCounters();
+			scene.updateVisibility(PLAYER, view);
+
+			int outstanding = crowd - (pass - 1) * budget;
+			int expected = Math.max(0, Math.min(budget, outstanding));
+
+			assertEquals("pass " + pass + " may build " + expected + " model(s)",
+				expected, client.mergeCalls());
+			assertEquals("and a citizen whose build was held over must not have asked the "
+					+ "client for its parts either — the whole point is that the work does "
+					+ "not happen on this pass",
+				expected, client.loadModelDataCalls());
+			assertEquals("pass " + pass + ": everything built so far is on screen",
+				Math.min(crowd, pass * budget), client.registeredCount());
+		}
+
+		// And once the crowd has arrived the budget costs nothing at all: a settled
+		// scene builds nothing, so this is a brake on the burst rather than a
+		// permanent tax on every pass.
+		client.resetCounters();
+		scene.updateVisibility(PLAYER, view);
+		assertEquals(0, client.mergeCalls());
+		assertEquals(crowd, client.registeredCount());
+	}
+
+	/**
+	 * What waits is the far end of the crowd, never the citizen the player is standing
+	 * next to.
+	 *
+	 * <p><b>The fixture files them furthest first</b>, so scope order and distance order
+	 * disagree. That is the whole test: the budget is spent walking the sorted candidate
+	 * list, and a version that spent it in the order the region file happens to list its
+	 * records would build the three citizens eight tiles away and leave the one on the
+	 * next tile waiting — which is the same "nearest first" property
+	 * {@link RenderPolicy#MAX_ACTIVE_OBJECTS} has always had, and it has to survive.
+	 */
+	@Test
+	public void theBudgetHoldsBackTheFarCitizensAndNeverTheNearOnes()
+	{
+		List<EntityDefinition> line = new ArrayList<>();
+		for (int distance = 8; distance >= 1; distance--)
+		{
+			line.add(regions.citizen(
+				VARROCK_SOUTH, PLAYER.getX(), PLAYER.getY() + distance, 0));
+		}
+		regions.file(VARROCK_SOUTH, line);
+
+		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(view);
+		scene.updateVisibility(PLAYER, view);
+
+		assertEquals(RenderPolicy.MAX_MODEL_BUILDS_PER_PASS, client.registeredCount());
+
+		for (EntityDefinition definition : line)
+		{
+			LivelyEntity wrapper = scene.wrapperFor(definition);
+			assertNotNull(wrapper);
+
+			int distance = RenderPolicy.tileDistance(PLAYER, definition.getWorldLocation());
+			assertEquals("the citizen " + distance + " tile(s) away, filed at position "
+					+ line.indexOf(definition) + " of " + line.size(),
+				distance <= RenderPolicy.MAX_MODEL_BUILDS_PER_PASS, wrapper.isActive());
+		}
+
+		// The far ones are not lost, refused or broken — they simply have not arrived.
+		VisibilityPasses.settle(scene, PLAYER, view);
+		assertEquals("every one of them gets there", line.size(), client.registeredCount());
+		assertEquals("and none of them is latched out on the way", 0, scene.countBroken());
+	}
+
+	/**
+	 * A build held over by the budget is not an attempt, and must not spend one.
+	 *
+	 * <p>The bug this exists to make impossible: {@link LivelyEntity#MAX_MODEL_ATTEMPTS}
+	 * is three per scene load, spaced by {@link LivelyEntity#RETRY_BACKOFF_PASSES}, and
+	 * it is there to stop a genuinely missing model producing a per-tick storm of cache
+	 * calls. If waiting for the budget counted against it, a crowd four passes deep
+	 * would leave its last citizens having "attempted" three times without the client
+	 * ever being asked anything — and then unbuildable for the next twenty-five passes,
+	 * on a warm cache, for no reason at all.
+	 *
+	 * <p>The fixture is sized so that only that failure mode can show up here: one more
+	 * pass' worth of crowd than the retry budget has attempts in it.
+	 */
+	@Test
+	public void aBuildHeldOverByTheBudgetIsNotOneOfTheEntitysModelAttempts()
+	{
+		int budget = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS;
+		int passes = LivelyEntity.MAX_MODEL_ATTEMPTS + 1;
+		int crowd = budget * passes;
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3218, 3352, crowd));
+
+		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(view);
+
+		for (int pass = 0; pass < passes; pass++)
+		{
+			scene.updateVisibility(PLAYER, view);
+		}
+
+		assertEquals("every citizen arrives inside " + passes + " passes, and none of them "
+				+ "burns a retry attempt waiting its turn",
+			crowd, client.registeredCount());
+		assertEquals("the client is asked for each citizen's parts exactly once", crowd,
+			client.loadModelDataCalls());
+		assertEquals(0, scene.countBroken());
+	}
+
+	/**
+	 * A cold model cache does not spend the build budget, because it did not build
+	 * anything.
+	 *
+	 * <p>This is the reason the budget is charged when a build <i>completes</i> rather
+	 * than when one is planned, and it is the difference between a fix and a regression.
+	 * Charged on intent, the three nearest citizens on a cold login would hold the whole
+	 * budget shut while doing no work, and — since a miss puts them into
+	 * {@link LivelyEntity#RETRY_BACKOFF_PASSES} — would keep holding it for
+	 * twenty-five passes with everybody behind them never asked at all. Charged on
+	 * completion, a cold pass costs exactly what it always cost.
+	 */
+	@Test
+	public void aColdModelCacheDoesNotSpendTheBuildBudget()
+	{
+		int crowd = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS * 3;
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3220, 3355, crowd));
+		client.setCacheCold(true);
+
+		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(view);
+		scene.updateVisibility(PLAYER, view);
+
+		assertEquals("a cold cache spawns nobody", 0, client.registeredCount());
+		assertEquals("but every one of them is asked for, on the one pass: a build that "
+				+ "did not happen must not spend a budget that bounds the cost of building",
+			crowd, client.loadModelDataCalls());
+		assertEquals("and nothing was built, so nothing was merged", 0, client.mergeCalls());
+
+		// And when the cache warms, they all arrive — through the retry backoff and then
+		// through the budget, which is the two mechanisms cooperating rather than one
+		// starving the other.
+		client.setCacheCold(false);
+		for (int pass = 0; pass < LivelyEntity.RETRY_BACKOFF_PASSES; pass++)
+		{
+			scene.updateVisibility(PLAYER, view);
+		}
+		VisibilityPasses.settle(scene, PLAYER, view);
+		assertEquals("a warm cache must spawn what the cold one could not",
+			crowd, client.registeredCount());
+	}
+
+	/**
+	 * The crowd cap still counts objects and the build budget still counts builds, in
+	 * the one fixture where both bind.
+	 */
+	@Test
+	public void theCrowdCapBoundsWhatIsActiveAndTheBudgetOnlyBoundsHowFastItGetsThere()
+	{
+		int cap = RenderPolicy.MAX_ACTIVE_OBJECTS;
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3210, 3350, cap + 20));
+
+		WorldPoint north = new WorldPoint(3212, 3372, 0);
+		FakeWorldView view = FakeWorldView.around(north, VARROCK_SOUTH);
+		scene.syncRegions(view);
+
+		client.resetCounters();
+		VisibilityPasses.settle(scene, north, view);
+
+		assertEquals("the crowd cap is what decides how many are on screen", cap,
+			client.registeredCount());
+		assertEquals("and the budget is not a second, smaller cap — every one of the "
+				+ "capped crowd is built, just over more than one pass",
+			cap, client.mergeCalls());
 		assertEquals("the client must never hold more than the cap, mid-pass included",
 			cap, client.peakRegistered());
 	}
@@ -230,7 +438,7 @@ public class EntitySceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
-		scene.updateVisibility(PLAYER, view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 
 		assertEquals("the four neighbours must still be spawned", 4, client.registeredCount());
 		assertEquals("the thrower is latched out", 1, scene.countBroken());
@@ -295,7 +503,7 @@ public class EntitySceneTest
 		WorldPoint border = new WorldPoint(3225, 3390, 0);
 		FakeWorldView view = FakeWorldView.around(border, VARROCK_SOUTH, VARROCK_NORTH);
 		scene.syncRegions(view);
-		scene.updateVisibility(border, view);
+		VisibilityPasses.settle(scene, border, view);
 		assertEquals(2, scene.getCachedRegionCount());
 		assertEquals(4, client.registeredCount());
 
@@ -389,10 +597,13 @@ public class EntitySceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		scene.onGameTick(PLAYER, view);
 		assertEquals(5, client.registeredCount());
 
-		// Untick Varrock. No scene change, no reload — just the next pass.
+		// Untick Varrock. No scene change, no reload — just the next pass. One pass is
+		// still enough: every model is built by now, and the build budget bounds
+		// building rather than activating, so bringing them back below is instant.
 		config.disableOnly(City.VARROCK);
 		scene.onGameTick(PLAYER, view);
 		assertEquals("unticking a city must deactivate what it already spawned",
@@ -418,6 +629,7 @@ public class EntitySceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		scene.onGameTick(PLAYER, view);
 		assertEquals(4, client.registeredCount());
 
@@ -468,6 +680,7 @@ public class EntitySceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		scene.onGameTick(PLAYER, view);
 		assertEquals("full density keeps everyone", crowd, client.registeredCount());
 
@@ -721,6 +934,7 @@ public class EntitySceneTest
 
 		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
 		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, PLAYER, view);
 		scene.onGameTick(PLAYER, view);
 
 		assertEquals(6, client.registeredCount());

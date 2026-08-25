@@ -861,7 +861,11 @@ public class CitizenMenuTest
 	{
 		regions.file(VARROCK_NORTH, entities);
 		scene.syncRegions(view);
-		scene.updateVisibility(PLAYER, view);
+
+		// Passes, plural: RenderPolicy.MAX_MODEL_BUILDS_PER_PASS means a fixture of nine
+		// arrives over three game ticks. Nothing here is about when they arrive, only
+		// about what the menu does once they have.
+		VisibilityPasses.settle(scene, PLAYER, view);
 		assertTrue("the fixture has to actually spawn", scene.countActive() > 0);
 	}
 

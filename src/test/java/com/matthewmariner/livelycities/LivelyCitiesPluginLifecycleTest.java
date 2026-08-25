@@ -440,7 +440,11 @@ public class LivelyCitiesPluginLifecycleTest
 		EntityScene scene = new EntityScene(client, regions, config, config.overrides());
 		LivelyCitiesPlugin plugin = plugin(scene);
 
-		plugin.onGameTick(new GameTick());
+		// Ticks, plural: a crowd of four arrives over two of them, because
+		// RenderPolicy.MAX_MODEL_BUILDS_PER_PASS builds three models a pass. Driven
+		// through the plugin's own handler rather than the scene's, since what this
+		// test is about is the plugin's config path reaching a fully spawned crowd.
+		VisibilityPasses.settle(() -> plugin.onGameTick(new GameTick()));
 		assertEquals("region 12852 is Varrock, so the fixture should spawn",
 			4, client.registeredCount());
 

@@ -614,13 +614,23 @@ public class FrameTimingsTest
 		scene.updateVisibility(PLAYER, view);
 
 		assertEquals(1L, timings.sampleCount(FrameTimings.Pass.VISIBILITY));
-		assertEquals("five citizens on screen, and the meter has to know that",
-			5, scene.countActive());
-		assertEquals(5, timings.countAtMax(FrameTimings.Pass.VISIBILITY));
+		assertEquals("the first pass builds its budget and no more, so five citizens are "
+				+ "not five on screen any more",
+			RenderPolicy.MAX_MODEL_BUILDS_PER_PASS, scene.countActive());
+
+		// The load-bearing one, and it is the guard on `planned - failed - buildsDeferred`
+		// rather than a restatement of the line above: `planned` is 5 here and `failed` is
+		// 0, so a version that forgot to subtract the held-over builds would report five
+		// objects active for a pass that put three on screen — overstating the load every
+		// timing in the report was measured under, which is the one thing this meter is
+		// not allowed to get wrong.
+		assertEquals("the meter reports what the client is actually holding",
+			scene.countActive(), timings.countAtMax(FrameTimings.Pass.VISIBILITY));
 
 		scene.updateVisibility(PLAYER, view);
 		assertEquals("a second pass is a second sample",
 			2L, timings.sampleCount(FrameTimings.Pass.VISIBILITY));
+		assertEquals("and the other two arrive on it", 5, scene.countActive());
 	}
 
 	/**
@@ -704,6 +714,121 @@ public class FrameTimingsTest
 			0, timings.countAtMax(FrameTimings.Pass.VISIBILITY));
 	}
 
+	/**
+	 * A build the budget held over is counted as held over — and is not a model build,
+	 * not a failure, and not a cold-cache miss.
+	 *
+	 * <p>The meter has four outcomes to keep apart for a wanted entity that is not yet
+	 * on screen, and three of them look identical from outside: it built a model (a
+	 * MODEL_BUILD sample), the client would not give it one (nothing recorded, ever),
+	 * the budget said not this pass (a deferral), or it failed structurally (nothing
+	 * recorded, and the entity is latched out). Fold any two together and the report
+	 * starts describing a burst it did not measure.
+	 */
+	@Test
+	public void aBuildTheBudgetHeldOverIsCountedAndIsNotAModelBuild()
+	{
+		FrameTimings timings = new FrameTimings(true, true);
+		int crowd = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS * 3;
+		EntityScene scene = sceneWith(timings, crowd);
+
+		scene.updateVisibility(PLAYER, view);
+
+		assertEquals("the pass builds its budget and no more",
+			(long) RenderPolicy.MAX_MODEL_BUILDS_PER_PASS,
+			timings.sampleCount(FrameTimings.Pass.MODEL_BUILD));
+		assertEquals("and the other six are held over, not lost and not failed",
+			crowd - RenderPolicy.MAX_MODEL_BUILDS_PER_PASS, timings.getBuildsDeferred());
+		assertEquals("over the one pass that held them", 1L, timings.getPassesWithDeferredBuilds());
+
+		// The second pass builds three more and holds three over; the third builds the
+		// last three and holds none, so the pass counter has to stop at two.
+		scene.updateVisibility(PLAYER, view);
+		scene.updateVisibility(PLAYER, view);
+
+		assertEquals("every citizen is built exactly once", (long) crowd,
+			timings.sampleCount(FrameTimings.Pass.MODEL_BUILD));
+		assertEquals(crowd, scene.countActive());
+		assertEquals("six held over on the first pass and three on the second",
+			(crowd - RenderPolicy.MAX_MODEL_BUILDS_PER_PASS)
+				+ (crowd - 2 * RenderPolicy.MAX_MODEL_BUILDS_PER_PASS),
+			timings.getBuildsDeferred());
+		assertEquals("a pass that held nothing over must not be counted as one that did",
+			2L, timings.getPassesWithDeferredBuilds());
+	}
+
+	/**
+	 * A cold-cache deferral is not a budget deferral, and the meter has to say so.
+	 *
+	 * <p>The sibling of {@link #aSpawnDeferredByAColdCacheIsNotAModelBuild}, and the
+	 * assertion that stops the new counter from quietly absorbing the old case. Both are
+	 * "a wanted citizen that did not get a model this pass"; only one of them is a
+	 * decision this plugin made. Counting a cold cache as a budget deferral would make
+	 * the report claim the fix was working on a login where it never even engaged.
+	 */
+	@Test
+	public void aColdCacheDeferralIsNotABudgetDeferral()
+	{
+		FrameTimings timings = new FrameTimings(true, true);
+		EntityScene scene = sceneWith(timings, RenderPolicy.MAX_MODEL_BUILDS_PER_PASS * 3);
+		client.setCacheCold(true);
+
+		scene.updateVisibility(PLAYER, view);
+
+		assertEquals("nothing spawned, so nothing was built", 0, scene.countActive());
+		assertEquals(0L, timings.sampleCount(FrameTimings.Pass.MODEL_BUILD));
+		assertEquals("and nothing was held over either — the budget was never spent, so it "
+				+ "never held anything back",
+			0L, timings.getBuildsDeferred());
+		assertEquals(0L, timings.getPassesWithDeferredBuilds());
+	}
+
+	/**
+	 * The report says what the budget held over, and says it even when the answer is
+	 * nothing.
+	 *
+	 * <p>A fix whose effect cannot be read off the next report is not finished: the
+	 * model-build meter's sample count no longer accounts for every citizen that wanted
+	 * a model, so without this line a reader would see a quiet burst and no reason for
+	 * it. Printed at zero as well, because "the budget held nothing back" and "nobody
+	 * wired the budget up" are different answers.
+	 */
+	@Test
+	public void theReportSaysHowManyBuildsTheBudgetHeldOver()
+	{
+		FrameTimings quiet = new FrameTimings(true, true);
+		quiet.recordElapsed(FrameTimings.Pass.VISIBILITY, 900L, 3);
+		String quietReport = quiet.toReportText();
+		assertTrue("the line has to be there at zero: " + quietReport,
+			quietReport.contains("held over: 0"));
+		assertTrue("with the budget it was measured against: " + quietReport,
+			quietReport.contains("budget:    " + RenderPolicy.MAX_MODEL_BUILDS_PER_PASS
+				+ " build(s) per visibility pass"));
+
+		FrameTimings busy = new FrameTimings(true, true);
+		EntityScene scene = sceneWith(busy, RenderPolicy.MAX_MODEL_BUILDS_PER_PASS * 3);
+		scene.updateVisibility(PLAYER, view);
+
+		String report = busy.toReportText();
+		assertTrue("and the real figure once it fires: " + report,
+			report.contains("held over: " + busy.getBuildsDeferred() + "  (over 1 pass(es))"));
+		assertTrue("the summary line carries it too: " + busy.summaryLine(),
+			busy.summaryLine().contains("model builds held over by the "
+				+ RenderPolicy.MAX_MODEL_BUILDS_PER_PASS + "-per-pass budget: "
+				+ busy.getBuildsDeferred()));
+	}
+
+	/** A meter that is off counts no deferrals either. */
+	@Test
+	public void aDisabledMeterCountsNoDeferrals()
+	{
+		FrameTimings off = FrameTimings.off();
+		off.recordBuildsDeferred(7);
+
+		assertEquals(0L, off.getBuildsDeferred());
+		assertEquals(0L, off.getPassesWithDeferredBuilds());
+	}
+
 	/** With the stopwatch off, the same passes record nothing at all. */
 	@Test
 	public void aSceneWithNoStopwatchRecordsNothing()
@@ -785,7 +910,11 @@ public class FrameTimingsTest
 		FrameTimings timings = new FrameTimings(true, true);
 		EntityScene scene = packedSceneWith(timings, 90);
 
-		scene.updateVisibility(PLAYER, view);
+		// Eighty models no longer fit in one pass — that is what
+		// RenderPolicy.MAX_MODEL_BUILDS_PER_PASS is for — so this is the same fixture
+		// arriving over the twenty-seven passes it now takes. `planned` is unaffected by
+		// the build budget and is 80 on every one of them, which is the point.
+		VisibilityPasses.settle(scene, PLAYER, view);
 
 		assertEquals("all ninety have to be candidates, or the cap is not what bound",
 			90, scene.inScopeEntities().size());
@@ -796,7 +925,8 @@ public class FrameTimingsTest
 		assertEquals("one build per object the pass planned for", (long) RenderPolicy.MAX_ACTIVE_OBJECTS,
 			timings.sampleCount(FrameTimings.Pass.MODEL_BUILD));
 		assertEquals("the model-build meter reports what the pass planned — 80 — and not the "
-				+ "90 candidates it sorted through to get there",
+				+ "90 candidates it sorted through to get there, and not the three it was "
+				+ "allowed to build on the pass the sample came from",
 			RenderPolicy.MAX_ACTIVE_OBJECTS, timings.countAtMax(FrameTimings.Pass.MODEL_BUILD));
 	}
 
@@ -818,27 +948,34 @@ public class FrameTimingsTest
 	 * because {@code countAtMax} keeps the count from the <i>slowest</i> sample and both
 	 * passes here truncate to 0µs, so the first one wins the tie and the second pass —
 	 * the only one that can tell the two versions apart — never shows up in it.
+	 *
+	 * <p>The fixture is three rather than the five it used to be, because three is what
+	 * {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS} lets one pass build: with five, the
+	 * first pass legitimately leaves three on screen and the min/mean/max line stops
+	 * being one number. What this test needs is two passes that agree, and the
+	 * held-over-builds arithmetic is guarded next door in
+	 * {@link #everyVisibilityPassIsOneSampleCarryingTheActiveObjectCount}.
 	 */
 	@Test
 	public void theVisibilityMeterCountsEverythingLeftActiveAndNotJustTheNewSpawns()
 	{
 		FrameTimings timings = new FrameTimings(true, true);
-		EntityScene scene = sceneWith(timings, 5);
+		EntityScene scene = sceneWith(timings, 3);
 
 		scene.updateVisibility(PLAYER, view);
-		assertEquals("the first pass has to actually spawn them", 5, scene.countActive());
+		assertEquals("the first pass has to actually spawn them", 3, scene.countActive());
 
 		// The second pass: everybody is already on screen and stays there.
 		scene.updateVisibility(PLAYER, view);
-		assertEquals("and the second pass has to leave them there", 5, scene.countActive());
+		assertEquals("and the second pass has to leave them there", 3, scene.countActive());
 
 		assertEquals("two passes, two samples", 2L,
 			timings.sampleCount(FrameTimings.Pass.VISIBILITY));
 
 		String section = meterSection(timings.toReportText(), "visibility pass (per game tick)");
-		assertTrue("both passes left five objects with the client, so neither sample may "
+		assertTrue("both passes left three objects with the client, so neither sample may "
 				+ "read 0:\n" + section,
-			section.contains("objects active: min 5, mean 5, max 5"));
+			section.contains("objects active: min 3, mean 3, max 3"));
 	}
 
 	/**

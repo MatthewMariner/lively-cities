@@ -80,6 +80,18 @@ import net.runelite.api.coords.WorldPoint;
  * figure rather than an argument — see {@link FrameTimings}. Off for every shipped
  * client, and off is one field read per pass.
  *
+ * <p><b>Two budgets, and they bound different things.</b>
+ * {@link RenderPolicy#MAX_ACTIVE_OBJECTS} caps how many objects may be <i>active</i>
+ * at once; {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS} caps how many models one
+ * pass may <i>build</i>. The first was always here. The second is the answer to a
+ * measurement: 371 builds landed across 331 passes, so individual builds were fine
+ * (p99 1.50ms) and the worst pass was still 53.73ms, because walking into Varrock
+ * built forty models inside one game tick. {@link #runVisibilityPass} spends the
+ * build budget in the sorted candidate order, so what waits for the next pass is
+ * always the far end of the crowd, and a citizen that waits is one that has not
+ * appeared yet rather than one that flickers — it is never activated, never
+ * despawned, and does not spend one of its {@link LivelyEntity#MAX_MODEL_ATTEMPTS}.
+ *
  * <p><b>Where a border-crossing wanderer lives.</b> Scope membership is decided
  * once, from the entity's authored tile, and a citizen walking across a region
  * border does not change it. Six of the 63 wanderers have boxes that straddle
@@ -434,9 +446,11 @@ class EntityScene
 	 * {@link #updateVisibility} with the stopwatch peeled off.
 	 *
 	 * @return how many objects the client is left holding — {@code planned} minus the
-	 * ones that could not be built or placed. Computed rather than counted:
-	 * {@link #countActive()} walks every cached wrapper, so calling it here would make
-	 * an ordinary user pay for a figure only the meter wants.
+	 * ones that could not be built or placed, minus the ones whose model build
+	 * {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS} held over to a later pass.
+	 * Computed rather than counted: {@link #countActive()} walks every cached wrapper,
+	 * so calling it here would make an ordinary user pay for a figure only the meter
+	 * wants.
 	 */
 	private int runVisibilityPass(WorldPoint playerLocation, WorldView worldView)
 	{
@@ -561,9 +575,19 @@ class EntityScene
 			}
 		}
 
+		// Over `candidates` rather than over `inScope`, and that is the ordering half of
+		// the build budget below. The two loops cover the same set — `wanted` is cleared
+		// for every in-scope entity above and set only inside the candidate loop, so
+		// every wanted entity is a candidate — but only this list is sorted, authored
+		// first and nearest first inside that. Spawning in scope order would have made
+		// "which three get built this pass?" a question about the order region files
+		// happen to list their records in, and a citizen the player is standing next to
+		// could wait behind one twenty tiles away.
 		int spawned = 0;
 		int failed = 0;
-		for (LivelyEntity entity : inScope)
+		int built = 0;
+		int buildsDeferred = 0;
+		for (LivelyEntity entity : candidates)
 		{
 			if (!entity.isWanted())
 			{
@@ -587,6 +611,25 @@ class EntityScene
 			// out here. A deferred build, i.e. a cold cache, leaves the model still null
 			// and is deliberately not counted: it timed nothing.
 			final boolean building = entity.getRenderedModel() == null;
+
+			if (building && !RenderPolicy.hasBuildBudget(built))
+			{
+				// The burst brake. This pass has already built its
+				// MAX_MODEL_BUILDS_PER_PASS models, so this one waits for the next —
+				// 600ms later, which nobody can see, against the 53.73ms stutter that
+				// forty builds in one tick produced.
+				//
+				// Nothing else happens to it: spawn() is never called, so the entity
+				// does not spend one of its MAX_MODEL_ATTEMPTS and does not touch its
+				// retry backoff, and it cannot flicker because it was never active.
+				// It stays wanted, which costs nothing — the deactivate loop is behind
+				// us and the flag is cleared at the top of every pass — and the next
+				// pass re-sorts it into the same place it is in now, at the front,
+				// because it is nearer than everything still queued behind it.
+				buildsDeferred++;
+				continue;
+			}
+
 			final long buildStartedAt = building ? timings.start() : 0L;
 
 			if (spawnQuietly(entity, worldView))
@@ -600,12 +643,25 @@ class EntityScene
 
 			if (building && entity.getRenderedModel() != null)
 			{
+				// Charged here, on completion, and not at the check above. The two come
+				// apart on a cold model cache: loadParts() returns null, the model is
+				// still null, and nothing was built — so charging on intent would let
+				// three entities that did no work at all hold the budget shut for the
+				// twenty-five passes LivelyEntity.RETRY_BACKOFF_PASSES makes them wait,
+				// starving every entity behind them. A miss costs what it always cost.
+				built++;
+
 				// `planned` rather than a live count: it is what this pass is about to
 				// have on screen, it is already in a local, and asking the client would
 				// mean walking every wrapper once per model built.
 				timings.recordModelBuild(buildStartedAt, planned);
 			}
 		}
+
+		// Zero on the overwhelming majority of passes, and the meter ignores those: what
+		// the report has to be able to say is how much building the budget moved, and
+		// over how many passes it moved it.
+		timings.recordBuildsDeferred(buildsDeferred);
 
 		totalSpawns += spawned;
 		totalDespawns += despawned;
@@ -617,8 +673,8 @@ class EntityScene
 		// log.debug argument evaluates it at every log level.
 		if ((spawned > 0 || despawned > 0) && log.isDebugEnabled())
 		{
-			log.debug("visibility pass: +{} -{} (failed {}), {} active of {} in scope",
-				spawned, despawned, failed, countActive(), inScope.size());
+			log.debug("visibility pass: +{} -{} (failed {}, {} build(s) held over), {} active of {} in scope",
+				spawned, despawned, failed, buildsDeferred, countActive(), inScope.size());
 		}
 
 		if (reportNextPass)
@@ -640,7 +696,8 @@ class EntityScene
 					+ "{} definitions in scope ({} of them echoes), {} active ({} echoes), {} walking, "
 					+ "{} switched off by the city/density/cameo settings, "
 					+ "{} entity(ies) skipped because the collision map would not vouch for their tile, "
-					+ "{} beyond the {}-tile cull or off-plane, {} deferred by the {}-object cap, {} unbuildable";
+					+ "{} beyond the {}-tile cull or off-plane, {} deferred by the {}-object cap, "
+					+ "{} model build(s) held over by the {}-per-pass build budget, {} unbuildable";
 				Object[] args = {
 					playerLocation,
 					RenderPolicy.regionIdOf(playerLocation.getX(), playerLocation.getY()),
@@ -656,6 +713,8 @@ class EntityScene
 					cullRadius,
 					deferred,
 					RenderPolicy.MAX_ACTIVE_OBJECTS,
+					buildsDeferred,
+					RenderPolicy.MAX_MODEL_BUILDS_PER_PASS,
 					countBroken(),
 				};
 
@@ -670,15 +729,23 @@ class EntityScene
 				}
 			}
 		}
-		else if (deferred > 0)
+		else if (deferred > 0 || buildsDeferred > 0)
 		{
-			log.debug("{} entity(ies) deferred by the {}-object cap", deferred, RenderPolicy.MAX_ACTIVE_OBJECTS);
+			log.debug("{} entity(ies) deferred by the {}-object cap, "
+					+ "{} model build(s) held over by the {}-per-pass build budget",
+				deferred, RenderPolicy.MAX_ACTIVE_OBJECTS,
+				buildsDeferred, RenderPolicy.MAX_MODEL_BUILDS_PER_PASS);
 		}
 
 		// What the client is left holding: everything this pass planned for, minus the
-		// ones that could not be built or placed. Arithmetic on locals rather than a
-		// walk of every cached wrapper — see runVisibilityPass's contract.
-		return planned - failed;
+		// ones that could not be built or placed, minus the ones whose build the budget
+		// held over. Those last two are counted apart because they are different things
+		// — one is an entity the client would not give us a model for, the other is one
+		// we chose not to ask about yet — and the meter has to be able to tell them
+		// apart or the report starts describing a burst it did not measure. Arithmetic
+		// on locals rather than a walk of every cached wrapper — see runVisibilityPass's
+		// contract.
+		return planned - failed - buildsDeferred;
 	}
 
 	/**
