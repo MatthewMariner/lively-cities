@@ -15,28 +15,35 @@ public class PlacementCompatibilityTest
 	@Test
 	public void aGenericEntityFitsAnyRegion()
 	{
-		assertTrue(PlacementCompatibility.isCompatible(Theme.GENERIC, Theme.GENERIC));
-		assertTrue(PlacementCompatibility.isCompatible(Theme.GENERIC, Theme.DESERT));
-		assertTrue(PlacementCompatibility.isCompatible(Theme.GENERIC, Theme.KARAMJA_JUNGLE));
-		assertTrue(PlacementCompatibility.isCompatible(Theme.GENERIC, Theme.MORYTANIA_UNDEAD));
-		assertTrue(PlacementCompatibility.isCompatible(Theme.GENERIC, Theme.UNIQUE_BOSS));
+		// Every theme there is, so a new constant that this rule happens to reject
+		// cannot slip in unnoticed.
+		for (Theme regionTheme : Theme.values())
+		{
+			assertTrue("a generic citizen must fit a " + regionTheme + " region",
+				PlacementCompatibility.isCompatible(Theme.GENERIC, regionTheme));
+		}
 	}
 
 	@Test
 	public void aThemedEntityFitsItsOwnRegionTheme()
 	{
 		assertTrue(PlacementCompatibility.isCompatible(Theme.DESERT, Theme.DESERT));
-		assertTrue(PlacementCompatibility.isCompatible(Theme.KARAMJA_JUNGLE, Theme.KARAMJA_JUNGLE));
-		assertTrue(PlacementCompatibility.isCompatible(Theme.MORYTANIA_UNDEAD, Theme.MORYTANIA_UNDEAD));
+		assertTrue(PlacementCompatibility.isCompatible(Theme.CAMEO, Theme.CAMEO));
 	}
 
+	/**
+	 * The fixture deliberately uses <b>two different</b> non-generic themes on the
+	 * region side. One would not be enough: a rule that returned {@code true}
+	 * whenever the region theme was anything other than the one theme tested would
+	 * pass, and the mismatch case is the whole point of the class.
+	 */
 	@Test
 	public void aThemedEntityDoesNotFitAMismatchedRegionTheme()
 	{
 		assertFalse(PlacementCompatibility.isCompatible(Theme.DESERT, Theme.GENERIC));
-		assertFalse(PlacementCompatibility.isCompatible(Theme.DESERT, Theme.KARAMJA_JUNGLE));
-		assertFalse(PlacementCompatibility.isCompatible(Theme.KARAMJA_JUNGLE, Theme.MORYTANIA_UNDEAD));
-		assertFalse(PlacementCompatibility.isCompatible(Theme.MORYTANIA_UNDEAD, Theme.DESERT));
+		assertFalse(PlacementCompatibility.isCompatible(Theme.DESERT, Theme.CAMEO));
+		assertFalse(PlacementCompatibility.isCompatible(Theme.CAMEO, Theme.DESERT));
+		assertFalse(PlacementCompatibility.isCompatible(Theme.CAMEO, Theme.GENERIC));
 	}
 
 	/**
@@ -52,6 +59,7 @@ public class PlacementCompatibilityTest
 	{
 		assertTrue(PlacementCompatibility.isCompatible(Theme.UNIQUE_BOSS, Theme.UNIQUE_BOSS));
 		assertFalse(PlacementCompatibility.isCompatible(Theme.UNIQUE_BOSS, Theme.GENERIC));
-		assertFalse(PlacementCompatibility.isCompatible(Theme.UNIQUE_BOSS, Theme.MORYTANIA_UNDEAD));
+		assertFalse(PlacementCompatibility.isCompatible(Theme.UNIQUE_BOSS, Theme.DESERT));
+		assertFalse(PlacementCompatibility.isCompatible(Theme.UNIQUE_BOSS, Theme.CAMEO));
 	}
 }

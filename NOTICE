@@ -14,19 +14,59 @@ The files under src/main/resources/RegionData/ are derived from that project's
 region data (format version 0.8). Redistribution of those files retains the
 copyright notice above as the BSD 2-Clause License requires.
 
-They are no longer byte-identical to upstream, in six ways.
+They are no longer byte-identical to upstream, in seven ways.
 
-  1. The six citizens in 14131.json were named after the Barrows Brothers, with
-     matching examine text, and are now generic "Barrow wight"s; their
-     placements, models and animations are unchanged, only the identities.
+  1. Only a subset ships. This plugin carried 45 of their region files; as of
+     2026-08-24 it carries 27, covering nine places. The other eighteen files —
+     4922, 9016, 9272, 9273, 9776, 10038, 10549, 11062, 11318, 11569, 11573,
+     11577, 11826, 13110, 13622, 13878, 14131 and 14936 — were deleted outright,
+     taking exactly thirty of their placements with them (26 citizens, 4 scenery).
+     This was an editorial decision about what makes a finished plugin rather than
+     any judgement about the data: thirteen of the twenty-four places held one or
+     two figures each — ten of them held exactly one — and one figure in a town
+     reads as a broken plugin rather than as ambient life.
+
+     That accounts for thirteen of the fifteen. The rule applied was conjunctive —
+     a real city with at least three figures — and the other two failed its first
+     half rather than its second. Barrows (six figures, 14131.json) is a burial
+     mound, and Piscatoris (eight, across 9016, 9272 and 9273) is a fishing colony
+     and hunter area; both cleared the three-figure bar, and neither is a place a
+     player would call a city. The rule as the code states it is in
+     src/main/java/com/matthewmariner/livelycities/City.java.
+
+     Shipping a subset is itself a modification and is stated here for that
+     reason. BSD-2 does not require redistributing a work whole, but it does
+     require that nobody reading this assumes the 27 files are the whole of what
+     they published.
+
+     Two of the modifications this notice used to disclose went with those files
+     and are therefore no longer claimed anywhere: the six citizens in 14131.json
+     that had been renamed from the Barrows Brothers to generic "Barrow wight"s,
+     and one of the corrected "moveAnimation" records listed at item 4 ("Draug",
+     14936.json). Neither file ships, so neither change is in anything a licensee
+     receives from this project.
 
   2. 12598.json (the Grand Exchange) gained six records that are not theirs at
      all: the "friend cameo" figures, authored for this project and switched off
-     by default. They are identifiable in the data by "cameo": true, and they
-     are the only records using the "npcAppearanceId" field, which is also this
-     project's addition to the format. Nothing upstream authored was touched.
+     by default. They are identifiable in the data by "cameo": true. Adding them
+     touched nothing upstream authored.
 
-  3. Fourteen vendored citizens had their "moveAnimation" corrected, because it
+  3. One vendored citizen, "Rufus" (12853), was re-dressed. His record carried
+     twelve "modelIds" and six recolour pairs, none of which was footwear, and a
+     player reported him rendering without boots. Guessing a raw model id for
+     boots risks putting a hat on his feet, so instead his appearance now comes
+     from a named NPC: the twelve ids and the six pairs were removed and replaced
+     with "npcAppearanceId": 3114, which is the NPC the 1.12.36 cache names
+     "Farmer". His tile, wander box, name, examine text, remarks and animations
+     are untouched.
+
+     "npcAppearanceId" is this project's addition to their format; upstream data
+     has no such field. Seven records use it — the six cameos above and Rufus —
+     and Rufus is the only vendored one. An earlier version of this notice said
+     the cameos were the only records using it, which stopped being true when he
+     was re-dressed and was wrong until this revision.
+
+  4. Thirteen vendored citizens had their "moveAnimation" corrected, because it
      named a different creature's skeleton from their "idleAnimation" and their
      models, and a figure cannot have two rigs. Only that one field changed on
      each; placements, models, examine text and remarks are untouched.
@@ -36,25 +76,27 @@ They are no longer byte-identical to upstream, in six ways.
        Bees! (12853)                  HumanWalk        -> BeeIdle
        Nightfire (12853)              HumanWalk        -> KittenWalk
        Dofur, Simon, Rifur,
-         Dorgud (12853), Draug
-         (14936)                      HumanWalk        -> DwarfWalk
+         Dorgud (12853)               HumanWalk        -> DwarfWalk
        Zack (12850)                   DogWalk          -> HumanWalk
        Forester (11061)               DogWalk          -> HumanWalk
        Thalindra, Dark wizard
          (12850)                      DrunkenDwarfWalk -> HumanWalk
 
-     How visible the defect was: thirteen of the fourteen carry no wander box and
+     A fourteenth, "Draug" (14936), had the same correction and is not listed
+     because that file no longer ships — see item 1.
+
+     How visible the defect was: twelve of the thirteen carry no wander box and
      never move, so in all but one case ("Bees!" in Varrock) the wrong gait was
      latent rather than on screen. It was still worth fixing — a latent wrong is
      one wander box away from a visible one — but this notice previously said a
-     wrong gait "does not look slightly off, it comes apart", and for thirteen of
-     these fourteen nobody could have seen it either way.
+     wrong gait "does not look slightly off, it comes apart", and for twelve of
+     these thirteen nobody could have seen it either way.
 
      How each replacement was chosen, stated precisely because "we gave each one
-     its own species' walk" is only true of nine of them:
+     its own species' walk" is only true of eight of them:
 
-       - Nine got the exact walk of the NPC whose model list the record copies:
-         Skipper, Bees!, Nightfire, Dofur, Simon, Rifur, Dorgud, Draug and Zack.
+       - Eight got the exact walk of the NPC whose model list the record copies:
+         Skipper, Bees!, Nightfire, Dofur, Simon, Rifur, Dorgud and Zack.
        - Grimefang and Sludgenose got GoblinWalk (6202,
          SLICE_SURFACE_GOBLIN_SQUAT_GENERALS_WALK). NPC 3028 "Goblin", which owns
          their exact models, walks on 6180 (SLICE_SURFACE_GOBLIN_SQUAT_WALK)
@@ -67,7 +109,7 @@ They are no longer byte-identical to upstream, in six ways.
          672 — the exception is NPC 14824 "Barb", which shares only model 353, a
          part used by 597 other NPCs.
 
-  4. Four vendored citizens had their "idleAnimation" changed, and this one is
+  5. Four vendored citizens had their "idleAnimation" changed, and this one is
      editorial rather than a defect: they rendered exactly as authored, and what
      they depicted was a person sprawled or distressed in a public street — one
      of them lying flat in Draynor market beside child NPCs. This plugin's brief
@@ -80,14 +122,14 @@ They are no longer byte-identical to upstream, in six ways.
        Pryce (12853)            Crying         -> SlapHead
        Damien (12342)           FallenManIdle  -> NervousIdle
 
-  5. The scenery record at 3169,3488 in 12598.json gained a second model id,
+  6. The scenery record at 3169,3488 in 12598.json gained a second model id,
      3818, alongside the 2260 it already had. Every other placement of that
      brazier in their own data — two in 12594, one in 12595, one in 12853 — is
      the pair [2260, 3818]; the Grand Exchange copy was one model short and
      rendered with an open, untextured face.
 
-  6. Three more vendored records had an animation changed, for the reason in
-     modification 3 but caught by a different check: the animation drove a
+  7. Three more vendored records had an animation changed, for the reason in
+     modification 4 but caught by a different check: the animation drove a
      skeleton the record's own models are not rigged to. Their two child records
      played human emotes on gnome-rigged child models, and a scenery record
      played a human standing animation on a model the game only ever rigs to
@@ -109,8 +151,9 @@ They are no longer byte-identical to upstream, in six ways.
      scenery in this dataset already does. Nothing else on any of the three
      records moved.
 
-BSD-2 permits all six modifications — this note exists so nobody assumes the
-vendored data still matches the source it came from.
+BSD-2 permits all seven modifications, the subsetting at item 1 included — this
+note exists so nobody assumes the vendored data still matches the source it came
+from, or that what ships here is all of what they published.
 
 The animation name -> id table in
 src/main/java/com/matthewmariner/livelycities/LivelyAnimation.java is likewise
@@ -130,10 +173,17 @@ added because their table had no name for something a record here needed:
   GnomeChildWalk    12042  AnimationID.GNOME_WALK
 
 The first four are standing poses for the cameo records above; the next three are
-standing poses for the four re-posed citizens in modification 4; the last two are
-the small-humanoid rig's own stand and walk, for modification 6. Their table's
-"ChildIdle" and "ChildWalk" are still there and still mean what they meant — two
-human emotes — they are simply no longer used by anything.
+standing poses for the four re-posed citizens in modification 5; the last two are
+the small-humanoid rig's own stand and walk, for modification 7. All nine are
+still used by a record that ships.
+
+Nothing was removed from that table when the eighteen region files went. It is a
+name -> id mapping transcribed from theirs, and a name means what it meant whether
+or not a file here still says it; deleting the entries the smaller dataset stopped
+using would make this table diverge from the one it is derived from for no reason
+a licensee would thank us for. Their "ChildIdle" and "ChildWalk" are still there
+and still mean what they meant — two human emotes — and after the subsetting there
+are simply more names like them.
 
 The model lighting parameters in LivelyEntity (ambient 64, contrast 850,
 x -30, y -50, z -30, passed to Model#light) are also taken from that project.

@@ -210,7 +210,7 @@ public class CrowdDensityTest
 	}
 
 	/**
-	 * And the same thing on the roster that actually ships, where 181 samples make
+	 * And the same thing on the roster that actually ships, where 151 samples make
 	 * the band much wider — one standard deviation is already ~3.6 points at the
 	 * sparse level. Loose on purpose: what this catches is the dataset's uuids
 	 * clustering pathologically, not a small deviation.
@@ -219,7 +219,7 @@ public class CrowdDensityTest
 	public void thinningIsNotPathologicalOnTheShippedRoster()
 	{
 		List<UUID> uuids = shippedUuids();
-		assertEquals("the whole shipped roster", 181, uuids.size());
+		assertEquals("the whole shipped roster", 151, uuids.size());
 
 		for (CrowdDensity density : CrowdDensity.values())
 		{

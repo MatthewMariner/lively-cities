@@ -50,18 +50,12 @@ final class CityTheme
 		// Al Kharid: the shipped dataset's one desert city.
 		byCity.put(City.AL_KHARID, Theme.DESERT);
 
-		// Musa Point: Karamja's jungle coastline. The only tropical city shipped.
-		byCity.put(City.MUSA_POINT, Theme.KARAMJA_JUNGLE);
-
-		// Canifis: Morytania's werewolf town.
-		byCity.put(City.CANIFIS, Theme.MORYTANIA_UNDEAD);
-
-		// The Barrows mounds themselves. Note this does NOT make the six
-		// Barrows Brothers compatible — they carry Theme.UNIQUE_BOSS, which is
-		// mapped to no city anywhere, deliberately. This entry is here for a
-		// generic, unnamed undead citizen (a "barrow wight", say), which the
-		// dataset does not currently ship.
-		byCity.put(City.BARROWS, Theme.MORYTANIA_UNDEAD);
+		// Musa Point (Karamja) and Canifis/the Barrows (Morytania) used to be
+		// here, carrying Theme.KARAMJA_JUNGLE and Theme.MORYTANIA_UNDEAD. All
+		// three places left the dataset in the nine-city cut, so both themes lost
+		// their only anchor and were removed from Theme along with these rows —
+		// see Theme's javadoc for the rule, which is the same one that keeps
+		// FREMENNIK_SNOW and an elven theme out.
 
 		// The Grand Exchange, and the only city that may hold a cameo. Note what
 		// this does *not* do: Theme.GENERIC is compatible with every region, so

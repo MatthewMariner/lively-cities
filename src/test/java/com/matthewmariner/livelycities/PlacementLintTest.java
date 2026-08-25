@@ -22,18 +22,26 @@ import static org.junit.Assert.assertTrue;
  * silent until a player noticed; this makes the same shape of mistake a red
  * test instead.
  *
- * <p><b>It found one real offender, and that offender has been fixed.</b> The
+ * <p><b>It found one real offender, and that offender was fixed.</b> The
  * six citizens in region 14131 were named after the Barrows Brothers, with
  * "The ghost of &lt;Brother&gt;." examine text — the 303-upvote complaint about
  * the predecessor. {@link EntityTheme} tagged them {@link Theme#UNIQUE_BOSS},
  * which {@link CityTheme} maps to no region, so the lint went red. On
  * 2026-08-23 they were renamed in the dataset to generic "Barrow wight"s
  * (placements, models and animations untouched — only the identities) and
- * retagged {@link Theme#MORYTANIA_UNDEAD}, which the Barrows region does
- * claim. The lint is green because they are now honestly undead in Morytania,
- * not because the check was relaxed: {@link PlacementExceptions} was
- * deliberately <b>not</b> used, since that list is for placements judged fine
- * on inspection and this one was not.
+ * retagged to the Morytania theme, which the Barrows region did claim. The lint
+ * went green because they were now honestly undead in Morytania, not because the
+ * check was relaxed: {@link PlacementExceptions} was deliberately <b>not</b>
+ * used, since that list is for placements judged fine on inspection and this one
+ * was not.
+ *
+ * <p><b>Region 14131 was then removed outright</b> in the nine-city cut on
+ * 2026-08-24, along with fourteen other thin places. That costs this file its
+ * only historical example of the rule biting real content — the live coverage is
+ * now the two Al Kharid transplants in Varrock, which violate and are excepted,
+ * and {@link #everyExceptionWouldActuallyViolateWithoutIt} is what keeps that
+ * exercised. It is a genuinely smaller sample than it was, and it is recorded
+ * here rather than quietly absorbed.
  *
  * <p><b>The six cameos are reasoned about, not exempted.</b> They are the only
  * player-shaped named humans in the dataset and they stand in the Grand

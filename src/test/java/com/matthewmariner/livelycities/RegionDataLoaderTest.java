@@ -13,7 +13,7 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * Fixtures live in {@code src/test/resources/TestRegionData/} so the loader can
- * be pointed at deliberately broken data without touching the 45 shipped files.
+ * be pointed at deliberately broken data without touching the 27 shipped files.
  */
 public class RegionDataLoaderTest
 {
@@ -224,7 +224,7 @@ public class RegionDataLoaderTest
 
 	/**
 	 * The shipped dataset, loaded through the real resource prefix. Audited by
-	 * hand: 45 files, 135 citizens (129 vendored plus the six cameos), 46 scenery,
+	 * hand: 27 files, 109 citizens (103 vendored plus the six cameos), 42 scenery,
 	 * every record valid.
 	 */
 	@Test
@@ -249,9 +249,9 @@ public class RegionDataLoaderTest
 			assertEquals(RegionDataLoader.EXPECTED_VERSION, region.getVersion(), 0.0001f);
 		}
 
-		assertEquals("region file count", 45, files);
-		assertEquals("citizen count", 135, citizens);
-		assertEquals("scenery count", 46, scenery);
+		assertEquals("region file count", 27, files);
+		assertEquals("citizen count", 109, citizens);
+		assertEquals("scenery count", 42, scenery);
 		assertEquals("nothing in the shipped data should be skipped", 0, skipped);
 	}
 

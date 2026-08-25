@@ -118,30 +118,33 @@ public class LivelyAnimationTest
 		assertTrue("animation names used by the dataset but absent from the enum: " + missing,
 			missing.isEmpty());
 
-		// Sanity: 63 distinct idleAnimation names and 28 distinct moveAnimation
-		// names across the 45 files, overlapping on HumanIdle and BeeIdle ->
-		// 89 distinct. A drop here means definitions stopped resolving names.
+		// Sanity: 54 distinct idleAnimation names and 19 distinct moveAnimation
+		// names across the 27 files, overlapping on BeeIdle alone -> 72 distinct.
+		// A drop here means definitions stopped resolving names.
 		//
-		// It was 81 before the six cameos, which brought in Alching, Flex and
-		// HumanLeanReady as idle poses; the other three (Fishing, Think, HumanIdle —
-		// and LectorIdle) were already in use elsewhere in the dataset. It went 84 ->
-		// 89 when the video pass corrected fourteen wrong gaits and re-posed seven
-		// figures: the moves gained GoblinWalk, PenguinWalk and KittenWalk (+3, and
-		// none of HumanWalk, DogWalk or DrunkenDwarfWalk left the dataset, they are
-		// each still right for somebody); the idles gained DrunkPlayerReady,
-		// VarrockTrampReady, NervousIdle, SlapHead, MageReady, ArmsCrossedReady and
-		// HumanSmugIdle (+7) and lost HalfLayingDown, CurledUp, Crying, Alching and
-		// Flex, which nothing else used (-5). FallenManIdle stayed: the scenery record
-		// beside Damien still uses it.
+		// The history, because a number that only ever moves without explanation is
+		// not evidence of anything. It was 81 before the six cameos, which brought in
+		// Alching, Flex and HumanLeanReady as idle poses; the other three (Fishing,
+		// Think, HumanIdle — and LectorIdle) were already in use elsewhere in the
+		// dataset. It went 84 -> 89 when the video pass corrected the wrong gaits and
+		// re-posed seven figures: the moves gained GoblinWalk, PenguinWalk and
+		// KittenWalk (+3), the idles gained DrunkPlayerReady, VarrockTrampReady,
+		// NervousIdle, SlapHead, MageReady, ArmsCrossedReady and HumanSmugIdle (+7)
+		// and lost HalfLayingDown, CurledUp, Crying, Alching and Flex, which nothing
+		// else used (-5). It stayed at 89 through the skeleton pass, which was
+		// arithmetic rather than luck: the idles lost ChildIdle and gained
+		// GnomeChildReady (0), the moves lost ChildWalk and gained GnomeChildWalk (0).
 		//
-		// It stayed at 89 through the skeleton pass, which is arithmetic rather than
-		// luck: the idles lost ChildIdle and gained GnomeChildReady (0), the moves lost
-		// ChildWalk and gained GnomeChildWalk (0), and Sludgellama moving from LectorIdle
-		// to NervousIdle moved neither — "Lector Argus" in 12852 still uses the first
-		// and "Damien" in 12342 already used the second. Dropping HumanIdle off one
-		// scenery record left 58 other users of it.
-		assertEquals("distinct animation names in the dataset", 89, ShippedAnimationNames.all().size());
-		assertEquals("distinct animations resolved onto definitions", 89, seen.size());
+		// 89 -> 72 is the nine-city cut on 2026-08-24, and it is the first move that
+		// is subtraction rather than editing: seventeen names left because every
+		// record using them left. They were the animal and monster vocabulary of the
+		// fifteen removed places — DwarfMining, GoblinFishIdle/Walk, MoleIdle/Walk,
+		// MonkeyIdle/Walk, PuffinIdle/Walk, SwanIdle/Walk, TanglerootIdle/Walk,
+		// TrollIdle/Walk and WerewolfIdle/Walk. HumanIdle stopped being an overlap
+		// because the one record that carried it as a *move* — "Ol' Tony" in 9273,
+		// Piscatoris — went with them; it is still a widely-used idle.
+		assertEquals("distinct animation names in the dataset", 72, ShippedAnimationNames.all().size());
+		assertEquals("distinct animations resolved onto definitions", 72, seen.size());
 	}
 
 	/**

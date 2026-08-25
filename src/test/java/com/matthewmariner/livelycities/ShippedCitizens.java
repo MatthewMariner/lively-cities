@@ -26,7 +26,7 @@ import java.util.List;
  * <p><b>Scenery is out of scope.</b> A {@code sceneryRoster} record carries no
  * {@code name} or {@code examineText} — {@link EntityRecord}'s own javadoc
  * says as much — so there is no signal to hand-author a theme from and no
- * name to write a table entry against. All 46 shipped scenery records are
+ * name to write a table entry against. All 42 shipped scenery records are
  * generic props (market stalls, planters — see the placement lint report),
  * and {@code PlacementLintTest} explains this rather than guessing a theme
  * from a bare {@code modelIds} array.
@@ -102,7 +102,8 @@ final class ShippedCitizens
 				string(record, "examineText"),
 				string(record, "entityType"),
 				bool(record, "cameo"),
-				integer(record, "npcAppearanceId")));
+				integer(record, "npcAppearanceId"),
+				authoredRemarks(record)));
 		}
 	}
 
@@ -125,6 +126,26 @@ final class ShippedCitizens
 		return value != null && value.isJsonPrimitive() ? value.getAsInt() : 0;
 	}
 
+	/**
+	 * How many remarks the record authored, or {@code null} for a record with no
+	 * {@code remarks} field at all.
+	 *
+	 * <p>The distinction is the whole reason this is read from the JSON rather than
+	 * from {@link EntityDefinition}: the validation gate flattens "no field",
+	 * "{@code []}", "all blank" and "scenery" into one empty array on purpose, so
+	 * asking it how many records spelled silence which way gets one answer for all
+	 * four.
+	 */
+	private static Integer authoredRemarks(JsonObject record)
+	{
+		JsonElement value = record.get("remarks");
+		if (value == null || value.isJsonNull())
+		{
+			return null;
+		}
+		return value.isJsonArray() ? value.getAsJsonArray().size() : null;
+	}
+
 	/** One shipped {@code citizenRoster} record, exactly as authored. */
 	static final class Entry
 	{
@@ -140,6 +161,13 @@ final class ShippedCitizens
 		/** The record's own {@code npcAppearanceId}, or {@code 0} if it has none. */
 		final int npcAppearanceId;
 
+		/**
+		 * How many remarks the record authored, or {@code null} for one carrying no
+		 * {@code remarks} field at all — the difference {@link EntityDefinition}
+		 * deliberately flattens away.
+		 */
+		final Integer authoredRemarks;
+
 		Entry(
 			int fileRegionId,
 			String uuid,
@@ -147,7 +175,8 @@ final class ShippedCitizens
 			String examineText,
 			String entityType,
 			boolean cameo,
-			int npcAppearanceId)
+			int npcAppearanceId,
+			Integer authoredRemarks)
 		{
 			this.fileRegionId = fileRegionId;
 			this.uuid = uuid;
@@ -156,6 +185,7 @@ final class ShippedCitizens
 			this.entityType = entityType;
 			this.cameo = cameo;
 			this.npcAppearanceId = npcAppearanceId;
+			this.authoredRemarks = authoredRemarks;
 		}
 
 		@Override

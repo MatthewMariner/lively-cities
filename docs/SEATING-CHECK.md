@@ -3,6 +3,15 @@
 **Status: not yet walked. No pose or tile on this list has been changed, and none
 should be until it is.**
 
+**Re-verified after the nine-city cut (2026-08-24), and unchanged.** The cut deleted
+eighteen region files, so this list was recomputed from the reduced dataset rather
+than assumed to still hold. All thirty-one figures survive: every one of them stands
+in Varrock, Lumbridge, the Grand Exchange, Edgeville, Ardougne, Catherby or Draynor,
+and none of the fifteen removed places held a seated or leaning figure at all. The
+"scenery this dataset places nearby" lines were recomputed too — no deleted record
+was within three tiles of any tile below, so not one of those lines moved. Grimefang,
+in the open question at the end, is in Lumbridge and also survives.
+
 Five of the figures below — Thalindra, the Dark wizard, Nightfire, Dofur and Simon —
 did have their `moveAnimation` corrected in the same pass that produced this file,
 because it named a different creature's skeleton from their pose and their models. That

@@ -1,6 +1,16 @@
 package com.matthewmariner.livelycities;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -25,11 +35,12 @@ public class CitizenRemarksTest
 	/**
 	 * All four spellings of silence, side by side.
 	 *
-	 * <p>All four are in the shipped data — 33 citizens carry remarks, 54 carry
-	 * {@code "remarks": []}, 42 carry no field at all, and all 46 scenery records
+	 * <p>All four are in the shipped data — 34 citizens carry remarks, 51 carry
+	 * {@code "remarks": []}, 24 carry no field at all, and all 42 scenery records
 	 * omit it — so this is a fixture matching reality rather than an invented edge
 	 * case. Flattening them at the validation gate is what lets every later reader
-	 * ask one question.
+	 * ask one question. {@link #theShippedRemarksPartitionAddsUpToTheRoster()} is
+	 * what keeps those four numbers honest.
 	 */
 	@Test
 	public void everyKindOfSilenceProducesNoRemarksAtAll()
@@ -187,6 +198,140 @@ public class CitizenRemarksTest
 	private CitizenRemarks remarksFor(String... remarks)
 	{
 		return remarksFor(regions.talker(12853, 3220, 3420, remarks));
+	}
+
+	/**
+	 * The four-way split above, recomputed from the shipped files — and made to add
+	 * up.
+	 *
+	 * <p><b>Why a test and not a javadoc sentence.</b> The split was written down in
+	 * two places and drifted in both, and the drift was invisible because nothing
+	 * added the parts together: one version of it claimed 39 + 54 + 24 remark
+	 * spellings across a roster of 109 citizens, which is 117 citizens and therefore
+	 * could not have been true of any dataset. A partition is the cheapest kind of
+	 * claim to guard — the parts have to be the whole — so this asserts both the
+	 * parts and the sum, and the totals it checks them against are counted rather
+	 * than typed.
+	 *
+	 * <p>Read through {@link ShippedCitizens} rather than {@link EntityDefinition},
+	 * because the four spellings are exactly what the validation gate flattens: ask
+	 * a definition and all four look identical.
+	 */
+	@Test
+	public void theShippedRemarksPartitionAddsUpToTheRoster()
+	{
+		int carryRemarks = 0;
+		int carryAnEmptyArray = 0;
+		int carryNoField = 0;
+
+		for (ShippedCitizens.Entry citizen : ShippedCitizens.all())
+		{
+			if (citizen.authoredRemarks == null)
+			{
+				carryNoField++;
+			}
+			else if (citizen.authoredRemarks == 0)
+			{
+				carryAnEmptyArray++;
+			}
+			else
+			{
+				carryRemarks++;
+			}
+		}
+
+		int citizens = 0;
+		int scenery = 0;
+		int sceneryWithARemarksField = 0;
+		int silent = 0;
+		RegionDataLoader loader = new RegionDataLoader(TestGson.injected());
+		List<EntityDefinition> entities = new ArrayList<>();
+		for (int regionId : ShippedRegions.ids())
+		{
+			RegionDefinition region = loader.loadRegion(regionId);
+			assertNotNull("region " + regionId + " failed to load", region);
+			entities.addAll(region.getEntities());
+		}
+
+		for (EntityDefinition entity : entities)
+		{
+			if (entity.getType().isCitizen())
+			{
+				citizens++;
+			}
+			else
+			{
+				scenery++;
+			}
+
+			if (CitizenRemarks.forDefinition(entity) == null)
+			{
+				silent++;
+			}
+		}
+
+		for (int regionId : ShippedRegions.ids())
+		{
+			sceneryWithARemarksField += sceneryRecordsCarryingRemarks(regionId);
+		}
+
+		assertEquals("citizens carrying at least one remark", 34, carryRemarks);
+		assertEquals("citizens carrying \"remarks\": []", 51, carryAnEmptyArray);
+		assertEquals("citizens carrying no remarks field at all", 24, carryNoField);
+		assertEquals("scenery records, none of which carry the field", 42, scenery);
+		assertEquals("and none of them carry it", 0, sceneryWithARemarksField);
+
+		assertEquals("the three citizen spellings have to be the whole roster and nothing "
+				+ "more — a split that does not add up is the failure this test exists for",
+			citizens, carryRemarks + carryAnEmptyArray + carryNoField);
+		assertEquals("and the roster is the shipped one", 109, citizens);
+
+		assertEquals("every spelling of silence ends up as one empty array, which is what "
+				+ "EntityDefinition.NO_REMARKS is shared across",
+			carryAnEmptyArray + carryNoField + scenery, silent);
+		assertEquals("and that shared array covers this many of the shipped entities — the "
+				+ "figure EntityDefinition.NO_REMARKS and LivelyEntity.remarks both quote",
+			117, silent);
+		assertEquals("151 shipped entities, and the ones with nothing to say",
+			151, silent + carryRemarks);
+	}
+
+	/**
+	 * @return how many {@code sceneryRoster} records in one region file carry a
+	 * {@code remarks} field — the fourth spelling of silence, which
+	 * {@link ShippedCitizens} does not cover because it reads the citizen roster
+	 */
+	private static int sceneryRecordsCarryingRemarks(int regionId)
+	{
+		String resource = RegionDataLoader.DEFAULT_RESOURCE_PREFIX + regionId + ".json";
+		InputStream in = CitizenRemarksTest.class.getClassLoader().getResourceAsStream(resource);
+		assertNotNull("missing " + resource, in);
+
+		JsonObject root;
+		try (Reader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8)))
+		{
+			root = TestGson.injected().fromJson(reader, JsonObject.class);
+		}
+		catch (IOException e)
+		{
+			throw new IllegalStateException("could not read " + resource, e);
+		}
+
+		JsonElement roster = root.get("sceneryRoster");
+		if (roster == null || !roster.isJsonArray())
+		{
+			return 0;
+		}
+
+		int carrying = 0;
+		for (JsonElement element : roster.getAsJsonArray())
+		{
+			if (element.isJsonObject() && element.getAsJsonObject().has("remarks"))
+			{
+				carrying++;
+			}
+		}
+		return carrying;
 	}
 
 	private CitizenRemarks remarksFor(EntityDefinition definition)

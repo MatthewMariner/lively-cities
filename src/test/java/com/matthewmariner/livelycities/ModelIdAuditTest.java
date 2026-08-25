@@ -107,7 +107,7 @@ public class ModelIdAuditTest
 			violations.isEmpty());
 
 		// Both halves have to be non-empty or this test is only checking one rule.
-		assertEquals("entities dressed from raw model ids", 174, fromModelIds);
+		assertEquals("entities dressed from raw model ids", 144, fromModelIds);
 		assertEquals("entities dressed from an NPC appearance", 7, fromNpcAppearance);
 	}
 
@@ -220,9 +220,11 @@ public class ModelIdAuditTest
 
 	/**
 	 * The load-bearing pin. The plan's L0 audit measured 384 — the exact input list
-	 * the cache-backed validator had to check. It is 376 now: "Rufus" in Varrock was
-	 * moved onto an {@code npcAppearanceId} (GitHub issue #1) and eight of his twelve
-	 * model ids were used by nobody else, so they left the corpus with him. A dataset
+	 * the cache-backed validator had to check. It went to 376 when "Rufus" in Varrock
+	 * was moved onto an {@code npcAppearanceId} (GitHub issue #1) and eight of his
+	 * twelve model ids, used by nobody else, left the corpus with him. It is 324 now:
+	 * the nine-city cut on 2026-08-24 removed eighteen region files, and 52 model ids
+	 * went with them because nothing in the surviving nine places wears them. A dataset
 	 * change that adds or removes model ids has to move this number, which is what makes
 	 * the change visible in review rather than silently changing what the durability
 	 * tooling covers.
@@ -233,7 +235,7 @@ public class ModelIdAuditTest
 		assertEquals("distinct model ids across the shipped dataset — see the L0 audit in "
 				+ "plans/osrs-lively-cities.md; a change here means the durability tooling's "
 				+ "input list changed and should be re-reviewed",
-			376, ShippedModelIds.distinct().size());
+			324, ShippedModelIds.distinct().size());
 	}
 
 	/**

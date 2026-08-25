@@ -33,14 +33,23 @@ public class CrowdedSceneTest
 	private static final int VARROCK_SOUTH = 12852;
 	private static final int VARROCK_NORTH = 12853;
 
-	/** Piscatoris' one region file: 9272, x 2304..2367, y 3584..3647. */
-	private static final int PISCATORIS_HARBOUR = 9272;
+	/**
+	 * Varrock's east-gate road: 13109, x 3264..3327, y 3392..3455. The northern
+	 * edge of a region a city really does claim.
+	 */
+	private static final int VARROCK_EAST_GATE_ROAD = 13109;
 
 	/**
-	 * The region immediately south of it, y 3520..3583. No city claims it and no
-	 * region file ships for it, which is exactly why echoes could hide there.
+	 * The region immediately north of it, y 3456..3519 — the Lumber Yard's square.
+	 * No city claims it and no region file ships for it, which is exactly why
+	 * echoes can hide there.
+	 *
+	 * <p>It is unclaimed for a reason worth knowing: it shipped as its own
+	 * "Lumber Yard" checkbox over one citizen until the nine-city cut on
+	 * 2026-08-24 removed it. So this is not a hypothetical square picked off a
+	 * map — it is a real hole the cut opened directly against a surviving city.
 	 */
-	private static final int UNCLAIMED_SOUTH_OF_PISCATORIS = 9271;
+	private static final int UNCLAIMED_NORTH_OF_THE_EAST_GATE = 13110;
 
 	private static final WorldPoint PLAYER = new WorldPoint(3225, 3360, 0);
 
@@ -612,51 +621,68 @@ public class CrowdedSceneTest
 	 * <b>Unticking a city takes its echoes with it even when an echo has stepped over
 	 * a border into a region no city claims.</b>
 	 *
-	 * <p>Run against the real dataset, because the case only exists there and because
-	 * it is the case that used to escape. {@link City#isEnabled} answers {@code true}
-	 * for an unclaimed region on purpose — that is what lets a region file ship one
-	 * commit before its checkbox — so an echo judged by its own tile went through that
-	 * door: three of Piscatoris's echoes stand in region 9271, which no city claims and
-	 * which ships no file, and unticking Piscatoris left them standing in the empty
-	 * fields south of the village. They are judged by their source's city now, so they
-	 * go when it goes and come back when it comes back.
+	 * <p>{@link City#isEnabled} answers {@code true} for an unclaimed region on purpose
+	 * — that is what lets a region file ship one commit before its checkbox — so an
+	 * echo judged by its own tile went through that door: three of Piscatoris's echoes
+	 * used to stand in region 9271, which no city claimed and which shipped no file,
+	 * and unticking Piscatoris left them standing in the empty fields south of the
+	 * village. They are judged by their source's city now, so they go when it goes and
+	 * come back when it comes back.
+	 *
+	 * <p><b>This used to run against the real dataset and no longer can.</b> The
+	 * nine-city cut on 2026-08-24 removed Piscatoris, and with it the only place in the
+	 * shipped data where an echo crossed into a region no city claims: all 121 echoes
+	 * the surviving 27 regions seed now stand in a region their own city claims. That
+	 * is a real reduction in what this test proves — a hand-built fixture rather than a
+	 * live case — and it is stated here rather than absorbed, because the instruction
+	 * this file used to carry ("if the dataset moved, find the new case rather than
+	 * deleting this test") assumed a new case existed, and none does.
+	 *
+	 * <p>The geometry stays as close to the real thing as it can. The source is filed
+	 * under 13109, a region {@link City#VARROCK} genuinely claims; the echo lands in
+	 * 13110, which is genuinely unclaimed and genuinely ships no file — because the
+	 * same cut deleted it. So the hole being exercised is one the cut actually opened,
+	 * directly north of a surviving city, rather than an invented square.
 	 */
 	@Test
 	public void untickingACityAlsoRemovesTheEchoesStandingInARegionNoCityClaims()
 	{
-		EntityScene real = new EntityScene(
-			client, new RegionDataLoader(TestGson.injected()), config, config.overrides());
-
-		// Piscatoris' harbour, and the unclaimed region immediately south of it. Both
-		// have to be in the scene: scope membership is keyed on the entity's own tile,
-		// so an echo standing in 9271 is only in scope while 9271 is loaded.
-		WorldPoint spot = new WorldPoint(2337, 3585, 0);
+		// The north edge of Varrock's east-gate road, and the unclaimed region
+		// immediately north of it. Both have to be in the scene: scope membership is
+		// keyed on the entity's own tile, so an echo standing in 13110 is only in
+		// scope while 13110 is loaded.
+		WorldPoint spot = new WorldPoint(3290, 3454, 0);
+		regions.file(VARROCK_EAST_GATE_ROAD,
+			regions.recoloured(VARROCK_EAST_GATE_ROAD, spot.getX(), spot.getY(), 6));
 		config.setCrowdDensity(CrowdDensity.CROWDED);
 
-		FakeWorldView view = FakeWorldView.around(spot, PISCATORIS_HARBOUR, UNCLAIMED_SOUTH_OF_PISCATORIS);
-		real.syncRegions(view);
-		VisibilityPasses.settle(real, spot, view);
+		FakeWorldView view = FakeWorldView.around(
+			spot, VARROCK_EAST_GATE_ROAD, UNCLAIMED_NORTH_OF_THE_EAST_GATE);
+		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, spot, view);
 
-		int strays = countActiveEchoesInUnclaimedRegions(real);
-		assertTrue("the fixture depends on real echoes crossing into region "
-				+ UNCLAIMED_SOUTH_OF_PISCATORIS + " — if the dataset moved, find the new case "
-				+ "rather than deleting this test", strays > 0);
-		assertTrue("and on their authored sources being on screen too",
-			real.countActiveAuthored() > 0);
-		assertNull("the region they stand in really is unclaimed",
-			City.of(UNCLAIMED_SOUTH_OF_PISCATORIS));
+		int strays = countActiveEchoesInUnclaimedRegions(scene);
+		assertTrue("the fixture depends on an echo crossing into region "
+				+ UNCLAIMED_NORTH_OF_THE_EAST_GATE + " — if the echo ring or the separation "
+				+ "distance moves, re-site the source rather than deleting this test", strays > 0);
+		assertTrue("and on its authored source being on screen too",
+			scene.countActiveAuthored() > 0);
+		assertNull("the region it stands in really is unclaimed",
+			City.of(UNCLAIMED_NORTH_OF_THE_EAST_GATE));
+		assertEquals("and the region its source is filed under really is claimed",
+			City.VARROCK, City.of(VARROCK_EAST_GATE_ROAD));
 
-		config.disableOnly(City.PISCATORIS);
-		real.onSettingsChanged(spot, view);
+		config.disableOnly(City.VARROCK);
+		scene.onSettingsChanged(spot, view);
 
-		assertEquals("unticking Piscatoris has to take everything derived from Piscatoris "
+		assertEquals("unticking Varrock has to take everything derived from Varrock "
 				+ "with it, wherever it ended up standing", 0, client.registeredCount());
 
-		config.enable(City.PISCATORIS);
-		real.onSettingsChanged(spot, view);
+		config.enable(City.VARROCK);
+		scene.onSettingsChanged(spot, view);
 
 		assertEquals("and ticking it again brings the same strays back",
-			strays, countActiveEchoesInUnclaimedRegions(real));
+			strays, countActiveEchoesInUnclaimedRegions(scene));
 	}
 
 	/**

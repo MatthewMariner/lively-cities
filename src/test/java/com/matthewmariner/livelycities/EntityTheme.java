@@ -21,13 +21,16 @@ import java.util.Map;
  * {@code EntityDefinition.stableHash}) with the quote that justified it next
  * to it.
  *
- * <p><b>Confidence, entry by entry.</b> The six Barrows Brothers and Harry the
- * monkey are certain — the examine text names the character outright, or the
- * name is the character. The three Al Kharid "Ali"s are certain the same way.
- * Steven the werewolf is certain. "Ali" and "Afrah" in Varrock are certain
- * <i>as {@link Theme#DESERT}</i> — their own examine text says so — but
+ * <p><b>Confidence, entry by entry.</b> The three Al Kharid "Ali"s are certain —
+ * the examine text names the character outright, or the name is the character.
+ * The six cameos are certain the same way. "Ali" and "Afrah" in Varrock are
+ * certain <i>as {@link Theme#DESERT}</i> — their own examine text says so — but
  * whether that is a bug is a separate question, answered by
  * {@code PlacementExceptions}, not by this table.
+ *
+ * <p>(Harry the monkey, Steven the werewolf and the six Barrow wights were listed
+ * here on the same footing until the nine-city cut removed all three places from
+ * the dataset. See the comment where their rows used to be.)
  *
  * <p><b>What was found and deliberately left out</b>, because the signal did
  * not clear the bar above: nine "a dwarf" citizens scattered across five
@@ -38,7 +41,10 @@ import java.util.Map;
  * outright — Ak-Haranu does neither); "Ghost" (Draynor) and "Ghost of
  * Lumbridge", both generic haunting flavour rather than a named character, and
  * common enough across Gielinor that tagging bare "ghost" would flag two fine
- * placements to catch nothing sharper than the Barrows table already catches.
+ * placements and catch nothing. (When this was written the sharper catch was the
+ * six Barrow wights, which are no longer in the dataset — see below. That removes
+ * the comparison, not the conclusion: a bare "ghost" tag would still be two false
+ * positives and no true one.)
  */
 final class EntityTheme
 {
@@ -71,28 +77,18 @@ final class EntityTheme
 		byUuid.put("ee3c3e90-7fe5-4387-a976-74463163dab7", Theme.DESERT); // "Ali", 12853, "He looks like he's from Al-Kharid."
 		byUuid.put("fc28fec2-c105-49ab-8040-e36dda874646", Theme.DESERT); // "Afrah", 12853, "She looks like she's from Al-Kharid."
 
-		// --- Karamja / jungle ----------------------------------------------------
-		byUuid.put("8dcbbf3c-f074-4ba7-9ec2-cf0780fb39c3", Theme.KARAMJA_JUNGLE); // "Harry", "A little monkey.", 11569 Musa Point
-
-		// --- Morytania / undead --------------------------------------------------
-		byUuid.put("e8b75a86-588c-445a-b118-8414b4dae5ca", Theme.MORYTANIA_UNDEAD); // "Steven", "A freshly-turned werewolf.", 13878 Canifis
-
-		// --- Unique bosses ---------------------------------------------------------
-		// The six Barrows Brothers, region 14131. Named outright in their own
-		// Region 14131 (the Barrows) held six citizens named after the Barrows
-		// Brothers, with "The ghost of <Brother>." examine text — the 303-upvote
-		// complaint against the predecessor. Softened rather than deleted
-		// (Matthew's call, 2026-08-23): the placements were fine, the
-		// impersonation was not. They are now six generic "Barrow wight"s, so
-		// MORYTANIA_UNDEAD is the honest tag and it matches the region's own
-		// theme. Kept in this table on purpose: tagging them GENERIC would let
-		// them pass anywhere, and undead belong in Morytania specifically.
-		byUuid.put("cf1b6b28-f503-4901-9077-40aeda080fe5", Theme.MORYTANIA_UNDEAD);
-		byUuid.put("d78ce759-d6ca-43ba-ba38-3af7d181c436", Theme.MORYTANIA_UNDEAD);
-		byUuid.put("8b8d70ef-f890-4fdd-bc67-23549a7dabe1", Theme.MORYTANIA_UNDEAD);
-		byUuid.put("65a7afe5-950c-4031-9453-41d8d5f68a07", Theme.MORYTANIA_UNDEAD);
-		byUuid.put("ce292e57-cdc3-4132-9a8f-01c139903a50", Theme.MORYTANIA_UNDEAD);
-		byUuid.put("976bfe11-b438-412a-ad26-57615c673017", Theme.MORYTANIA_UNDEAD);
+		// --- Karamja / jungle, and Morytania / undead ------------------------------
+		// Eight rows used to live here and no longer do, because the citizens they
+		// named no longer ship: "Harry" the monkey (KARAMJA_JUNGLE, 11569 Musa
+		// Point), "Steven" the werewolf (MORYTANIA_UNDEAD, 13878 Canifis) and the
+		// six Barrow wights (MORYTANIA_UNDEAD, 14131) all went in the nine-city cut
+		// on 2026-08-24, and both themes went with them — see Theme.
+		//
+		// The rows were deleted rather than left in place. A uuid in this table that
+		// matches nothing in the dataset protects nothing while reading as though it
+		// does, which is the same failure PlacementLintTest.everyExceptionNamesA
+		// ShippedCitizen makes a red test for PlacementExceptions; this table has no
+		// such guard, so the discipline has to be manual.
 
 		// --- Cameos ---------------------------------------------------------------
 		// The six named likenesses of the plugin author's friends, region 12598

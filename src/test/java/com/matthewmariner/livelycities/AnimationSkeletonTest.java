@@ -18,16 +18,21 @@ import static org.junit.Assert.assertTrue;
  *
  * <h2>The defect this exists for</h2>
  *
- * <p>A human playing the plugin and recording video found ten citizens whose
+ * <p>A human playing the plugin and recording video found citizens whose
  * {@code idleAnimation} and {@code moveAnimation} had been taken from different
  * creatures: goblins that stood like goblins and walked like men, a penguin with a
- * human gait, five dwarves the same, a bee swarm on {@code HumanWalk}, a cat on
+ * human gait, four dwarves the same, a bee swarm on {@code HumanWalk}, a cat on
  * {@code HumanWalk} — and, in the other direction, a man at a furnace who walked
- * like a stray dog. An offline sweep against the 1.12.36 cache found three more
- * nobody had reported: another man on {@code DogWalk} and two women on
+ * like a stray dog. That is ten. An offline sweep against the 1.12.36 cache found
+ * three more nobody had reported: another man on {@code DogWalk} and two women on
  * {@code DrunkenDwarfWalk}.
  *
- * <p>Thirteen of the fourteen never move — only "Bees!" in Varrock carries a wander
+ * <p>There was a fifth dwarf, "Draug" in the Motherlode Mine, which made it fourteen
+ * rather than thirteen; region 14936 left the dataset in the nine-city cut on
+ * 2026-08-24, so both the citizen and its correction are gone and every count in this
+ * file is one lower than it was.
+ *
+ * <p>Twelve of the thirteen never move — only "Bees!" in Varrock carries a wander
  * box — so in all but one case the wrong gait was latent rather than visible. That is
  * precisely why it needs a test and not just a fix: the
  * dataset's whole claim on anyone's attention is that it is trustworthy, and a
@@ -37,7 +42,7 @@ import static org.junit.Assert.assertTrue;
  *
  * <p>The first rule here is the one the dataset can ask about itself: the two
  * animations on one record must drive the same skeleton as each other. Every one of
- * the fourteen fails that, and no correct record does — a figure with one body cannot
+ * the thirteen fails that, and no correct record does — a figure with one body cannot
  * have two rigs.
  *
  * <p>It has a blind spot exactly one record wide, and it is not hypothetical.
@@ -67,12 +72,12 @@ public class AnimationSkeletonTest
 	 * <p>Pinned, and load-bearing. The comparison below skips a record with only one
 	 * animation, so a bug that made {@link EntityDefinition} drop move animations
 	 * entirely would empty the sample and turn every assertion green. This is the
-	 * number that stops that: 99 of the 135 shipped citizens have both.
+	 * number that stops that: 73 of the 109 shipped citizens have both.
 	 */
-	private static final int CITIZENS_WITH_BOTH_ANIMATIONS = 99;
+	private static final int CITIZENS_WITH_BOTH_ANIMATIONS = 73;
 
 	/**
-	 * The one that would have caught all fourteen.
+	 * The one that would have caught all thirteen.
 	 */
 	@Test
 	public void noCitizenWalksOnADifferentSkeletonFromTheOneItStandsOn()
@@ -120,11 +125,11 @@ public class AnimationSkeletonTest
 	 * skips a record whose models nothing in the cache is built out of, so a bug that
 	 * emptied {@link ModelSkeletons} would turn every assertion green.
 	 *
-	 * <p>The arithmetic: 181 shipped records, 14 of them carrying no animation at all,
-	 * leaves 167 this rule could apply to. 138 of those have a body the cache can put a
-	 * rig on and 29 do not — see {@link #RECORDS_WITH_NO_RIG_EVIDENCE}.
+	 * <p>The arithmetic: 151 shipped records, 14 of them carrying no animation at all,
+	 * leaves 137 this rule could apply to. 112 of those have a body the cache can put a
+	 * rig on and 25 do not — see {@link #RECORDS_WITH_NO_RIG_EVIDENCE}.
 	 */
-	private static final int RECORDS_WITH_A_TRACEABLE_RIG = 138;
+	private static final int RECORDS_WITH_A_TRACEABLE_RIG = 112;
 
 	/**
 	 * The other side of that split, pinned so it cannot quietly grow.
@@ -136,7 +141,7 @@ public class AnimationSkeletonTest
 	 * landing in this bucket would mean somebody had authored a person out of scenery
 	 * models, and that should be visible.
 	 */
-	private static final int RECORDS_WITH_NO_RIG_EVIDENCE = 29;
+	private static final int RECORDS_WITH_NO_RIG_EVIDENCE = 25;
 
 	/**
 	 * An animation has to drive the skeleton the record's own body is rigged to.
@@ -220,6 +225,11 @@ public class AnimationSkeletonTest
 	 * framemap 0, so a table that rounded the rest off to human would look almost right
 	 * and pass every record in the dataset. The counts and the four spot-checks below
 	 * are what stops that.
+	 *
+	 * <p>These four counts are properties of the <b>table</b>, which the nine-city cut
+	 * did not touch — see {@link ModelSkeletons} for why its rows outlive the dataset.
+	 * The matching claim about the <b>dataset</b> is
+	 * {@link #everyShippedModelIdIsEitherRiggedOrExplicitlyUnriggable}.
 	 */
 	@Test
 	public void theModelSkeletonTableTellsTheBodiesApart()
@@ -248,6 +258,72 @@ public class AnimationSkeletonTest
 			Collections.singleton(1944), ModelSkeletons.framemapsOf(41886));
 		assertEquals("and a brazier is on nothing at all — it is object geometry",
 			Collections.<Integer>emptySet(), ModelSkeletons.framemapsOf(2260));
+	}
+
+	/**
+	 * Every model id the dataset actually ships is classified one way or the other:
+	 * it has a rig recorded, or it is named as having no NPC to infer one from.
+	 *
+	 * <p>This is the guard that used to be implicit. {@link ModelSkeletons} held
+	 * exactly as many rows as the dataset had distinct model ids — 340 rigged plus 36
+	 * unriggable, against 376 shipped — so a shipped id nobody had looked up showed as
+	 * a size mismatch in {@link #theModelSkeletonTableTellsTheBodiesApart}. The
+	 * nine-city cut took the dataset to 324 without touching the table (see
+	 * {@link ModelSkeletons} for why the extra rows were kept), so the two are no
+	 * longer the same set and that coincidence stopped doing any work.
+	 *
+	 * <p>Stated directly it is a better check than the coincidence was: it fails with
+	 * the id that has no row, rather than with two numbers that disagree. An
+	 * unclassified id is not cosmetic — {@link ModelSkeletons#impliedRig} would return
+	 * an empty set for a record built only out of such ids, and
+	 * {@link #noRecordPlaysAnAnimationOnASkeletonItsOwnBodyIsNotRiggedTo} skips a
+	 * record with no rig evidence, so the animation rule would silently stop being
+	 * asked of it.
+	 */
+	@Test
+	public void everyShippedModelIdIsEitherRiggedOrExplicitlyUnriggable()
+	{
+		Set<Integer> unclassified = new TreeSet<>();
+		int rigged = 0;
+		int unriggable = 0;
+
+		for (int modelId : ShippedModelIds.distinct())
+		{
+			boolean hasRig = !ModelSkeletons.framemapsOf(modelId).isEmpty();
+			boolean named = ModelSkeletons.NO_NPC_EVIDENCE.contains(modelId);
+
+			if (hasRig && named)
+			{
+				unclassified.add(modelId);
+				continue;
+			}
+
+			if (hasRig)
+			{
+				rigged++;
+			}
+			else if (named)
+			{
+				unriggable++;
+			}
+			else
+			{
+				unclassified.add(modelId);
+			}
+		}
+
+		assertTrue("shipped model id(s) with no row in ModelSkeletons and no place on its "
+				+ "NO_NPC_EVIDENCE list — look them up in the cache and add them, or the "
+				+ "animation rule quietly stops being asked of whatever wears them: "
+				+ unclassified, unclassified.isEmpty());
+
+		// Both buckets pinned, so a table that classified everything as unriggable —
+		// which would empty impliedRig() and turn the animation rule green everywhere —
+		// fails here rather than passing.
+		assertEquals("shipped model ids with a rig recorded", 290, rigged);
+		assertEquals("shipped model ids no NPC is built out of", 34, unriggable);
+		assertEquals("and the two buckets have to account for the whole dataset",
+			ShippedModelIds.distinct().size(), rigged + unriggable);
 	}
 
 	/**
@@ -287,8 +363,8 @@ public class AnimationSkeletonTest
 	 *
 	 * <p>This is the fake-test guard, and it is not hypothetical: a table that mapped
 	 * every animation to {@link AnimationSkeletons#HUMAN} would pass the comparison for
-	 * all 99 records including the fourteen broken ones, because every pair would agree
-	 * on 0. So the six skeletons the fourteen fixes actually turned on are named here
+	 * all 73 records including the thirteen broken ones, because every pair would agree
+	 * on 0. So the six skeletons the thirteen fixes actually turned on are named here
 	 * individually, asserted distinct from the human one and from each other, and the
 	 * distinct-framemap count across the whole table is pinned on top.
 	 */
@@ -328,13 +404,13 @@ public class AnimationSkeletonTest
 	 *
 	 * <p>The sweep above says "no citizen disagrees with itself", which stays true if
 	 * somebody fixes a mismatch by making the citizen stationary or by copying the
-	 * wrong animation onto both fields. This says what each of the fourteen was
+	 * wrong animation onto both fields. This says what each of the thirteen was
 	 * actually given, so a regression that re-broke one of them fails with that
 	 * citizen's name in the message rather than as an anonymous list entry.
 	 *
-	 * <p><b>"Its own species' gait" is nine of the fourteen, not fourteen.</b> The
+	 * <p><b>"Its own species' gait" is eight of the thirteen, not thirteen.</b> The
 	 * method is named for the skeleton, not the animation, because that is all the
-	 * fourteen have in common. Nine got the exact {@code walk} of the NPC whose model
+	 * thirteen have in common. Eight got the exact {@code walk} of the NPC whose model
 	 * list the record copies. Grimefang and Sludgenose got {@code GoblinWalk} (6202)
 	 * where NPC 3028 "Goblin" — which owns their exact models — walks on 6180; both are
 	 * framemap 1415, so the rig is right and the animation is a different goblin walk.
@@ -345,7 +421,7 @@ public class AnimationSkeletonTest
 	 * that and not this.
 	 */
 	@Test
-	public void theFourteenCorrectedCitizensCarryAGaitFromTheirOwnSkeleton()
+	public void theThirteenCorrectedCitizensCarryAGaitFromTheirOwnSkeleton()
 	{
 		assertGait(12594, "Grimefang", LivelyAnimation.GoblinChill, LivelyAnimation.GoblinWalk);
 		assertGait(12594, "Sludgenose", LivelyAnimation.GoblinIdle3, LivelyAnimation.GoblinWalk);
@@ -356,7 +432,6 @@ public class AnimationSkeletonTest
 		assertGait(12853, "Simon", LivelyAnimation.DwarfSit, LivelyAnimation.DwarfWalk);
 		assertGait(12853, "Rifur", LivelyAnimation.DwarfSmith, LivelyAnimation.DwarfWalk);
 		assertGait(12853, "Dorgud", LivelyAnimation.DwarfIdle, LivelyAnimation.DwarfWalk);
-		assertGait(14936, "Draug", LivelyAnimation.DwarfMining, LivelyAnimation.DwarfWalk);
 		assertGait(12850, "Zack", LivelyAnimation.FurnaceSmelt, LivelyAnimation.HumanWalk);
 		assertGait(11061, "Forester", LivelyAnimation.Woodcutting, LivelyAnimation.HumanWalk);
 		assertGait(12850, "Thalindra", LivelyAnimation.Sitting, LivelyAnimation.HumanWalk);

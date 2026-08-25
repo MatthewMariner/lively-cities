@@ -37,7 +37,7 @@ public final class EntityDefinition
 	private static final int JAU_FULL_ROTATION = 2048;
 	private static final int MAX_PLANE = 3;
 
-	/** Shared, so 142 of the 181 entities do not each allocate an empty array. */
+	/** Shared, so 117 of the 151 entities do not each allocate an empty array. */
 	private static final String[] NO_REMARKS = new String[0];
 
 	private final UUID uuid;
@@ -554,11 +554,13 @@ public final class EntityDefinition
 	 * The one-liners this entity may say, with the four ways of having nothing to
 	 * say flattened into one empty array.
 	 *
-	 * <p>All four occur in the shipped data: 39 citizens carry remarks, 54 carry
-	 * {@code "remarks": []}, 42 carry no {@code remarks} field at all, and all 46
-	 * scenery records omit it. {@link CitizenRemarks#forDefinition} then has one
-	 * condition to check rather than four, and {@link CitizenChatter} never has to
-	 * ask what kind of silence it is looking at.
+	 * <p>All four occur in the shipped data: 34 citizens carry remarks, 51 carry
+	 * {@code "remarks": []}, 24 carry no {@code remarks} field at all — 34 + 51 + 24
+	 * being the 109 shipped citizens — and all 42 scenery records omit it.
+	 * {@link CitizenRemarks#forDefinition} then has one condition to check rather
+	 * than four, and {@link CitizenChatter} never has to ask what kind of silence it
+	 * is looking at. {@code CitizenRemarksTest} recomputes the partition from the
+	 * shipped files, so a split that no longer adds up fails the build.
 	 *
 	 * <p><b>Scenery is silenced here rather than downstream.</b> A talking crate is
 	 * an authoring mistake, and the place to refuse it is the validation gate — the
@@ -775,13 +777,20 @@ public final class EntityDefinition
 	 * {@link City#isEnabled} fails open for a region no city claims, deliberately, so
 	 * that a new region file can ship one commit before its checkbox. Judging an echo
 	 * by its own tile therefore let four shipped echoes out through that door: three
-	 * derived from Piscatoris citizens land in region 9271 and one derived from a
-	 * Camelot citizen lands in 10806, neither of which any city claims and neither of
-	 * which ships a region file — so unticking Piscatoris or Camelot left them
+	 * derived from Piscatoris citizens landed in region 9271 and one derived from a
+	 * Camelot citizen in 10806, neither of which any city claimed and neither of
+	 * which shipped a region file — so unticking Piscatoris or Camelot left them
 	 * standing in an empty village. An echo is a derivative of one authored citizen
 	 * and has no independent existence: whatever switches that citizen off switches it
-	 * off too. The fail-open rule is untouched for the authored entity that earns it,
-	 * and {@code CitizenEchoTest} asserts both halves over the shipped files.
+	 * off too. The fail-open rule is untouched for the authored entity that earns it.
+	 *
+	 * <p>Those four particular echoes are gone — the nine-city cut on 2026-08-24
+	 * removed both Piscatoris and Camelot — and no echo in the shipped dataset crosses
+	 * into an unclaimed region any more. The rule is not softened by that: it is what
+	 * makes an echo's checkbox well-defined at all, and the moment a region file is
+	 * added ahead of its checkbox the case is live again. {@code CitizenEchoTest}
+	 * asserts the rule over every shipped echo, and {@code CrowdedSceneTest} keeps the
+	 * crossing case itself exercised on a fixture.
 	 */
 	public int getCityRegionId()
 	{

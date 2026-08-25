@@ -34,7 +34,7 @@ public class CacheIdAuditTest
 	 * {@link ShippedModelIds#distinct()} — two independent readings of the same
 	 * dataset, one through {@link EntityDefinition} (validated, what the render
 	 * core actually uses) and one straight off the raw JSON
-	 * ({@link ModelIdAuditTest} pins the raw one at 376). They have to agree,
+	 * ({@link ModelIdAuditTest} pins the raw one at 324). They have to agree,
 	 * because the shipped dataset has zero skipped records and zero non-positive
 	 * ids — if they ever disagree, either a record started being skipped or a
 	 * non-positive id crept into the corpus, and this is what would notice
@@ -46,10 +46,10 @@ public class CacheIdAuditTest
 		RegionDataLoader loader = new RegionDataLoader(TestGson.injected());
 		CacheIdAudit.DatasetIds dataset = CacheIdAudit.collect(loader);
 
-		assertEquals("every City-claimed region has to load", 45, dataset.regionsLoaded);
+		assertEquals("every City-claimed region has to load", 27, dataset.regionsLoaded);
 		assertEquals("collect() must see exactly the raw dataset's distinct model ids",
 			ShippedModelIds.distinct(), dataset.modelIds);
-		assertEquals(376, dataset.modelIds.size());
+		assertEquals(324, dataset.modelIds.size());
 	}
 
 	/**
@@ -106,7 +106,7 @@ public class CacheIdAuditTest
 	/**
 	 * Every idle/move animation the render core resolves has to appear here by
 	 * name, matching {@code LivelyAnimationTest}'s independently-pinned count of
-	 * 89 distinct names.
+	 * 72 distinct names.
 	 */
 	@Test
 	public void collectsEveryResolvedAnimationNameUsedByTheDataset()
@@ -114,7 +114,7 @@ public class CacheIdAuditTest
 		RegionDataLoader loader = new RegionDataLoader(TestGson.injected());
 		CacheIdAudit.DatasetIds dataset = CacheIdAudit.collect(loader);
 
-		assertEquals(89, dataset.animationIdsByName.size());
+		assertEquals(72, dataset.animationIdsByName.size());
 		assertTrue("BeeIdle is used by the dataset and must be one of the collected names",
 			dataset.animationIdsByName.containsKey("BeeIdle"));
 		assertEquals(0, (int) dataset.animationIdsByName.get("BeeIdle"));

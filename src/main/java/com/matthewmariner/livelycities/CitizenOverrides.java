@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
  * apart, which is exactly the "fixture too uniform to distinguish outcomes" trap.
  * Two genuinely different granularities: one citizen, or the whole feature.
  *
- * <p><b>The uuid is the dataset's, and it is stable.</b> All 181 shipped records
+ * <p><b>The uuid is the dataset's, and it is stable.</b> All 151 shipped records
  * carry one. {@link EntityDefinition} generates a random uuid for a record that
  * does not, and an override on such an entity therefore lasts only as long as the
  * session — the honest failure, and the reason the generator logs a warning.

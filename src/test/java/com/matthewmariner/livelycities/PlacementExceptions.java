@@ -10,14 +10,17 @@ import java.util.Map;
  * <p><b>What does not belong here.</b> This list is for placements judged fine
  * on inspection — not a place to quietly launder a confirmed bug back to green.
  *
- * <p>The six citizens in region 14131 are the worked example. They were named
- * after the Barrows Brothers, carried "The ghost of &lt;Brother&gt;." examine
- * text, and were tagged {@link Theme#UNIQUE_BOSS} — the confirmed offender this
- * lint exists to catch. They were deliberately <b>never</b> added here. Instead
- * they were fixed in the data on 2026-08-23: renamed to generic "Barrow wight"s
- * and retagged {@link Theme#MORYTANIA_UNDEAD}, which the Barrows region does
- * claim. The lint is green because the content changed, not because the check
- * was told to look away.
+ * <p>The worked example is historical now, and is kept because the distinction it
+ * draws is the reason this class is so short. Region 14131 (the Barrows) shipped
+ * six citizens named after the Barrows Brothers, carrying "The ghost of
+ * &lt;Brother&gt;." examine text, and tagged {@link Theme#UNIQUE_BOSS} — the
+ * confirmed offender this lint exists to catch. They were deliberately
+ * <b>never</b> added here. They were fixed in the data on 2026-08-23 instead:
+ * renamed to generic "Barrow wight"s and retagged to the Morytania theme, which
+ * the Barrows region did claim. The lint went green because the content changed,
+ * not because the check was told to look away. (Region 14131 was then removed
+ * outright in the nine-city cut on 2026-08-24, so neither the citizens nor that
+ * theme ship any more.)
  *
  * <p>That is the distinction worth preserving. An exception here would have made
  * the build green while leaving the game exactly as wrong as it was.

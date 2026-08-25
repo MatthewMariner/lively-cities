@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -16,7 +17,7 @@ import static org.junit.Assert.assertTrue;
  * The consistency guard on the city mapping.
  *
  * <p>Two tables have to line up and neither one can be derived from the other:
- * the region ids live in {@link City}, the 24 checkboxes live in
+ * the region ids live in {@link City}, the 9 checkboxes live in
  * {@link LivelyCitiesConfig}, and RuneLite's config annotations make generating
  * one from the other impossible. So this file's whole job is to make a mismatch a
  * red build rather than a checkbox that quietly does nothing, or does someone
@@ -94,7 +95,7 @@ public class CityTest
 	/**
 	 * The enum→checkbox half of the mapping, checked one city at a time.
 	 *
-	 * <p>{@link FakeConfig} wires each of the 24 getters to its own {@link City},
+	 * <p>{@link FakeConfig} wires each of the 9 getters to its own {@link City},
 	 * so switching off exactly one city and finding exactly one city switched off
 	 * is the composition of the two mappings coming out as the identity. A
 	 * copy-paste in either file — {@code VARROCK.enabledIn} calling
@@ -173,7 +174,7 @@ public class CityTest
 			assertTrue(city + " claims no regions", city.getRegionIds().length > 0);
 		}
 
-		assertEquals("24 checkboxes, one per city", 24, City.values().length);
+		assertEquals("9 checkboxes, one per city", 9, City.values().length);
 	}
 
 	/**
@@ -218,6 +219,17 @@ public class CityTest
 	 * <p>The assertions run the arithmetic rather than quoting the answers, so a
 	 * transposed digit in a region id shows up here rather than as a checkbox that
 	 * switches off the wrong street.
+	 *
+	 * <p><b>What this test lost in the nine-city cut, stated plainly.</b> Three of
+	 * the four regions — 13110, 13622 and 10549 — no longer ship, so the
+	 * "…and it is filed under the checkbox that describes it" half of each pair is
+	 * gone with them; {@link City#of} now answers {@code null} for all three, which
+	 * is asserted below but is a weaker claim than naming the right city was. The
+	 * arithmetic half survives intact and is the half that catches a transposed
+	 * digit. The one pairing still checked end to end is 13109 → Varrock, and the
+	 * Ranging-Guild-is-not-Catherby point survives as the distance between the two
+	 * map points — 159 tiles, which is a claim that can fail, unlike the
+	 * {@code 10549 != 11061} it replaced.
 	 */
 	@Test
 	public void theRegionsTheDigsiteCheckboxClaimedBelongToTheirRealPlaces()
@@ -233,23 +245,41 @@ public class CityTest
 		int lumberYard = RenderPolicy.regionIdOf(3293, 3492);
 		assertEquals(13110, lumberYard);
 		assertEquals(13110, RenderPolicy.regionIdOf(3326, 3518));
-		assertEquals(City.LUMBER_YARD, City.of(lumberYard));
 
 		// Paterdomus Temple.
 		int paterdomus = RenderPolicy.regionIdOf(3416, 3487);
 		assertEquals(13622, paterdomus);
-		assertEquals(City.PATERDOMUS, City.of(paterdomus));
 
-		// The Ranging Guild's polygon, and Catherby, which is not it.
+		// The Ranging Guild's polygon, and Catherby, which is not it. What made
+		// filing the Guild under Catherby's checkbox a mistake rather than a
+		// judgement call is how far apart the two map points are, so the distance is
+		// what is asserted. This line used to read `assertFalse(rangingGuild ==
+		// 11061)`, which could not fail: `rangingGuild` is asserted to be 10549 two
+		// lines above, so the comparison was already decided and the assertion was a
+		// sentence rather than a check.
 		int rangingGuild = RenderPolicy.regionIdOf(2651, 3411);
 		assertEquals(10549, rangingGuild);
 		assertEquals(10549, RenderPolicy.regionIdOf(2686, 3446));
-		assertEquals(City.RANGING_GUILD, City.of(rangingGuild));
 		assertEquals(11061, RenderPolicy.regionIdOf(2810, 3440));
 		assertEquals(City.CATHERBY, City.of(11061));
+		assertEquals("the Ranging Guild's map point is 159 tiles west of Catherby's — "
+				+ "a transposed digit in either pair would land them next door to each "
+				+ "other and this is what would notice",
+			159,
+			RenderPolicy.tileDistance(
+				new WorldPoint(2651, 3411, 0), new WorldPoint(2810, 3440, 0)));
+
+		// All three are out of the dataset now, and none of them may be claimed by a
+		// city while no region file ships for it — the same rule the Digsite is held
+		// to above, applied to the three that used to have checkboxes of their own.
+		assertNull("13110 ships no file, so no city may claim it", City.of(lumberYard));
+		assertNull("13622 ships no file, so no city may claim it", City.of(paterdomus));
+		assertNull("10549 ships no file, so no city may claim it", City.of(rangingGuild));
 
 		// The strip outside Varrock's east gate: no landmark of its own, so it is
-		// grouped with the city whose wall it starts at. 12853 ends at x 3263.
+		// grouped with the city whose wall it starts at. 12853 ends at x 3263. This
+		// is the one pairing of the four that still ships, so it is the one that can
+		// still be checked all the way through to a checkbox.
 		int outsideTheEastGate = RenderPolicy.regionIdOf(3268, 3426);
 		assertEquals(13109, outsideTheEastGate);
 		assertEquals(City.VARROCK, City.of(outsideTheEastGate));

@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-440-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-446-brightgreen)](#development)
 
 </div>
 
@@ -32,18 +32,18 @@ Varrock square has a handful of guards and a general store. Falador's streets ar
 Lumbridge is a castle with nobody in it. The world is beautifully built and almost entirely
 unpopulated, and once you notice it you cannot stop noticing it.
 
-Lively Cities adds **181 hand-placed figures** across **45 regions** — a fletching apprentice
-working at her bench, a drunken peasant near the tavern, sleepwalkers on a Morytania
-pilgrimage, a squirrel, a rat, someone cooking over a fire. Some stand, some sit, some walk a
+Lively Cities adds **151 hand-placed figures** across **27 regions** — a fletching apprentice
+working at her bench, a drunken peasant near the tavern, two thieves sitting on a wall in
+Varrock, a squirrel, a rat, someone cooking over a fire. Some stand, some sit, some walk a
 route. They talk occasionally. They are entirely local to your client: no packets, no server
 load, and **nothing another player can see**.
 
 | | |
 |---|---|
-| **181 entities** | 135 citizens + 46 pieces of scenery |
-| **63 wander**, 66 stand still, 6 follow a script | |
-| **24 places** | Varrock, Lumbridge, Falador, Al Kharid, Edgeville, Draynor, Ardougne, Catherby, Camelot, Taverley, Rimmington, Piscatoris, Canifis, the Barrows, and more |
-| **~276 at Crowded** | an optional density that roughly doubles the streets |
+| **151 entities** | 109 citizens + 42 pieces of scenery |
+| **39 wander**, 65 stand still, 5 follow a script | |
+| **9 places** | Varrock (97), Lumbridge (21), the Grand Exchange (10), Edgeville (5), Falador (4), Catherby (4), Al Kharid (4), Ardougne (3), Draynor (3) |
+| **~230 at Crowded** | an optional density that roughly doubles the streets |
 
 <!-- SCREENSHOT: a close-up of two or three citizens with distinct appearances, ideally one
      mid-walk. Save as docs/img/citizens.png and replace with:
@@ -72,7 +72,7 @@ says so.
 **Overhead text** — a hard off switch, plus how often anyone speaks and how long a line
 stays up. You can also mute one individual by right-clicking them.
 
-**24 city checkboxes** — turn any place off and its citizens vanish on the click, not on the
+**9 city checkboxes** — turn any place off and its citizens vanish on the click, not on the
 next region crossing.
 
 **Friend cameos** — off by default, and staying that way. Six named, human-looking figures
@@ -142,9 +142,9 @@ What is new is everything that stops it dying the same way:
   is the whole reason to prefer it. The vendored figures keep their `modelIds`; the one
   exception is Rufus, who had no boots in his (see below).
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
-  six citizens impersonating the Barrows Brothers above their own crypts; they are now
-  anonymous barrow wights.
-- **440 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+  six citizens impersonating the Barrows Brothers above their own crypts; they were renamed
+  to anonymous barrow wights, and the Barrows has since left the dataset entirely.
+- **446 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -153,9 +153,18 @@ What is new is everything that stops it dying the same way:
 
 Stated plainly, because you will find them anyway.
 
-- **The dataset is thin and lopsided.** 135 citizens for the whole game, and roughly a third
-  of them are in one Varrock region. Falador and Nardah have almost nobody. Fixing this is
-  content authoring, and it is the main work left.
+- **The dataset is thin and lopsided, and it is now nine places rather than twenty-four.**
+  109 citizens for the whole game, 40 of them in a single Varrock region and 63 in Varrock
+  altogether. Falador, Catherby, Al Kharid, Ardougne and Draynor have three or four figures
+  each — enough to read as a quiet town, not enough to read as a populated one.
+
+  Fifteen thinner places were removed outright on 2026-08-24 rather than shipped as they
+  were: thirteen of the original twenty-four held one or two figures, and ticking "Canifis"
+  to find one person there reads as a broken plugin, not as a sparse one. Those were
+  Barrows, Piscatoris, the Ranging Guild, Camelot, Taverley, Castle Wars, the Farming Guild,
+  the Lumber Yard, the Motherlode Mine, Otto's Grotto, Trollheim, Paterdomus, Canifis, Musa
+  Point and Rimmington. Bringing the nine survivors up, and earning those places back with
+  enough content to deserve a checkbox, is content authoring and it is the main work left.
 - **A figure whose record was short a model is re-dressed rather than patched.** Rufus in
   Varrock square had no footwear model in his twelve — the record simply never carried one.
   Guessing which raw id to add could have given him a hat for feet, so he now wears
@@ -163,8 +172,8 @@ Stated plainly, because you will find them anyway.
   replaces his whole appearance rather than patching it, so the twelve hand-picked ids and
   their six recolour pairs are gone; he reads as an ordinary farming trader now, complete,
   rather than as a distinctive barefoot one. He also stops seeding `Crowded` extras, because
-  an NPC-dressed citizen has no record palette to re-deal — two ambient bodies, 143 down to
-  141.
+  an NPC-dressed citizen has no record palette to re-deal — two ambient bodies, 123 down to
+  121.
 - **Twenty-nine figures sit down and nobody has checked what they sit on.** `Sitting`
   played on a tile with no bench under it renders as squatting in mid-air, and whether
   a seat is there is a question only a live client can answer — the dataset stores a
@@ -239,7 +248,7 @@ Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires 
 the Gradle wrapper handles the rest.
 
 ```bash
-./gradlew build            # compile and run the 440 tests
+./gradlew build            # compile and run the 446 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)
@@ -302,7 +311,7 @@ and `RegionDataLoaderTest` already assert, over the shipped JSON alone:
   weight (the `npcAppearanceId` wins when a record carries both)
 - every `npcAppearanceId` is inside the same plausible range, which bites
   harder there: `gameval.NpcID`'s highest constant in 1.12.36 is 16346
-- the dataset's distinct-model-id count is pinned (currently 376) and its
+- the dataset's distinct-model-id count is pinned (currently 324) and its
   distinct-`npcAppearanceId` count is pinned (currently 7) — if either test
   fails after you *intentionally* changed the dataset, update the pinned
   number in `ModelIdAuditTest`; if you did not touch the dataset, something

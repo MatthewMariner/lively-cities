@@ -15,7 +15,7 @@ import javax.annotation.Nullable;
  * interface of {@code default} methods, so the defaults come for free and only
  * the parts a test cares about have to be written.
  *
- * <p><b>All 24 city getters are overridden individually, on purpose.</b> The
+ * <p><b>All 9 city getters are overridden individually, on purpose.</b> The
  * cheap version of this class would return one field from all of them — and it
  * would then be a fixture too uniform to distinguish outcomes: every city would
  * answer the same, so {@code City.VARROCK.enabledIn(..)} calling
@@ -293,24 +293,6 @@ final class FakeConfig implements LivelyCitiesConfig
 	}
 
 	@Override
-	public boolean cityBarrows()
-	{
-		return on(City.BARROWS);
-	}
-
-	@Override
-	public boolean cityCanifis()
-	{
-		return on(City.CANIFIS);
-	}
-
-	@Override
-	public boolean cityCastleWars()
-	{
-		return on(City.CASTLE_WARS);
-	}
-
-	@Override
 	public boolean cityCatherby()
 	{
 		return on(City.CATHERBY);
@@ -335,87 +317,15 @@ final class FakeConfig implements LivelyCitiesConfig
 	}
 
 	@Override
-	public boolean cityFarmingGuild()
-	{
-		return on(City.FARMING_GUILD);
-	}
-
-	@Override
 	public boolean cityGrandExchange()
 	{
 		return on(City.GRAND_EXCHANGE);
 	}
 
 	@Override
-	public boolean cityLumberYard()
-	{
-		return on(City.LUMBER_YARD);
-	}
-
-	@Override
 	public boolean cityLumbridge()
 	{
 		return on(City.LUMBRIDGE);
-	}
-
-	@Override
-	public boolean cityMotherlodeMine()
-	{
-		return on(City.MOTHERLODE_MINE);
-	}
-
-	@Override
-	public boolean cityMusaPoint()
-	{
-		return on(City.MUSA_POINT);
-	}
-
-	@Override
-	public boolean cityOttosGrotto()
-	{
-		return on(City.OTTOS_GROTTO);
-	}
-
-	@Override
-	public boolean cityPaterdomus()
-	{
-		return on(City.PATERDOMUS);
-	}
-
-	@Override
-	public boolean cityPiscatoris()
-	{
-		return on(City.PISCATORIS);
-	}
-
-	@Override
-	public boolean cityRangingGuild()
-	{
-		return on(City.RANGING_GUILD);
-	}
-
-	@Override
-	public boolean cityRimmington()
-	{
-		return on(City.RIMMINGTON);
-	}
-
-	@Override
-	public boolean cityCamelot()
-	{
-		return on(City.CAMELOT);
-	}
-
-	@Override
-	public boolean cityTaverley()
-	{
-		return on(City.TAVERLEY);
-	}
-
-	@Override
-	public boolean cityTrollheim()
-	{
-		return on(City.TROLLHEIM);
 	}
 
 	@Override

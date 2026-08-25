@@ -50,8 +50,8 @@ import net.runelite.client.ui.overlay.OverlayUtil;
  *
  * <p><b>Kept minimal, because it runs every frame.</b> No sorting, no allocation
  * per entity beyond the {@code LocalPoint} the client's own API hands back, and no
- * work at all for the common case of a citizen with nothing to say — which is 96
- * of the 135 shipped citizens, and most of the remaining 39 most of the time.
+ * work at all for the common case of a citizen with nothing to say — which is 75
+ * of the 109 shipped citizens, and most of the remaining 34 most of the time.
  */
 class ChatterOverlay extends Overlay
 {

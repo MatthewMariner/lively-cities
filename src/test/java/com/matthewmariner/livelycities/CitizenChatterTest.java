@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
  *
  * <p><b>The fixtures are deliberately not uniform.</b> Every scene here mixes
  * citizens that can talk with citizens that cannot, and puts them at different
- * distances, because 96 of the 135 shipped citizens have nothing authored and
+ * distances, because 75 of the 109 shipped citizens have nothing authored and
  * because the radius and the cap are read off the tiles. A crowd where everybody
  * is identical could not tell "the chatter skipped the silent ones" from "the
  * chatter iterated everybody", nor "the cap bound" from "only three were

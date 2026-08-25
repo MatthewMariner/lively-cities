@@ -78,7 +78,7 @@ public class CameoPlacementTest
 	 * read as one clipped body. A group posing together has to read as six people.
 	 *
 	 * <p>Note this is a rule about <i>these six</i> and not about authored content in
-	 * general: 44 pairs of vendored entities are closer than this to each other and
+	 * general: 42 pairs of vendored entities are closer than this to each other and
 	 * that is fine, because a human put them there on purpose. Nobody has looked at
 	 * these, so they get held to the derived-content standard.
 	 */

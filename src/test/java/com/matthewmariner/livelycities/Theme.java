@@ -4,14 +4,26 @@ package com.matthewmariner.livelycities;
  * The closed set of place-flavours the placement lint knows how to reason
  * about ({@code PlacementLintTest}).
  *
- * <p><b>Why these five and not the fuller list a plan might imagine</b>
- * (Fremennik/snow, elven, dwarven were all considered and dropped):
+ * <p><b>Why these four and not the fuller list a plan might imagine</b>
+ * (Fremennik/snow, elven, dwarven were all considered and dropped, and
+ * Karamja/Morytania were shipped and then lost their anchors):
  *
  * <ul>
  *   <li>{@code FREMENNIK_SNOW} and an elven theme have no anchor — none of the
- *       45 shipped regions is a snow or elven place, so a theme with no
+ *       27 shipped regions is a snow or elven place, so a theme with no
  *       region to ever be compatible with would either sit unused or, worse,
  *       get reached for out of enthusiasm and misclassify something.</li>
+ *   <li>{@code KARAMJA_JUNGLE} and {@code MORYTANIA_UNDEAD} were both real
+ *       entries here until the nine-city cut (2026-08-24). Musa Point was the
+ *       dataset's only tropical place and Canifis and the Barrows its only
+ *       Morytanian ones; all three were removed, taking Harry the monkey, Steven
+ *       the werewolf and the six Barrow wights with them. That leaves both themes
+ *       in exactly the position the first bullet rules out — no region can ever be
+ *       compatible with them and no entity carries them — so they were removed
+ *       rather than left as two constants a future author could reach for. The
+ *       rule is not "delete an unused theme"; it is "a theme must have a region
+ *       that anchors it", and it is applied the same way whether the theme never
+ *       had one or stopped having one.</li>
  *   <li>A dwarven theme was tried and rejected. "A dwarf" appears on nine
  *       citizens spread across five unrelated regions (the Ranging Guild, two
  *       different Varrock files, Lumbridge, and the actually-dwarven
@@ -21,7 +33,8 @@ package com.matthewmariner.livelycities;
  *       Restricting "dwarf" to Motherlode Mine would flag eight fine
  *       placements to catch nothing sharper than the pattern already
  *       flags elsewhere; see {@code EntityTheme} for where that line is
- *       drawn instead.</li>
+ *       drawn instead. (The cut has since removed the Ranging Guild and the
+ *       Motherlode Mine, which settles the question by removing its subject.)</li>
  * </ul>
  *
  * <p>{@link #GENERIC} is the default and is compatible with every region —
@@ -37,12 +50,6 @@ enum Theme
 	/** Al Kharid's desert-market identity — turbaned traders, camels, sand. */
 	DESERT,
 
-	/** Karamja's tropical identity — jungle wildlife, the volcano coastline. */
-	KARAMJA_JUNGLE,
-
-	/** Morytania's undead/werewolf identity — Canifis, the Barrows mounds. */
-	MORYTANIA_UNDEAD,
-
 	/**
 	 * A <b>cameo</b>: a named, player-shaped likeness of one of the plugin
 	 * author's friends.
@@ -51,7 +58,7 @@ enum Theme
 	 * and that is the point of giving it a theme at all rather than leaving the
 	 * six of them {@link #GENERIC}. {@code GENERIC} is compatible with
 	 * everywhere, so a generic cameo could be copied into Varrock square, into
-	 * Canifis, into the Barrows, and the lint would have nothing to say. This
+	 * Lumbridge, into Falador, and the lint would have nothing to say. This
 	 * theme is compatible with the Grand Exchange and nowhere else, so the
 	 * question "may a named human likeness stand here?" has exactly one answer
 	 * and the lint is the thing that gives it.

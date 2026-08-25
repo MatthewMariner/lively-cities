@@ -40,14 +40,14 @@ import static org.junit.Assert.assertTrue;
  * chosen wardrobe models, so two citizens sharing five parts and differing in the
  * sixth is the authoring working, not failing. Scenery is the opposite — a prop is
  * a fixed set of models copied off the game's own object, so a partial copy is a
- * broken prop, and the same rule over the 46 scenery records produced exactly one
+ * broken prop, and the same rule over the 42 scenery records produced exactly one
  * finding: the brazier above. A rule that fires thirteen times on correct data is
  * not a guard, it is noise somebody will delete; this one is narrow on purpose.
  */
 public class SceneryModelPairTest
 {
 	/** Scenery records in the shipped dataset. Pinned; see {@code RegionDataLoaderTest}. */
-	private static final int SHIPPED_SCENERY_RECORDS = 46;
+	private static final int SHIPPED_SCENERY_RECORDS = 42;
 
 	/**
 	 * The one that would have caught the Grand Exchange brazier.

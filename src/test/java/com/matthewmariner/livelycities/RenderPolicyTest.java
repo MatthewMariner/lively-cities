@@ -1,7 +1,16 @@
 package com.matthewmariner.livelycities;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import net.runelite.api.Constants;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
@@ -218,6 +227,229 @@ public class RenderPolicyTest
 	}
 
 	/**
+	 * Every density figure written down in the shipped source is the one its own
+	 * sentence names.
+	 *
+	 * <p><b>Why the sentences and not just the arithmetic.</b> The test above asserts
+	 * {@code cap >= densest}, which is true of <i>both</i> ways of measuring density
+	 * and therefore blind to the difference between them. There are two:
+	 *
+	 * <ul>
+	 *   <li><b>From an arbitrary tile</b> — the largest number of entities inside one
+	 *       cull radius of <i>any</i> tile a player could stand on. This is the figure
+	 *       that bounds the cap, because {@link RenderPolicy#isCandidate} measures from
+	 *       the player's position and a player may stand anywhere.</li>
+	 *   <li><b>Centred on an entity's own tile</b> — the largest number inside one cull
+	 *       radius of a tile some citizen happens to occupy. Strictly smaller, useful to
+	 *       a test that has to stand somewhere in particular, and it bounds
+	 *       <b>nothing</b>.</li>
+	 * </ul>
+	 *
+	 * <p>Both have been written in {@code MAX_ACTIVE_OBJECTS}'s javadoc at different
+	 * times, and the second one halves the stated margin without changing a line of
+	 * code. {@code CrowdedSceneTest} carries a comment warning about exactly that
+	 * confusion; a comment cannot go red, so this does. Every claim is matched against
+	 * the metric recomputed from the shipped files, so the way to move one of these
+	 * numbers is to change the dataset.
+	 */
+	@Test
+	public void everyDensityFigureInTheSourceIsTheOneItsSentenceNames() throws IOException
+	{
+		int wide = RenderPolicy.MAX_CULL_RADIUS;
+		int fromAnyTile = densestNeighbourhood(wide).count;
+		int centredOnAnEntity = densestEntityCentredNeighbourhood(wide);
+
+		assertTrue("the dataset has to be loaded for any of this to mean anything",
+			fromAnyTile > 0 && centredOnAnEntity > 0);
+		assertTrue("an arbitrary tile can always do at least as well as an entity's own",
+			fromAnyTile >= centredOnAnEntity);
+		assertTrue("if the two metrics ever agree, every assertion below starts passing "
+				+ "for the wrong reason and this guard is worth nothing — "
+				+ fromAnyTile + " vs " + centredOnAnEntity,
+			fromAnyTile != centredOnAnEntity);
+
+		String shipped = flattenedShippedSource();
+		int claims = 0;
+
+		// "<n> entities at/inside <the widest radius>" — the sentence that bounds the
+		// cap, wherever in src/main it is written.
+		claims += pinned(shipped,
+			"(\\d+) (?:authored )?entities (?:at|inside) "
+				+ "(?:\\{@link (?:RenderPolicy)?#MAX_CULL_RADIUS\\}|the widest render distance)",
+			fromAnyTile, 3, "the density at the widest cull radius");
+
+		// The same claim in its other spelling, half a sentence later in
+		// MAX_ACTIVE_OBJECTS's javadoc.
+		claims += pinned(shipped,
+			"(\\d+) inside a \\{@link #MAX_CULL_RADIUS\\}-tile one",
+			fromAnyTile, 1, "the density at the widest cull radius");
+
+		// And the same metric at the default radius, in the same sentence.
+		Matcher atRadius = Pattern.compile("(\\d+) entities inside a (\\d+)-tile square")
+			.matcher(shipped);
+		int squares = 0;
+		while (atRadius.find())
+		{
+			squares++;
+			int radius = Integer.parseInt(atRadius.group(2));
+			assertEquals("'" + atRadius.group() + "' has to be the density measured from an "
+					+ "arbitrary tile at radius " + radius + ", not the one centred on an entity "
+					+ "(" + densestEntityCentredNeighbourhood(radius) + ")",
+				densestNeighbourhood(radius).count, Integer.parseInt(atRadius.group(1)));
+		}
+		assertEquals("the sentence naming a plain tile radius has to still be there", 1, squares);
+		claims += squares;
+
+		// The headroom, spelled out in words, in both places that spell it out.
+		int spare = RenderPolicy.MAX_ACTIVE_OBJECTS - fromAnyTile;
+		claims += pinnedWord(shipped,
+			"holds (?:\\d+) entities at \\{@link #MAX_CULL_RADIUS\\}, (\\w+) short of this",
+			spare, 1);
+		claims += pinnedWord(shipped,
+			"holds (?:\\d+) entities at the widest render distance, (\\w+) slots spare",
+			spare, 1);
+
+		// The build-budget cost sentence does arithmetic on the same figure.
+		Matcher passes = Pattern.compile("\\{@code ceil\\((\\d+) / (\\d+)\\)\\} = (\\d+) passes")
+			.matcher(shipped);
+		int fills = 0;
+		while (passes.find())
+		{
+			fills++;
+			assertEquals("'" + passes.group() + "' fills the densest neighbourhood, so it is the "
+					+ "arbitrary-tile figure", fromAnyTile, Integer.parseInt(passes.group(1)));
+			assertEquals("and it fills it at the build budget",
+				RenderPolicy.MAX_MODEL_BUILDS_PER_PASS, Integer.parseInt(passes.group(2)));
+			int builds = Integer.parseInt(passes.group(2));
+			assertEquals("and the division has to be the division it prints",
+				(Integer.parseInt(passes.group(1)) + builds - 1) / builds,
+				Integer.parseInt(passes.group(3)));
+		}
+		assertEquals("the cold-walk sentence has to still be there", 1, fills);
+		claims += fills;
+
+		assertTrue("a sweep that matched nothing would pass while checking nothing: "
+				+ claims + " claims found", claims >= 8);
+
+		// And the other metric, pinned where it is correctly named — the comment that
+		// exists to stop this confusion recurring, which is itself a place the wrong
+		// number could be typed.
+		String warning = flatten(read(
+			"src/test/java/com/matthewmariner/livelycities/CrowdedSceneTest.java"));
+		pinned(warning, "(\\d+) is the densest window centred on an entity's own tile",
+			centredOnAnEntity, 1, "the entity-centred density");
+		pinned(warning, "the densest window from an arbitrary tile holds (\\d+)",
+			fromAnyTile, 1, "the arbitrary-tile density");
+	}
+
+	/**
+	 * Asserts every match of {@code regex} carries {@code expected} in group 1, and
+	 * that there were {@code atLeast} of them.
+	 *
+	 * @return how many claims were checked
+	 */
+	private static int pinned(String text, String regex, int expected, int atLeast, String what)
+	{
+		Matcher matcher = Pattern.compile(regex).matcher(text);
+		int found = 0;
+		while (matcher.find())
+		{
+			found++;
+			assertEquals("'" + matcher.group() + "' states " + what
+					+ ", which is " + expected + " in the shipped dataset",
+				expected, Integer.parseInt(matcher.group(1)));
+		}
+
+		assertTrue("expected at least " + atLeast + " sentence(s) matching /" + regex
+				+ "/ and found " + found + " — if the wording moved, this guard has to move "
+				+ "with it rather than quietly stop checking", found >= atLeast);
+		return found;
+	}
+
+	/** {@link #pinned} for a figure written as an English word rather than digits. */
+	private static int pinnedWord(String text, String regex, int expected, int atLeast)
+	{
+		Matcher matcher = Pattern.compile(regex).matcher(text);
+		int found = 0;
+		while (matcher.find())
+		{
+			found++;
+			assertEquals("'" + matcher.group() + "' states the headroom between the cap and the "
+					+ "densest neighbourhood a player can stand in",
+				numberWord(expected), matcher.group(1));
+		}
+
+		assertTrue("expected at least " + atLeast + " sentence(s) matching /" + regex
+				+ "/ and found " + found, found >= atLeast);
+		return found;
+	}
+
+	private static String numberWord(int value)
+	{
+		String[] words = {
+			"zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+			"nine", "ten", "eleven", "twelve"};
+		return value >= 0 && value < words.length ? words[value] : String.valueOf(value);
+	}
+
+	/**
+	 * Every {@code .java} file under {@code src/main/java}, run together into one
+	 * string with comment furniture and line wrapping flattened away.
+	 *
+	 * <p>Reading the source text rather than the compiled classes because what is
+	 * being checked <i>is</i> prose — javadoc and {@code //} comments, which javac
+	 * throws away. Same working-directory assumption as {@code ShippedSourceTest},
+	 * and the same loud failure if it ever stops holding.
+	 */
+	private static String flattenedShippedSource() throws IOException
+	{
+		File root = new File("src/main/java");
+		assertTrue("expected to find " + root.getAbsolutePath()
+			+ " — if the test working directory moved, this test has to move with it",
+			root.isDirectory());
+
+		List<Path> sources;
+		try (Stream<Path> paths = Files.walk(root.toPath()))
+		{
+			sources = paths
+				.filter(path -> path.getFileName().toString().endsWith(".java"))
+				.sorted()
+				.collect(Collectors.toList());
+		}
+
+		assertFalse("no .java files under " + root.getAbsolutePath()
+			+ " — a sweep of nothing would pass", sources.isEmpty());
+
+		StringBuilder all = new StringBuilder();
+		for (Path source : sources)
+		{
+			all.append(flatten(read(source.toString()))).append('\n');
+		}
+		return all.toString();
+	}
+
+	private static String read(String path) throws IOException
+	{
+		File file = new File(path);
+		assertTrue("expected to find " + file.getAbsolutePath(), file.isFile());
+		return new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+	}
+
+	/**
+	 * Strips the comment furniture — leading {@code *}, {@code //}, the javadoc
+	 * delimiters and inline {@code <b>}/{@code <i>} — and collapses every run of
+	 * whitespace to one space, so a sentence can be matched however it happens to be
+	 * wrapped.
+	 */
+	private static String flatten(String source)
+	{
+		return source
+			.replaceAll("(?m)^\\s*(?:\\*/|/\\*+|\\*|//)\\s?", " ")
+			.replaceAll("</?[bi]>", "")
+			.replaceAll("\\s+", " ");
+	}
+
+	/**
 	 * The scene's geometry at the moment it is built, and the fact that it is only
 	 * true at that moment.
 	 *
@@ -407,7 +639,7 @@ public class RenderPolicyTest
 		}
 
 		assertEquals("the shipped dataset has exactly one misfiled entity", 1, misfiled);
-		assertEquals("the shipped dataset has 63 wandering citizens", 63, boxes.size());
+		assertEquals("the shipped dataset has 39 wandering citizens", 39, boxes.size());
 
 		assertTrue("worst misfiling " + worstMisfiling + " (" + misfiledWhere
 				+ ") exceeds the " + allowance + "-tile overhang allowance",
@@ -495,6 +727,42 @@ public class RenderPolicyTest
 					}
 				}
 			}
+		}
+
+		return best;
+	}
+
+	/**
+	 * The most entities that can be inside one cull radius of a tile <b>some entity
+	 * already stands on</b>.
+	 *
+	 * <p>The other metric, and the one that bounds nothing: it is what a test can
+	 * position itself on, not what the cull check measures. Kept here beside
+	 * {@link #densestNeighbourhood} so the two are computed the same way and only
+	 * differ in the one thing that differs.
+	 */
+	private static int densestEntityCentredNeighbourhood(int radius)
+	{
+		List<WorldPoint> points = new ArrayList<>();
+		for (EntityDefinition entity : shippedEntities())
+		{
+			points.add(entity.getWorldLocation());
+		}
+
+		int best = 0;
+		for (WorldPoint centre : points)
+		{
+			int count = 0;
+			for (WorldPoint p : points)
+			{
+				if (p.getPlane() == centre.getPlane()
+					&& Math.abs(p.getX() - centre.getX()) <= radius
+					&& Math.abs(p.getY() - centre.getY()) <= radius)
+				{
+					count++;
+				}
+			}
+			best = Math.max(best, count);
 		}
 
 		return best;

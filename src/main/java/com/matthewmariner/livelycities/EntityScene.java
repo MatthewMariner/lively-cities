@@ -94,7 +94,7 @@ import net.runelite.api.coords.WorldPoint;
  *
  * <p><b>Where a border-crossing wanderer lives.</b> Scope membership is decided
  * once, from the entity's authored tile, and a citizen walking across a region
- * border does not change it. Six of the 63 wanderers have boxes that straddle
+ * border does not change it. Three of the 39 wanderers have boxes that straddle
  * one. That choice is what makes both failure modes impossible rather than
  * unlikely:
  * <ul>
@@ -517,7 +517,7 @@ class EntityScene
 				// allowedByConfig: it reads the live collision map, so it is the one
 				// check that costs a scene lookup, and this is the first point at
 				// which we know the entity is close enough for the answer to matter.
-				// It is a no-op for the 175 vendored entities — a human stood on those
+				// It is a no-op for the 145 vendored entities — a human stood on those
 				// tiles in game.
 				if (!groundIsUsable(worldView, entity.getDefinition()))
 				{

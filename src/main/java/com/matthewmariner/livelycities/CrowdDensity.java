@@ -4,7 +4,7 @@ package com.matthewmariner.livelycities;
  * How much of the roster to show.
  *
  * <p><b>There is no density field in the dataset</b>, and inventing one would
- * mean editing 45 vendored files. So this is proportional thinning instead: each
+ * mean editing 27 vendored files. So this is proportional thinning instead: each
  * level keeps a percentage of the entities, and every entity's own identity
  * decides whether it is one of them.
  *

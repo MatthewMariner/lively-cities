@@ -13,12 +13,23 @@ import lombok.extern.slf4j.Slf4j;
  * <p><b>Why an enum and not a table in the config interface.</b> RuneLite config
  * items are static declarations: {@code @ConfigItem} annotates a method on an
  * interface, so there is no way to generate one checkbox per city at runtime.
- * That forces 24 hand-written methods on {@link LivelyCitiesConfig} — but it does
+ * That forces 9 hand-written methods on {@link LivelyCitiesConfig} — but it does
  * not force the region lists to be written twice. They live here, once; each
- * constant knows which of those 22 methods is its own, through
+ * constant knows which of those 9 methods is its own, through
  * {@link #enabledIn(LivelyCitiesConfig)}. So adding a region to a city is a
  * one-line change in one file, and {@code CityTest} fails if the two halves ever
  * stop lining up.
+ *
+ * <p><b>Why nine places and not twenty-four.</b> An earlier revision shipped 24,
+ * and thirteen of them held one or two figures each — ten held exactly one, and
+ * Varrock alone held 97 of the 181 entities. A city with one citizen is not
+ * ambient life: it is a checkbox, a region file, a set of cache ids that break on
+ * a game update, and a user who ticks "Canifis", sees one person, and concludes
+ * the plugin is broken. The rule applied on 2026-08-24 was <b>a real city with at
+ * least three figures</b>; fifteen places failed it and were removed outright,
+ * dataset and all. Varrock is deliberately the dense flagship. Bringing the
+ * thinner survivors up is content work, not a reason to keep shipping the thin
+ * ones meanwhile.
  *
  * <p><b>Every id below was checked against a primary source</b> —
  * {@code ((x >> 6) << 8) | (y >> 6)} applied to the {@code {{Map}}} coordinates
@@ -32,9 +43,12 @@ import lombok.extern.slf4j.Slf4j;
  * checkbox over regions 13109, 13110 and 13622, none of which contains the
  * Digsite: the Digsite's own map centre is (3354, 3420), which is region
  * <b>13365</b>, and the plugin ships no file for it. The same pass found the
- * Ranging Guild (10549) filed under Catherby, roughly 160 tiles away. Both are
- * corrected below, and the {@code cityDigsite} key is retired rather than reused
- * — see {@link LivelyCitiesConfig} for why a {@code keyName} is permanent.
+ * Ranging Guild (10549) filed under Catherby, roughly 160 tiles away. 13109 is
+ * still here, under Varrock, where the arithmetic put it; 13110, 13622 and 10549
+ * have since been dropped from the dataset entirely as part of the nine-city cut,
+ * so the only trace they leave is their retired {@code keyName}s. The
+ * {@code cityDigsite} key stays retired rather than reused — see
+ * {@link LivelyCitiesConfig} for why a {@code keyName} is permanent.
  *
  * <p><b>A vague label beats a confident wrong one.</b> Region 13109 has no
  * landmark of its own; it is the strip of road immediately outside Varrock's east
@@ -68,51 +82,9 @@ public enum City
 				return config.cityArdougne();
 			}
 		},
-	BARROWS("Barrows", 14131)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityBarrows();
-			}
-		},
-	/**
-	 * Region 11062, and it really is Camelot rather than Seers' Village.
-	 *
-	 * <p>The wiki puts Camelot's map centre at (2758, 3507), which computes to
-	 * 11062; Seers' Village proper is centred at (2710, 3485), which is region
-	 * 10806 — not in this dataset at all. An earlier pass shipped this as
-	 * {@code citySeersVillage}, the same mistake as the retired
-	 * {@code cityDigsite}: naming a region after the famous place next door
-	 * instead of what stands inside the square. Both keys are retired rather
-	 * than renamed, for the reason given on {@link LivelyCitiesConfig}.
-	 */
-	CAMELOT("Camelot", 11062)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityCamelot();
-			}
-		},
-	CANIFIS("Canifis", 13878)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityCanifis();
-			}
-		},
-	CASTLE_WARS("Castle Wars", 9776)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityCastleWars();
-			}
-		},
-	// 11061 and 11317 are the two halves of Catherby; 10549 used to be in here
-	// and is not — see RANGING_GUILD.
+	// 11061 and 11317 are the two halves of Catherby. Region 10549 (the Ranging
+	// Guild, ~160 tiles west) was once filed in here by mistake; it was moved to a
+	// checkbox of its own, and then dropped with the rest of the nine-city cut.
 	CATHERBY("Catherby", 11061, 11317)
 		{
 			@Override
@@ -145,14 +117,6 @@ public enum City
 				return config.cityFalador();
 			}
 		},
-	FARMING_GUILD("Farming Guild", 4922)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityFarmingGuild();
-			}
-		},
 	GRAND_EXCHANGE("Grand Exchange", 12598)
 		{
 			@Override
@@ -161,110 +125,12 @@ public enum City
 				return config.cityGrandExchange();
 			}
 		},
-	/**
-	 * Region 13110. The Lumber Yard's own map polygon runs x 3293..3326,
-	 * y 3492..3518, every corner of which is region 13110, and the wiki files it
-	 * under Varrock — but it is a 50-tile walk outside the city wall and a
-	 * destination in its own right, so it gets its own checkbox rather than being
-	 * switched on and off by "Varrock".
-	 */
-	LUMBER_YARD("Lumber Yard", 13110)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityLumberYard();
-			}
-		},
 	LUMBRIDGE("Lumbridge", 12850, 12594, 12595, 12849)
 		{
 			@Override
 			boolean enabledIn(LivelyCitiesConfig config)
 			{
 				return config.cityLumbridge();
-			}
-		},
-	MOTHERLODE_MINE("Motherlode Mine", 14936)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityMotherlodeMine();
-			}
-		},
-	MUSA_POINT("Musa Point", 11569)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityMusaPoint();
-			}
-		},
-	OTTOS_GROTTO("Otto's Grotto", 10038)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityOttosGrotto();
-			}
-		},
-	/**
-	 * Region 13622. Paterdomus Temple's map centre is (3416, 3487) — region 13622
-	 * — and the wiki puts the temple in Silvarea, whose own centre (3375, 3500) is
-	 * the region next door (13366), which this plugin ships no file for. So the
-	 * region is named after the landmark that is actually inside it.
-	 */
-	PATERDOMUS("Paterdomus", 13622)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityPaterdomus();
-			}
-		},
-	PISCATORIS("Piscatoris", 9016, 9272, 9273)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityPiscatoris();
-			}
-		},
-	/**
-	 * Region 10549. The Ranging Guild's map polygon runs x 2651..2686,
-	 * y 3411..3446, every corner of which is region 10549. It shipped under
-	 * "Catherby" (11061, x 2752..2815), about 160 tiles east.
-	 */
-	RANGING_GUILD("Ranging Guild", 10549)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityRangingGuild();
-			}
-		},
-	RIMMINGTON("Rimmington", 11826)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityRimmington();
-			}
-		},
-	TAVERLEY("Taverley", 11573, 11318)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityTaverley();
-			}
-		},
-	TROLLHEIM("Trollheim", 11577)
-		{
-			@Override
-			boolean enabledIn(LivelyCitiesConfig config)
-			{
-				return config.cityTrollheim();
 			}
 		},
 	/**
@@ -294,18 +160,16 @@ public enum City
 		this.label = label;
 		this.regionIds = regionIds;
 	}
-
 	/**
 	 * Which of the {@code enabledIn} config getters is this city's.
 	 *
 	 * <p>Abstract rather than a lambda field or a name-based lookup: the compiler
 	 * then guarantees every constant answers, and {@code CityTest} composes this
-	 * with a config whose 22 getters are individually distinguishable, so a
+	 * with a config whose 9 getters are individually distinguishable, so a
 	 * copy-paste that points two cities at the same checkbox is a red test rather
 	 * than a checkbox that quietly does someone else's job.
 	 */
 	abstract boolean enabledIn(LivelyCitiesConfig config);
-
 	/**
 	 * @param regionId a region id
 	 * @return the city that claims it, or {@code null} if none does
@@ -315,7 +179,6 @@ public enum City
 	{
 		return BY_REGION.get(regionId);
 	}
-
 	/**
 	 * Whether entities standing in a region should be shown.
 	 *
@@ -332,7 +195,6 @@ public enum City
 	{
 		return label;
 	}
-
 	/**
 	 * @return this city's region ids. A copy: the array is the enum's state, and
 	 * handing out the original would let a caller edit the mapping.
@@ -347,7 +209,6 @@ public enum City
 	{
 		return label;
 	}
-
 	/**
 	 * Builds the region lookup.
 	 *

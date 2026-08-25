@@ -84,7 +84,7 @@ public class EntityRecord
 	 * cameo unless both {@code cameos} and its city's checkbox are on, and
 	 * {@code CitizenEcho} refuses to derive anything from one.
 	 *
-	 * <p>Absent (or false) for all 175 vendored entities.
+	 * <p>Absent (or false) for all 145 vendored entities.
 	 */
 	public Boolean cameo;
 

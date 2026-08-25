@@ -69,7 +69,7 @@ final class CacheIdAudit
 
 	/**
 	 * Walks every region {@link City} claims — which {@code CityTest} keeps
-	 * exactly equal to the 45 shipped region files — loading each through
+	 * exactly equal to the 27 shipped region files — loading each through
 	 * {@code loader} and collecting the ids the render core would actually ask
 	 * the client to resolve.
 	 *
@@ -147,7 +147,7 @@ final class CacheIdAudit
 	}
 
 	/**
-	 * @return every region id any {@link City} claims — the same 45 the dataset
+	 * @return every region id any {@link City} claims — the same 27 the dataset
 	 * ships, per {@code CityTest.everyShippedRegionBelongsToExactlyOneCity}
 	 */
 	static Set<Integer> shippedRegionIds()

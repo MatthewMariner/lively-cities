@@ -725,13 +725,66 @@ public class EntitySceneTest
 	}
 
 	/**
-	 * Six of the 63 shipped wanderers have boxes that straddle a region border.
+	 * The border-crossing wanderers, counted and named from the shipped files.
+	 *
+	 * <p>The claim below — and the one in {@link EntityScene}'s own javadoc — is the
+	 * reason scope membership is decided from the authored tile rather than from where
+	 * a citizen currently is. It was written as "six of the 63" and stayed that way
+	 * through a dataset cut that took the roster to 39 wanderers, three of which still
+	 * cross a border. Counted here so the next cut cannot leave it stale.
+	 *
+	 * <p>The box read is {@link EntityDefinition}'s validated one, i.e. the box the
+	 * walk actually uses, clamp included — the question is where a citizen can end up
+	 * standing, not what the file asked for.
+	 */
+	@Test
+	public void exactlyThreeShippedWanderersPaceAcrossARegionBorder()
+	{
+		RegionDataLoader loader = new RegionDataLoader(TestGson.injected());
+		int wanderers = 0;
+		List<String> crossing = new ArrayList<>();
+
+		for (int regionId : ShippedRegions.ids())
+		{
+			RegionDefinition region = loader.loadRegion(regionId);
+			assertNotNull("region " + regionId + " failed to load", region);
+
+			for (EntityDefinition entity : region.getEntities())
+			{
+				EntityDefinition.WanderBox box = entity.getWanderBox();
+				if (box == null)
+				{
+					continue;
+				}
+
+				wanderers++;
+				int home = RenderPolicy.regionIdOf(box.getMinX(), box.getMinY());
+				if (home != RenderPolicy.regionIdOf(box.getMaxX(), box.getMinY())
+					|| home != RenderPolicy.regionIdOf(box.getMinX(), box.getMaxY())
+					|| home != RenderPolicy.regionIdOf(box.getMaxX(), box.getMaxY()))
+				{
+					crossing.add(entity.getName());
+				}
+			}
+		}
+
+		assertEquals("the shipped wander boxes", 39, wanderers);
+		assertEquals("wanderers pacing across a region border", 3, crossing.size());
+		assertTrue("and they are the three the comments name: " + crossing,
+			crossing.contains("Ava") && crossing.contains("Dark wizard")
+				&& crossing.contains("Zethrus"));
+	}
+
+	/**
+	 * Three of the 39 shipped wanderers have boxes that straddle a region border.
 	 * Membership is pinned to the authored tile and does not follow the walk, so
 	 * neither of the two failure modes is reachable: the citizen cannot be listed
 	 * twice, and it cannot be left registered once its home region goes.
 	 *
 	 * <p>The fixture is the real one: "Dark wizard" is filed under 12853, stands
-	 * in 12852 and paces a box that spans both.
+	 * in 12852 and paces a box that spans both. Which three, and that there are
+	 * three, is counted from the shipped files by
+	 * {@link #exactlyThreeShippedWanderersPaceAcrossARegionBorder()}.
 	 */
 	@Test
 	public void aWandererWhoseBoxCrossesARegionBorderIsNeitherDoubledNorOrphaned()

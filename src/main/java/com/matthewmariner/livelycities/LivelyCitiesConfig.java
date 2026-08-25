@@ -21,7 +21,8 @@ import net.runelite.client.config.Units;
  * over regions 13109, 13110 and 13622, none of which is the Digsite (that is
  * region 13365, which this plugin has no data for). The regions moved to the
  * checkboxes that actually describe them — {@code cityVarrock},
- * {@code cityLumberYard}, {@code cityPaterdomus} — and the old key is left to rot
+ * {@code cityLumberYard}, {@code cityPaterdomus}, the last two of which have since
+ * been retired in their own right (below) — and the old key is left to rot
  * in whichever profiles already hold it. RuneLite ignores a key with no
  * {@code @ConfigItem}, so a stale {@code livelycities.cityDigsite=false} is inert;
  * the same goes for the equally-retired {@code citySeersVillage}, which named
@@ -29,7 +30,27 @@ import net.runelite.client.config.Units;
  * either name for some other place is what would silently switch that place
  * off for those users.
  *
- * <p><b>Why 24 hand-written city checkboxes.</b> {@code @ConfigItem} is an
+ * <p><b>Fifteen more keys were retired on 2026-08-24, and the same rule binds
+ * them.</b> The dataset was cut from 24 places to 9 (see {@link City} for the
+ * rule and the reason), and the places that went took their checkboxes with
+ * them. Every one of these is now a name RuneLite will find no
+ * {@code @ConfigItem} for, so a profile still holding
+ * {@code livelycities.cityBarrows=false} is inert — and none of them may ever be
+ * reused for a different place:
+ *
+ * <p>{@code cityBarrows}, {@code cityCamelot}, {@code cityCanifis},
+ * {@code cityCastleWars}, {@code cityFarmingGuild}, {@code cityLumberYard},
+ * {@code cityMotherlodeMine}, {@code cityMusaPoint}, {@code cityOttosGrotto},
+ * {@code cityPaterdomus}, {@code cityPiscatoris}, {@code cityRangingGuild},
+ * {@code cityRimmington}, {@code cityTaverley}, {@code cityTrollheim}.
+ *
+ * <p>Note what is <i>not</i> needed here: a migration. A migration exists to
+ * carry a user's saved answer to a question that is still being asked. These
+ * questions are not being asked any more — the content they governed is gone
+ * from the jar — so there is nothing for the old value to mean, and the honest
+ * outcome is the inert key.
+ *
+ * <p><b>Why 9 hand-written city checkboxes.</b> {@code @ConfigItem} is an
  * annotation on an interface method: the set of items is fixed at compile time
  * and cannot be generated from {@link City#values()}. What can be avoided is
  * writing the region ids twice — those live only in {@link City}, and each
@@ -336,7 +357,7 @@ public interface LivelyCitiesConfig extends Config
 
 	// --- One checkbox per city. Order matches City's declaration order. -------
 	// position starts at 100 so a later non-city item can be slotted in above
-	// without renumbering 24 annotations.
+	// without renumbering 9 annotations.
 
 	@ConfigItem(keyName = "cityAlKharid", name = "Al Kharid", description = "Populate Al Kharid",
 		position = 100, section = citiesSection)
@@ -352,159 +373,51 @@ public interface LivelyCitiesConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityBarrows", name = "Barrows", description = "Populate the Barrows",
-		position = 102, section = citiesSection)
-	default boolean cityBarrows()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityCanifis", name = "Canifis", description = "Populate Canifis",
-		position = 103, section = citiesSection)
-	default boolean cityCanifis()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityCastleWars", name = "Castle Wars", description = "Populate Castle Wars",
-		position = 104, section = citiesSection)
-	default boolean cityCastleWars()
-	{
-		return true;
-	}
-
 	@ConfigItem(keyName = "cityCatherby", name = "Catherby", description = "Populate Catherby",
-		position = 105, section = citiesSection)
+		position = 102, section = citiesSection)
 	default boolean cityCatherby()
 	{
 		return true;
 	}
 
 	@ConfigItem(keyName = "cityDraynor", name = "Draynor", description = "Populate Draynor",
-		position = 106, section = citiesSection)
+		position = 103, section = citiesSection)
 	default boolean cityDraynor()
 	{
 		return true;
 	}
 
 	@ConfigItem(keyName = "cityEdgeville", name = "Edgeville", description = "Populate Edgeville",
-		position = 107, section = citiesSection)
+		position = 104, section = citiesSection)
 	default boolean cityEdgeville()
 	{
 		return true;
 	}
 
 	@ConfigItem(keyName = "cityFalador", name = "Falador", description = "Populate Falador",
-		position = 108, section = citiesSection)
+		position = 105, section = citiesSection)
 	default boolean cityFalador()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityFarmingGuild", name = "Farming Guild", description = "Populate the Farming Guild",
-		position = 109, section = citiesSection)
-	default boolean cityFarmingGuild()
-	{
-		return true;
-	}
-
 	@ConfigItem(keyName = "cityGrandExchange", name = "Grand Exchange", description = "Populate the Grand Exchange",
-		position = 110, section = citiesSection)
+		position = 106, section = citiesSection)
 	default boolean cityGrandExchange()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityLumberYard", name = "Lumber Yard", description = "Populate the Lumber Yard",
-		position = 111, section = citiesSection)
-	default boolean cityLumberYard()
-	{
-		return true;
-	}
-
 	@ConfigItem(keyName = "cityLumbridge", name = "Lumbridge", description = "Populate Lumbridge",
-		position = 112, section = citiesSection)
+		position = 107, section = citiesSection)
 	default boolean cityLumbridge()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityMotherlodeMine", name = "Motherlode Mine", description = "Populate the Motherlode Mine",
-		position = 113, section = citiesSection)
-	default boolean cityMotherlodeMine()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityMusaPoint", name = "Musa Point", description = "Populate Musa Point",
-		position = 114, section = citiesSection)
-	default boolean cityMusaPoint()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityOttosGrotto", name = "Otto's Grotto", description = "Populate Otto's Grotto",
-		position = 115, section = citiesSection)
-	default boolean cityOttosGrotto()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityPaterdomus", name = "Paterdomus",
-		description = "Populate Paterdomus Temple and the Salve crossing",
-		position = 116, section = citiesSection)
-	default boolean cityPaterdomus()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityPiscatoris", name = "Piscatoris", description = "Populate Piscatoris",
-		position = 117, section = citiesSection)
-	default boolean cityPiscatoris()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityRangingGuild", name = "Ranging Guild", description = "Populate the Ranging Guild",
-		position = 118, section = citiesSection)
-	default boolean cityRangingGuild()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityRimmington", name = "Rimmington", description = "Populate Rimmington",
-		position = 119, section = citiesSection)
-	default boolean cityRimmington()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityCamelot", name = "Camelot",
-		description = "Populate Camelot. Region 11062 is Camelot, not Seers' Village — the "
-			+ "village proper is region 10806 and carries no citizens.",
-		position = 120, section = citiesSection)
-	default boolean cityCamelot()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityTaverley", name = "Taverley", description = "Populate Taverley",
-		position = 121, section = citiesSection)
-	default boolean cityTaverley()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "cityTrollheim", name = "Trollheim", description = "Populate Trollheim",
-		position = 122, section = citiesSection)
-	default boolean cityTrollheim()
 	{
 		return true;
 	}
 
 	@ConfigItem(keyName = "cityVarrock", name = "Varrock",
 		description = "Populate Varrock, including the road outside the east gate",
-		position = 123, section = citiesSection)
+		position = 108, section = citiesSection)
 	default boolean cityVarrock()
 	{
 		return true;

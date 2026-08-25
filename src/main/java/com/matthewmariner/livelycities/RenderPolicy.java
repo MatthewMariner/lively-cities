@@ -16,12 +16,19 @@ public final class RenderPolicy
 	 * Hard ceiling on simultaneously active {@code RuneLiteObject}s.
 	 *
 	 * <p>The densest neighbourhood in the shipped dataset is in Varrock (regions
-	 * 12852/12853, which hold 81 of the 181 entities between them): 59 entities
+	 * 12852/12853, which hold 81 of the 151 entities between them): 59 entities
 	 * inside a 25-tile square, 76 inside a {@link #MAX_CULL_RADIUS}-tile one. So
 	 * this is headroom rather than a routine constraint — it exists so a future
 	 * region file cannot make the client build hundreds of models in one tick.
 	 * {@code RenderPolicyTest} recomputes that density from the shipped files
 	 * rather than trusting the numbers in this sentence.
+	 *
+	 * <p><b>Both figures are measured from an arbitrary tile</b>, because that is
+	 * what the cull check measures from: {@link #isCandidate} runs from wherever the
+	 * player happens to be standing, not from a citizen's own tile. The densest
+	 * window <i>centred on an entity</i> is a smaller number and it bounds nothing
+	 * — writing it here is the drift {@code CrowdedSceneTest} warns about and
+	 * {@code RenderPolicyTest} now fails on.
 	 *
 	 * <p>Not a config dial: its job is to stop a future region file asking the
 	 * client to build hundreds of models in one tick, which is a guard rather than

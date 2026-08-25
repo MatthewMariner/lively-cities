@@ -71,8 +71,12 @@ final class ShippedModelIds
 
 	/**
 	 * @return every distinct raw {@code modelIds} value across the whole shipped
-	 * dataset — 376 of them. It was 384 before Rufus traded his twelve authored ids for
-	 * an {@code npcAppearanceId}; eight of those twelve were used by nobody else.
+	 * dataset — 324 of them. It was 384 at the L0 audit; 376 once Rufus traded his
+	 * twelve authored ids for an {@code npcAppearanceId} and the eight of them nobody
+	 * else used left with him; and 324 after the nine-city cut on 2026-08-24 took
+	 * eighteen region files and the 52 ids only they wore.
+	 * {@code ModelIdAuditTest.theDistinctModelIdFigureIsPinned} is where that figure
+	 * is held.
 	 */
 	static TreeSet<Integer> distinct()
 	{

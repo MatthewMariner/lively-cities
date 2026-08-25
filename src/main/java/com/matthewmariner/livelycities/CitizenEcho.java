@@ -16,7 +16,7 @@ import net.runelite.api.coords.WorldPoint;
  * Extra citizens, derived from the authored ones — the whole of
  * {@link CrowdDensity#CROWDED}.
  *
- * <p>The dataset holds 135 hand-placed citizens and the user asked for twice as
+ * <p>The dataset holds 109 hand-placed citizens and the user asked for twice as
  * many. There is no second dataset, so the second half has to come from the first:
  * an <b>echo</b> is a citizen built entirely out of one authored citizen's own
  * record, standing on separately-validated ground a few tiles away, wearing that
@@ -56,18 +56,18 @@ import net.runelite.api.coords.WorldPoint;
  *       and not the one above — "Rufus" in Varrock square, who wears
  *       {@code NpcID.FARMER1} because his authored {@code modelIds} had no footwear
  *       in them (GitHub issue #1). He used to seed two echoes and now seeds none;</li>
- *   <li>of the 128 that remain, 45 carry no recolour at all and 4 carry a single
- *       pair — no second slot to deal into, so 49 seed nothing;</li>
- *   <li>4 more carry two or more pairs whose {@code replace} values are all
- *       identical ("Brother Keptic", "Dark wizard", "Ambatu", "Sister Palus"), so
- *       every re-deal is the deal it started with — they seed nothing either;</li>
- *   <li>the remaining <b>75</b> seed {@link #MAX_ECHOES_PER_CITIZEN} echoes each
+ *   <li>of the 102 that remain, 32 carry no recolour at all and 4 carry a single
+ *       pair — no second slot to deal into, so 36 seed nothing;</li>
+ *   <li>3 more carry two or more pairs whose {@code replace} values are all
+ *       identical ("Brother Keptic", "Dark wizard", "Ambatu"), so every re-deal is
+ *       the deal it started with — they seed nothing either;</li>
+ *   <li>the remaining <b>63</b> seed {@link #MAX_ECHOES_PER_CITIZEN} echoes each
  *       where their palette supports two <i>distinct</i> re-deals, and one where it
- *       supports only one — 142 echoes asked for, of which 141 find somewhere legal
+ *       supports only one — 122 echoes asked for, of which 121 find somewhere legal
  *       to stand (see below).</li>
  * </ul>
- * That comes to <b>141 echoes against 135 authored citizens — 276 in total,
- * 2.04×</b>, which is the "roughly twice as many" the request asked for.
+ * That comes to <b>121 echoes against 109 authored citizens — 230 in total,
+ * 2.11×</b>, which is the "roughly twice as many" the request asked for.
  * {@code CitizenEchoTest} recomputes all of those numbers from the shipped files
  * rather than trusting this paragraph.
  *
@@ -115,7 +115,7 @@ import net.runelite.api.coords.WorldPoint;
  * two sources of known-good ground are used, in this order:
  *
  * <ol>
- *   <li><b>The source's authored wander box.</b> The 63 {@code WanderingCitizen}s
+ *   <li><b>The source's authored wander box.</b> The 39 {@code WanderingCitizen}s
  *       carry a box a human drew, so every tile in it is ground that person already
  *       decided a citizen could walk on. Box tiles are tried first, in a
  *       hash-rotated pass over the box, and an echo placed on one is marked
@@ -184,7 +184,7 @@ final class CitizenEcho
 	 * most literal form. At two there is a whole empty tile between them and they
 	 * read as two people standing near each other.
 	 *
-	 * <p>It says nothing about two <i>authored</i> entities, and cannot: 44 pairs of
+	 * <p>It says nothing about two <i>authored</i> entities, and cannot: 42 pairs of
 	 * hand-placed entities in the shipped files are closer than this to each other,
 	 * including eight that share a tile exactly. A human put those there on purpose
 	 * (a stall and its owner, a pair of guards) and this feature does not get a vote
@@ -197,8 +197,8 @@ final class CitizenEcho
 	 *
 	 * <p>A judgement, not arithmetic. The palette of the richest shipped citizen
 	 * supports ten distinct re-deals; letting it spend all ten would put eleven
-	 * copies of one body in one doorway. Two is what turns 135 authored citizens
-	 * into 276 — the "twice as many" that was asked for — and it is the number the
+	 * copies of one body in one doorway. Two is what turns 109 authored citizens
+	 * into 230 — the "twice as many" that was asked for — and it is the number the
 	 * count in this class's javadoc is computed from.
 	 */
 	static final int MAX_ECHOES_PER_CITIZEN = 2;
@@ -239,7 +239,7 @@ final class CitizenEcho
 	private static final long ECHO_UUID_SALT_HIGH = 0x9E3779B97F4A7C15L;
 	private static final long ECHO_UUID_SALT_LOW = 0xBF58476D1CE4E5B9L;
 
-	/** Shared, so the 49 citizens that seed nothing do not each allocate a list. */
+	/** Shared, so the 36 citizens that seed nothing do not each allocate a list. */
 	private static final List<EntityDefinition> NONE = Collections.emptyList();
 
 	/**
@@ -369,7 +369,7 @@ final class CitizenEcho
 		short[] replace = source.getRecolorReplace();
 		if (find.length < 2 || replace.length < 2)
 		{
-			// Nothing to re-deal — see the class javadoc. 49 of the 128 shipped citizens
+			// Nothing to re-deal — see the class javadoc. 36 of the 102 shipped citizens
 			// that reach this line land here.
 			return NONE;
 		}
@@ -378,7 +378,7 @@ final class CitizenEcho
 		if (deals.length == 0)
 		{
 			// Two or more pairs, all replacing with the same colour: every re-deal is
-			// the deal it started with. Four shipped citizens land here.
+			// the deal it started with. Three shipped citizens land here.
 			return NONE;
 		}
 
@@ -627,8 +627,8 @@ final class CitizenEcho
 	 * The ring of tiles at exactly {@link #MIN_SEPARATION_TILES} from the source, in
 	 * a hash-rotated pass.
 	 *
-	 * <p>The fallback for the 66 citizens with no box, and the top-up for the six
-	 * shipped wanderers whose box cannot hold two well-separated echoes — either
+	 * <p>The fallback for the 70 shipped citizens with no box, and the top-up for the
+	 * five shipped wanderers whose box cannot hold two well-separated echoes — either
 	 * because it is too small, or because somebody else is already standing in the
 	 * part of it that would do. These are candidates and nothing more: the ring says
 	 * "this tile is the right distance away", and {@link StandableGround} is what says

@@ -192,17 +192,17 @@ final class FakeRegions extends RegionDataLoader
 	 *
 	 * <p>Needed rather than an extra argument on {@link #citizen}, because "a citizen
 	 * that seeds echoes" and "a citizen that seeds none" are two fixtures the crowd
-	 * tests need side by side: of the 128 shipped citizens that reach
-	 * {@link CitizenEcho}'s palette check, 49 have too little palette to re-deal — 45
+	 * tests need side by side: of the 102 shipped citizens that reach
+	 * {@link CitizenEcho}'s palette check, 36 have too little palette to re-deal — 32
 	 * carry no recolour pairs at all and 4 carry a single pair, and the check wants two.
 	 * So a fixture where everybody seeds echoes could not tell "the dial added the
 	 * derived citizens" from "the dial doubled everything".
 	 *
-	 * <p><b>128, not the 129 non-cameo citizens.</b> The two figures are one apart and
-	 * they are not the same population: 135 shipped citizens minus the 6 cameos is 129,
-	 * and one of those 129 — "Rufus" — is dressed from an {@code npcAppearanceId} and is
+	 * <p><b>102, not the 103 non-cameo citizens.</b> The two figures are one apart and
+	 * they are not the same population: 109 shipped citizens minus the 6 cameos is 103,
+	 * and one of those 103 — "Rufus" — is dressed from an {@code npcAppearanceId} and is
 	 * turned away by {@link CitizenEcho} before the palette check is reached at all. He
-	 * also carries no recolour pairs, so counting him in would make the numerator 50;
+	 * also carries no recolour pairs, so counting him in would make the numerator 37;
 	 * both halves of the ratio have to be the same population or the sentence is
 	 * comparing two different things.
 	 *
@@ -258,7 +258,7 @@ final class FakeRegions extends RegionDataLoader
 	 * instead of the empty one left the whole suite green: {@link #recoloured} has
 	 * nothing to say and {@link #talker} has no palette, so no source in any fixture
 	 * had both, and "an echo never speaks" was a claim no test could tell from a
-	 * fixture coincidence. 39 of the 135 shipped citizens have both.
+	 * fixture coincidence. 34 of the 109 shipped citizens have both.
 	 */
 	EntityDefinition recolouredTalker(int fileRegionId, int x, int y, int pairs, String... remarks)
 	{
@@ -378,7 +378,7 @@ final class FakeRegions extends RegionDataLoader
 	 *
 	 * <p>Separate from {@link #citizen} rather than an extra argument to it, because
 	 * "a citizen with remarks" and "a citizen with none" are two fixtures the chatter
-	 * tests need side by side in the same scene: 96 of the 135 shipped citizens have
+	 * tests need side by side in the same scene: 75 of the 109 shipped citizens have
 	 * nothing authored, so a fixture where everybody talks would not be able to tell
 	 * "the chatter skipped the silent ones" from "the chatter iterated everybody".
 	 *

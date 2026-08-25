@@ -84,7 +84,7 @@ final class LivelyEntity
 {
 	/**
 	 * Lighting used by the source dataset's authoring tool. Changing these
-	 * changes the look of all 181 entities, so they stay put.
+	 * changes the look of all 151 entities, so they stay put.
 	 */
 	private static final int LIGHT_AMBIENT = 64;
 	private static final int LIGHT_CONTRAST = 850;
@@ -147,8 +147,8 @@ final class LivelyEntity
 	private final CitizenWalk walk;
 
 	/**
-	 * What this citizen can say and what it is saying; {@code null} for the 142 of
-	 * 181 shipped entities with nothing authored.
+	 * What this citizen can say and what it is saying; {@code null} for the 117 of
+	 * 151 shipped entities with nothing authored.
 	 *
 	 * <p>Owned here, on the wrapper, rather than in the overlay — see
 	 * {@link CitizenRemarks}. The consequence that matters is one line down in
@@ -260,7 +260,7 @@ final class LivelyEntity
 
 	/**
 	 * @return this citizen's remarks, or {@code null} if it has nothing authored to
-	 * say — which is every {@code Scenery} record and 96 of the 135 citizens
+	 * say — which is every {@code Scenery} record and 75 of the 109 citizens
 	 */
 	@Nullable
 	CitizenRemarks getRemarks()

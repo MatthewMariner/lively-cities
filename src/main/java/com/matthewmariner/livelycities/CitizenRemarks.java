@@ -74,8 +74,8 @@ final class CitizenRemarks
 
 	/**
 	 * @return a remark holder, or {@code null} if this entity has nothing to say —
-	 * which is most of the dataset. Of the 135 shipped citizens 39 carry remarks,
-	 * 54 carry an empty array and 42 carry no {@code remarks} field at all; scenery
+	 * which is most of the dataset. Of the 109 shipped citizens 34 carry remarks,
+	 * 51 carry an empty array and 24 carry no {@code remarks} field at all; scenery
 	 * never speaks. {@link EntityDefinition} has already flattened all four cases
 	 * into "the array is empty".
 	 */

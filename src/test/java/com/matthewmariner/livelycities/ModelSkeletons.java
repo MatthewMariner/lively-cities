@@ -45,11 +45,41 @@ import java.util.TreeSet;
  *
  * <h2>Coverage, and what it deliberately does not cover</h2>
  *
- * <p>340 of the dataset's 376 distinct model ids appear on at least one NPC and
- * are listed here. The remaining 36 appear on no NPC at all — they are object
- * geometry (braziers, stalls, planters), and no amount of decoding turns them into a
- * rig. They are named in {@link #NO_NPC_EVIDENCE} so that "this record was skipped"
+ * <p>This table holds 376 model ids: 340 that appear on at least one NPC, listed
+ * below with the framemap that implies, and 36 that appear on no NPC at all — object
+ * geometry (braziers, stalls, planters), which no amount of decoding turns into a
+ * rig. Those are named in {@link #NO_NPC_EVIDENCE} so that "this record was skipped"
  * stays a counted, reviewable outcome rather than a silent one.
+ *
+ * <h2>Why 376 rows for a 324-id dataset</h2>
+ *
+ * <p>376 was the dataset's distinct-model-id count when these numbers were decoded.
+ * The nine-city cut on 2026-08-24 took it to 324, leaving 52 rows here describing
+ * model ids nothing ships any more. <b>They were deliberately kept.</b>
+ *
+ * <p>The count on each framemap comment below is therefore a count of <i>that row</i>,
+ * not of what ships: framemap 0 lists 255 model ids and 218 of them are in the
+ * dataset today, and eight of the smaller rows now describe nothing shipped at all.
+ * They used to say "shipped model ids" and were left saying it through the cut, which
+ * is the reason they say "model ids" now — a row is a reading of the cache, and the
+ * dataset does not get a vote on whether it is true.
+ *
+ * <p>The reasoning is the difference between this table and something like
+ * {@code EntityTheme}. A theme row is a <i>judgement about a citizen</i> — if the
+ * citizen is gone the row asserts nothing and should go with it. A row here is a
+ * <i>measurement of the game cache</i>: "every NPC built out of model 6640 stands and
+ * walks on framemap 0" is true or false about the 1.12.36 cache and has nothing to do
+ * with which regions this plugin happens to ship. Deleting those rows would discard
+ * correct, expensively-obtained readings — the decoder run is not reproducible from
+ * inside this repository — and the top-up pass that brings the thin cities back up
+ * will want them.
+ *
+ * <p>What that decision costs is the property the old count quietly carried: that the
+ * table and the dataset were the same set, so a shipped id with no row would have
+ * shown up as a size mismatch. That is now stated as its own assertion instead —
+ * {@code AnimationSkeletonTest.everyShippedModelIdIsEitherRiggedOrExplicitlyUnriggable}
+ * — which is a stronger check than the size pin ever was, because it names the
+ * uncovered id rather than reporting that two numbers differ.
  */
 final class ModelSkeletons
 {
@@ -73,7 +103,7 @@ final class ModelSkeletons
 
 	static
 	{
-		// framemap 0 (human) — 255 shipped model ids
+		// framemap 0 (human) — 255 model ids
 		rig(0,
 			150, 159, 164, 169, 176, 177, 179, 180, 182, 183, 184, 185, 194, 196, 201, 202, 206, 207,
 			208, 211, 214, 217, 219, 220, 223, 228, 229, 230, 231, 235, 236, 238, 241, 246, 247, 248,
@@ -93,104 +123,104 @@ final class ModelSkeletons
 			27139, 27154, 27619, 27628, 27632, 27639, 27650, 28285, 28346, 28512, 28515, 31783, 31794,
 			31797, 31805, 31889, 31911, 34283, 35119, 37996, 41801, 41802, 46747, 47706, 54165, 54275);
 
-		// framemap 121 — 1 shipped model id
+		// framemap 121 — 1 model id
 		rig(121,
 			42012);
 
-		// framemap 280 (cat) — 6 shipped model ids
+		// framemap 280 (cat) — 6 model ids
 		rig(280,
 			3006, 3010, 9386, 9388, 13405, 13409);
 
-		// framemap 297 (dwarf) — 23 shipped model ids
+		// framemap 297 (dwarf) — 23 model ids
 		rig(297,
 			2970, 2972, 2973, 2974, 2977, 2978, 2979, 2980, 2981, 2983, 2984, 2985, 2986, 2990, 2992,
 			2993, 7045, 7050, 7059, 7061, 7063, 7072, 10326);
 
-		// framemap 320 — 1 shipped model id
+		// framemap 320 — 1 model id
 		rig(320,
 			7744);
 
-		// framemap 325 — 1 shipped model id
+		// framemap 325 — 1 model id
 		rig(325,
 			11723);
 
-		// framemap 326 — 1 shipped model id
+		// framemap 326 — 1 model id
 		rig(326,
 			9610);
 
-		// framemap 330 — 1 shipped model id
+		// framemap 330 — 1 model id
 		rig(330,
 			11724);
 
-		// framemap 343 — 1 shipped model id
+		// framemap 343 — 1 model id
 		rig(343,
 			11725);
 
-		// framemap 344 (swarm) — 1 shipped model id
+		// framemap 344 (swarm) — 1 model id
 		rig(344,
 			2950);
 
-		// framemap 461 — 3 shipped model ids
+		// framemap 461 — 3 model ids
 		rig(461,
 			3756, 4942, 6239);
 
-		// framemap 790 — 1 shipped model id
+		// framemap 790 — 1 model id
 		rig(790,
 			7363);
 
-		// framemap 1105 (dog) — 4 shipped model ids
+		// framemap 1105 (dog) — 4 model ids
 		rig(1105,
 			18167, 18168, 18169, 18170);
 
-		// framemap 1247 — 3 shipped model ids
+		// framemap 1247 — 3 model ids
 		rig(1247,
 			20273, 20276, 20281);
 
-		// framemap 1255 — 1 shipped model id
+		// framemap 1255 — 1 model id
 		rig(1255,
 			23905);
 
-		// framemap 1290 — 1 shipped model id
+		// framemap 1290 — 1 model id
 		rig(1290,
 			21154);
 
-		// framemap 1304 — 1 shipped model id
+		// framemap 1304 — 1 model id
 		rig(1304,
 			32942);
 
-		// framemap 1310 (penguin) — 1 shipped model id
+		// framemap 1310 (penguin) — 1 model id
 		rig(1310,
 			21552);
 
-		// framemap 1359 — 1 shipped model id
+		// framemap 1359 — 1 model id
 		rig(1359,
 			22792);
 
-		// framemap 1385 — 2 shipped model ids
+		// framemap 1385 — 2 model ids
 		rig(1385,
 			23713, 23714);
 
-		// framemap 1415 (goblin) — 12 shipped model ids
+		// framemap 1415 (goblin) — 12 model ids
 		rig(1415,
 			24431, 24433, 24441, 24443, 24448, 24450, 24456, 24458, 24472, 24476, 24482, 24484);
 
-		// framemap 1490 — 3 shipped model ids
+		// framemap 1490 — 3 model ids
 		rig(1490,
 			26177, 26181, 26188);
 
-		// framemap 1653 — 1 shipped model id
+		// framemap 1653 — 1 model id
 		rig(1653,
 			39571);
 
-		// framemap 1655 — 1 shipped model id
+		// framemap 1655 — 1 model id
 		rig(1655,
 			32204);
 
-		// framemap 1944 — 1 shipped model id
+		// framemap 1944 — 1 model id
 		rig(1944,
 			41886);
 
-		// framemap 2402 (gnome/child) — 10 shipped model ids
+		// framemap 2402 (gnome/child) — 10 model ids
 		rig(2402,
 			12735, 56095, 56138, 56139, 56164, 56179, 56184, 56187, 56217, 56218);
 

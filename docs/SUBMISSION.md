@@ -2,7 +2,12 @@
 
 Everything needed to file the submission, prepared in advance. **Deliberately not filed yet** —
 the decision (2026-08-23) is to wait until the content pass is done, because a first impression
-at 135 citizens is a first impression at 135 citizens.
+at 109 citizens is a first impression at 109 citizens.
+
+The dataset was cut from 24 places to 9 on 2026-08-24 (181 entities to 151, 135 citizens to
+109). That decision cuts the other way from the one above and is meant to: the wait is for
+*density*, and shipping twelve one-figure towns was buying breadth that read as breakage. The
+nine that remain are the ones worth topping up.
 
 Nothing below requires new work. When the content lands, re-run the checks and file it.
 
@@ -12,20 +17,11 @@ Nothing below requires new work. When the content lands, re-run the checks and f
 
 | Check | Command | Expected |
 |---|---|---|
-| Tests | `./gradlew clean test` | all green |
+| Tests | `./gradlew clean test` | all green (446) |
 | Offline dataset audit | *(part of the above)* | green |
 | No filesystem API in `src/main` | *(part of the above — `ShippedSourceTest`)* | green; see [below](#no-filesystem-writes-in-the-shipped-jar) |
 | Cache ids still resolve | `./run-windows.sh --audit` | no failing ids outside the known-permanent-null section |
 | Frame cost measured | `./run-windows.sh --timings`, then play for a few minutes | a real figure in `frame-timings.txt`, inside the thresholds the README states — and **written into the README and the PR body below**, replacing the placeholder sentence |
-
-**Use `run-windows.sh`, not the Gradle tasks, on a WSL machine.** They do the same thing, but
-`./gradlew auditCacheIds` and `./gradlew runWithTimings` launch a *Linux-side* client whose
-`user.home` is `~`, so they read `~/.runelite/credentials.properties` — a different file from
-the one the Jagex Launcher writes at `C:\Users\<you>\.runelite\`. The client then logs in as
-whatever stale character that WSL copy names, and no amount of relaunching in the launcher
-changes it, because nothing carries the Windows file across the boundary. RuneLite refreshes
-the stale token at startup, so the file even looks freshly written. `run-windows.sh` copies
-the Windows credentials in on every run; that is why it gets the character you picked.
 | Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight ~/Workspaces/osrs/lively-cities` | `Result: PASS` |
 | Compiles under the hub's own build | see [Verifying the hub build](#verifying-the-hub-build) | `BUILD SUCCESSFUL` |
 | Screenshots in the README | — | *deliberately deferred (2026-08-24) — the page ships with placeholders* |
@@ -34,6 +30,16 @@ the Windows credentials in on every run; that is why it gets the character you p
 That last row is not ceremony. The guidelines page was revised once without changing its
 visible dateline, so "I read it months ago" is not the same as having read it. Do it per
 submission.
+
+**Use `run-windows.sh`, not the Gradle tasks, on a WSL machine.** The two rows above name it
+deliberately. `./gradlew auditCacheIds` and `./gradlew runWithTimings` do the same work, but
+they launch a *Linux-side* client whose `user.home` is `~`, so they read
+`~/.runelite/credentials.properties` — a different file from the one the Jagex Launcher
+writes at `C:\Users\<you>\.runelite\`. The client then logs in as whatever stale character
+that WSL copy names, and no amount of relaunching in the launcher changes it, because nothing
+carries the Windows file across the boundary. RuneLite refreshes the stale token at startup,
+so the file even looks freshly written. `run-windows.sh` copies the Windows credentials in on
+every run; that is why it gets the character you picked.
 
 ### Verifying the hub build
 
@@ -52,12 +58,12 @@ cp -r gradle gradlew "$S/"
 ( cd "$S" && ./gradlew compileJava )
 ```
 
-Last verified **2026-08-24: BUILD SUCCESSFUL, 63 classes**, run against the working tree
+Last verified **2026-08-24: BUILD SUCCESSFUL, 48 classes**, run against the working tree
 rather than a commit so the uncommitted work was included. Our source uses Gson and Guice,
 which look like third-party dependencies but arrive transitively through the client — worth
 re-proving rather than assuming, so **re-run this after any new import.**
 
-The 63 → 67 → 66 → 63 accounting, since a class count that cannot be explained is not
+The 63 → 67 → 66 → 63 → 48 accounting, since a class count that cannot be explained is not
 evidence of anything:
 
 - **63 → 67.** `NpcAppearance` arrived with the cameos; `FrameTimings` and its two nested
@@ -67,9 +73,15 @@ evidence of anything:
 - **66 → 63.** `CacheIdAudit` and its two nested types followed it. Nothing in the shipped
   jar called them once the reporting moved, and a cache-walker with no reachable caller is
   weight the hub builds, serves and reviews for nobody.
+- **63 → 48.** The nine-city cut. `City` is an enum whose every constant has a body — each
+  one overrides `enabledIn` — so javac emits one anonymous subclass per constant: `City$1`
+  … `City$24`. Removing fifteen constants removed fifteen classes, and nothing else. The
+  compiled output confirms it: exactly nine `City$N.class` files where there were
+  twenty-four, and every other class name in the jar unchanged.
 
-Landing back on 63 is a coincidence worth stating rather than a target: the jar is the size
-it was before any of the developer tooling existed, and it now contains none of it. See
+Landing back on 63 before that was a coincidence worth stating rather than a target: the jar
+was the size it was before any of the developer tooling existed, and it contained none of it.
+48 is not a coincidence — it is 63 minus the fifteen checkboxes that no longer exist. See
 [No filesystem writes in the shipped jar](#no-filesystem-writes-in-the-shipped-jar).
 
 Note the recipe above uses `git archive HEAD`, which silently omits uncommitted changes — if

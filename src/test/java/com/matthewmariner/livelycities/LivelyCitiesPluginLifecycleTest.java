@@ -398,12 +398,8 @@ public class LivelyCitiesPluginLifecycleTest
 		// the same game tick.
 		String[] keys = {
 			"cullRadius", "crowdDensity",
-			"cityAlKharid", "cityArdougne", "cityBarrows", "cityCanifis", "cityCastleWars",
-			"cityCatherby", "cityDraynor", "cityEdgeville", "cityFalador", "cityFarmingGuild",
-			"cityGrandExchange", "cityLumberYard", "cityLumbridge", "cityMotherlodeMine",
-			"cityMusaPoint", "cityOttosGrotto", "cityPaterdomus", "cityPiscatoris",
-			"cityRangingGuild", "cityRimmington", "cityCamelot", "cityTaverley",
-			"cityTrollheim", "cityVarrock",
+			"cityAlKharid", "cityArdougne", "cityCatherby", "cityDraynor", "cityEdgeville",
+			"cityFalador", "cityGrandExchange", "cityLumbridge", "cityVarrock",
 		};
 		assertEquals("one key per city plus the two dials", City.values().length + 2, keys.length);
 
