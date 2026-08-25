@@ -118,15 +118,30 @@ public class LivelyAnimationTest
 		assertTrue("animation names used by the dataset but absent from the enum: " + missing,
 			missing.isEmpty());
 
-		// Sanity: 61 distinct idleAnimation names and 25 distinct moveAnimation
+		// Sanity: 63 distinct idleAnimation names and 28 distinct moveAnimation
 		// names across the 45 files, overlapping on HumanIdle and BeeIdle ->
-		// 84 distinct. A drop here means definitions stopped resolving names.
+		// 89 distinct. A drop here means definitions stopped resolving names.
 		//
 		// It was 81 before the six cameos, which brought in Alching, Flex and
 		// HumanLeanReady as idle poses; the other three (Fishing, Think, HumanIdle —
-		// and LectorIdle) were already in use elsewhere in the dataset.
-		assertEquals("distinct animation names in the dataset", 84, ShippedAnimationNames.all().size());
-		assertEquals("distinct animations resolved onto definitions", 84, seen.size());
+		// and LectorIdle) were already in use elsewhere in the dataset. It went 84 ->
+		// 89 when the video pass corrected fourteen wrong gaits and re-posed seven
+		// figures: the moves gained GoblinWalk, PenguinWalk and KittenWalk (+3, and
+		// none of HumanWalk, DogWalk or DrunkenDwarfWalk left the dataset, they are
+		// each still right for somebody); the idles gained DrunkPlayerReady,
+		// VarrockTrampReady, NervousIdle, SlapHead, MageReady, ArmsCrossedReady and
+		// HumanSmugIdle (+7) and lost HalfLayingDown, CurledUp, Crying, Alching and
+		// Flex, which nothing else used (-5). FallenManIdle stayed: the scenery record
+		// beside Damien still uses it.
+		//
+		// It stayed at 89 through the skeleton pass, which is arithmetic rather than
+		// luck: the idles lost ChildIdle and gained GnomeChildReady (0), the moves lost
+		// ChildWalk and gained GnomeChildWalk (0), and Sludgellama moving from LectorIdle
+		// to NervousIdle moved neither — "Lector Argus" in 12852 still uses the first
+		// and "Damien" in 12342 already used the second. Dropping HumanIdle off one
+		// scenery record left 58 other users of it.
+		assertEquals("distinct animation names in the dataset", 89, ShippedAnimationNames.all().size());
+		assertEquals("distinct animations resolved onto definitions", 89, seen.size());
 	}
 
 	/**

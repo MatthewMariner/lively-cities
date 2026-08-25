@@ -86,7 +86,7 @@
                 "Smells like human."
             ],
             "examineText": "A goblin.",
-            "moveAnimation": "HumanWalk",
+            "moveAnimation": "GoblinWalk",
             "uuid": "3328f161-d457-41d5-8ec2-f032e46a8402",
             "regionId": 12594,
             "entityType": "StationaryCitizen",
@@ -116,7 +116,7 @@
                 "Wish had more grog."
             ],
             "examineText": "A goblin.",
-            "moveAnimation": "HumanWalk",
+            "moveAnimation": "GoblinWalk",
             "uuid": "3c25fa0b-302e-4edb-94ed-f6cc2566086f",
             "regionId": 12594,
             "entityType": "StationaryCitizen",

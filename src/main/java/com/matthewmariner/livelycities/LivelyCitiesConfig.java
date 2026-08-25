@@ -139,13 +139,19 @@ public interface LivelyCitiesConfig extends Config
 	 * user — and a hub reviewer — what the feature adds, that it is player-shaped, and
 	 * that being off is the deliberate default rather than an accident. Trimming it to
 	 * a label is what the test prevents.
+	 *
+	 * <p><b>The costume list is part of the promise, not decoration.</b> It said "a
+	 * barbarian" for a while after Peter stopped being one, because the guard checked
+	 * the length and several phrases and never the costumes. It does now: every word in
+	 * the list is tied to the actual roster in {@code CameoPlacementTest}. Change a
+	 * cameo's body and this string has to change with it.
 	 */
 	String CAMEOS_NAME = "Friend cameos (off by default)";
 
 	String CAMEOS_DESCRIPTION =
 		"Adds six named, human-looking figures posing as a group on the north-west side of the "
 			+ "Grand Exchange: caricatures of the plugin author's friends, dressed as a wizard, a "
-			+ "sailor, a barbarian, a rogue, a butler and a White Knight. This is player-shaped "
+			+ "sailor, a Shayzien soldier, a rogue, a butler and a White Knight. This is player-shaped "
 			+ "content and it is deliberately switched off by default — everything else in this "
 			+ "plugin is a townsperson, and a cluster of named humans at the busiest bank in the "
 			+ "game is exactly what gets mistaken for real players. They are cosmetic and local "

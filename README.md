@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-423-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-440-brightgreen)](#development)
 
 </div>
 
@@ -77,9 +77,9 @@ next region crossing.
 
 **Friend cameos** — off by default, and staying that way. Six named, human-looking figures
 posing as a group on the north-west side of the Grand Exchange: caricatures of the author's
-friends, dressed as a wizard, a sailor, a barbarian, a rogue, a butler and a White Knight.
-Everything else in this plugin is a townsperson; a cluster of named humans at the busiest
-bank in the game is the one thing here that could be mistaken for real players, so nobody
+friends, dressed as a wizard, a sailor, a Shayzien soldier, a rogue, a butler and a White
+Knight. Everything else in this plugin is a townsperson; a cluster of named humans at the
+busiest bank in the game is the one thing here that could be mistaken for real players, so nobody
 sees them unless they tick the box. They obey the Grand Exchange checkbox too, Examine says
 outright that each is a likeness and not a player, and any of them can be hidden or muted
 individually like any other citizen.
@@ -127,7 +127,7 @@ revived. The demand outlived the maintenance by well over a year.
 retained — that data is hundreds of hours of walking around Gielinor deciding where a person
 should stand, and throwing it away would have been vandalism. See [NOTICE](NOTICE) for exactly
 what is derived: the dataset, the animation-name table, the model lighting constants, and the
-two modifications we made to their data.
+five modifications we have made to their data.
 
 What is new is everything that stops it dying the same way:
 
@@ -144,7 +144,7 @@ What is new is everything that stops it dying the same way:
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they are now
   anonymous barrow wights.
-- **423 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **440 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -165,6 +165,27 @@ Stated plainly, because you will find them anyway.
   rather than as a distinctive barefoot one. He also stops seeding `Crowded` extras, because
   an NPC-dressed citizen has no record palette to re-deal — two ambient bodies, 143 down to
   141.
+- **Twenty-nine figures sit down and nobody has checked what they sit on.** `Sitting`
+  played on a tile with no bench under it renders as squatting in mid-air, and whether
+  a seat is there is a question only a live client can answer — the dataset stores a
+  tile, not what is on it. Their **poses** are deliberately left exactly as the
+  predecessor authored them, because most were placed by someone standing in the room and
+  a citizen genuinely sitting on a pub bench is good content. (Five of them — Thalindra,
+  the Dark wizard, Nightfire, Dofur and Simon — did have their *walk* corrected, for the
+  skeleton reason in [NOTICE](NOTICE); none of them moves, and none of them changed
+  position or pose.) Every one is listed with its tile, pose and examine text in
+  [docs/SEATING-CHECK.md](docs/SEATING-CHECK.md), together with two more who *lean*
+  rather than sit and have the same problem in a different shape — thirty-one figures on
+  one walk, with a Ground Markers import block covering all of them so the walk is a walk
+  rather than a search.
+- **One cameo's costume is an approximation, and it is the one wearing armour.** Peter
+  wears `NpcID.CORSCURS_LORD_MARSHAL` — Lord Marshal Brogan's full Shayzien plate —
+  because it is imposing with no bare skin anywhere in it. It is not a portrait: the
+  brief was "a soldier", the constant is a named quest NPC, and nothing offline can ask
+  a composition what it looks like. He replaced `NpcID.BARBARIAN`, which was picked for
+  being the most muscular human body in the named constants and read on video as a naked
+  man standing in the busiest bank in the game. If Brogan's plate turns out to read as
+  "that specific quest NPC" rather than "a soldier", that is a costume change, not a bug.
 - **Distant figures pop in** past ~16 tiles. See Render distance above.
 - **Smoothing needs RuneLite's own Animation Smoothing plugin** turned on. With it off,
   nothing in the game interpolates — real NPCs included — so our figures look equally steppy.
@@ -218,7 +239,7 @@ Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires 
 the Gradle wrapper handles the rest.
 
 ```bash
-./gradlew build            # compile and run the 423 tests
+./gradlew build            # compile and run the 440 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)

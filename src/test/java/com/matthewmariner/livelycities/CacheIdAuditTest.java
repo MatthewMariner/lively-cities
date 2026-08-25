@@ -65,8 +65,12 @@ public class CacheIdAuditTest
 
 		assertFalse("the shipped dataset has at least one mergedObjects entry",
 			dataset.mergedObjectIds.isEmpty());
-		assertFalse("a merged-object id must not also be counted as a model id",
-			dataset.modelIds.containsAll(dataset.mergedObjectIds));
+		// Disjoint, not !containsAll — see the npcAppearanceId assertion below for why.
+		// With one merged-object id in the dataset the two spellings happen to agree
+		// today; with two they would not, and the message would be the thing that lied.
+		assertTrue("a merged-object id must not also be counted as a model id; overlapping: "
+				+ overlap(dataset.modelIds, dataset.mergedObjectIds),
+			Collections.disjoint(dataset.modelIds, dataset.mergedObjectIds));
 	}
 
 	/**
@@ -91,14 +95,18 @@ public class CacheIdAuditTest
 			ShippedModelIds.distinctNpcAppearanceIds(), dataset.npcAppearanceIds);
 		assertEquals("the six cameos' NPC ids plus the one \"Rufus\" wears", 7,
 			dataset.npcAppearanceIds.size());
-		assertFalse("an NPC id is not a model id and must not be counted as one",
-			dataset.modelIds.containsAll(dataset.npcAppearanceIds));
+		// Collections.disjoint, not containsAll: the message claims a property of every
+		// element, and containsAll() only says "not all of them" — one stray id landing
+		// in modelIds would have gone on passing as long as a second one did not.
+		assertTrue("an NPC id is not a model id and must not be counted as one; overlapping: "
+				+ overlap(dataset.modelIds, dataset.npcAppearanceIds),
+			Collections.disjoint(dataset.modelIds, dataset.npcAppearanceIds));
 	}
 
 	/**
 	 * Every idle/move animation the render core resolves has to appear here by
 	 * name, matching {@code LivelyAnimationTest}'s independently-pinned count of
-	 * 84 distinct names.
+	 * 89 distinct names.
 	 */
 	@Test
 	public void collectsEveryResolvedAnimationNameUsedByTheDataset()
@@ -106,7 +114,7 @@ public class CacheIdAuditTest
 		RegionDataLoader loader = new RegionDataLoader(TestGson.injected());
 		CacheIdAudit.DatasetIds dataset = CacheIdAudit.collect(loader);
 
-		assertEquals(84, dataset.animationIdsByName.size());
+		assertEquals(89, dataset.animationIdsByName.size());
 		assertTrue("BeeIdle is used by the dataset and must be one of the collected names",
 			dataset.animationIdsByName.containsKey("BeeIdle"));
 		assertEquals(0, (int) dataset.animationIdsByName.get("BeeIdle"));
@@ -387,6 +395,14 @@ public class CacheIdAuditTest
 			map.put((String) namesThenIds[i], (Integer) namesThenIds[i + 1]);
 		}
 		return map;
+	}
+
+	/** What the two sets have in common, so a failure names the ids rather than the sets. */
+	private static Set<Integer> overlap(Set<Integer> left, Set<Integer> right)
+	{
+		Set<Integer> both = new TreeSet<>(left);
+		both.retainAll(right);
+		return both;
 	}
 
 	private static CacheIdAudit.DatasetIds dataset(

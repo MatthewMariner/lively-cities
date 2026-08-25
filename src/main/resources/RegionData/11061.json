@@ -40,7 +40,7 @@
         {
             "name": "Forester",
             "examineText": "He likes to cut down trees. Not sure why.",
-            "moveAnimation": "DogWalk",
+            "moveAnimation": "HumanWalk",
             "uuid": "4ba2ae1e-b222-4f8f-9a98-aae5da1b432f",
             "regionId": 11061,
             "entityType": "StationaryCitizen",

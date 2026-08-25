@@ -75,7 +75,7 @@
         {
             "name": "Child",
             "examineText": "A child.",
-            "moveAnimation": "ChildWalk",
+            "moveAnimation": "GnomeChildWalk",
             "wanderBoxBL": {
                 "x": 3177,
                 "y": 3506,
@@ -112,7 +112,7 @@
                 10351,
                 5555
             ],
-            "idleAnimation": "ChildIdle"
+            "idleAnimation": "GnomeChildReady"
         },
         {
             "name": "Rob",
@@ -135,7 +135,7 @@
         },
         {
             "name": "Cazh",
-            "examineText": "A cameo — one of the plugin author's friends, drawn as a wizard mid-incantation. A likeness, not a player.",
+            "examineText": "A cameo — one of the plugin author's friends, drawn as a wizard between spells. A likeness, not a player.",
             "remarks": [
                 "Hold still, this one is new."
             ],
@@ -150,7 +150,7 @@
             },
             "npcAppearanceId": 512,
             "baseOrientation": 1792,
-            "idleAnimation": "Alching"
+            "idleAnimation": "MageReady"
         },
         {
             "name": "Sludgellama",
@@ -169,11 +169,11 @@
             },
             "npcAppearanceId": 526,
             "baseOrientation": 1856,
-            "idleAnimation": "LectorIdle"
+            "idleAnimation": "NervousIdle"
         },
         {
             "name": "Peter",
-            "examineText": "A cameo — one of the plugin author's friends, drawn as a barbarian mid-flex. A likeness, not a player.",
+            "examineText": "A cameo — one of the plugin author's friends, drawn as a soldier in heavy armour, arms folded. A likeness, not a player.",
             "remarks": [
                 "One more set."
             ],
@@ -186,9 +186,9 @@
                 "y": 3495,
                 "plane": 0
             },
-            "npcAppearanceId": 3256,
+            "npcAppearanceId": 7987,
             "baseOrientation": 1984,
-            "idleAnimation": "Flex"
+            "idleAnimation": "ArmsCrossedReady"
         },
         {
             "name": "Gunnar",
@@ -207,7 +207,7 @@
             },
             "npcAppearanceId": 3680,
             "baseOrientation": 1728,
-            "idleAnimation": "Fishing"
+            "idleAnimation": "HumanSmugIdle"
         },
         {
             "name": "MrCream",
@@ -240,7 +240,8 @@
                 "plane": 0
             },
             "modelIds": [
-                2260
+                2260,
+                3818
             ],
             "baseOrientation": 1024,
             "modelRecolorFind": [],

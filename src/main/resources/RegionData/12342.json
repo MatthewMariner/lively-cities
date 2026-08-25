@@ -125,7 +125,7 @@
             "baseOrientation": 500,
             "modelRecolorFind": [],
             "modelRecolorReplace": [],
-            "idleAnimation": "FallenManIdle"
+            "idleAnimation": "NervousIdle"
         },
         {
             "name": "Eugene",

@@ -65,7 +65,14 @@ public class ShippedSourceTest
 		// Both take a String or File and write to it. Neither names a "File" anything,
 		// which is how new Formatter("x.txt") walked past the source-text version.
 		"java/util/Formatter",
-		"java/util/Scanner"));
+		"java/util/Scanner",
+		// Both take a String path and open it, and neither is caught by anything above.
+		// This is the exact shape a leaked cache reader takes: the game cache is a
+		// directory of files, and reaching it from the shipped jar is precisely what
+		// this project keeps in a scratchpad instead. ZipFile is also how a plugin
+		// would read a jar it was not shipped inside.
+		"java/util/zip/ZipFile",
+		"java/util/jar/JarFile"));
 
 	/**
 	 * The one exemption, named rather than pattern-matched.

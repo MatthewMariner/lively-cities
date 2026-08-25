@@ -27,7 +27,7 @@
             "baseOrientation": 1536,
             "modelRecolorFind": [],
             "modelRecolorReplace": [],
-            "idleAnimation": "HalfLayingDown"
+            "idleAnimation": "DrunkPlayerReady"
         },
         {
             "name": "Assistant Apothecary",

@@ -39,7 +39,19 @@ public class CameoSceneTest
 
 	/** NpcID.WHITE_KNIGHT, and it does not matter here beyond being a real body. */
 	private static final int WHITE_KNIGHT = 1798;
-	private static final int BARBARIAN = 3256;
+
+	/**
+	 * NpcID.CORSCURS_LORD_MARSHAL — Peter's body, and the second one these fixtures
+	 * need so two cameos can be told apart.
+	 *
+	 * <p>It used to be {@code NpcID.BARBARIAN} (3256), at Peter's exact tile. Nothing
+	 * here depends on which body it is, but a retired costume sitting in a fixture is
+	 * how a retired costume gets read as current — {@code CameoPlacementTest.peterIsDressed}
+	 * exists because that id put a bare-chested man in the busiest bank in the game, and
+	 * the settings description went on saying "a barbarian" long after he stopped being
+	 * one.
+	 */
+	private static final int LORD_MARSHAL = 7987;
 
 	private FakeClient client;
 	private FakeRegions regions;
@@ -52,7 +64,7 @@ public class CameoSceneTest
 		client = new FakeClient();
 		client.withNpc(WHITE_KNIGHT, FakeNpcComposition.recoloured(
 			"White Knight", new int[]{217, 305}, new short[]{10, 20}, new short[]{11, 21}));
-		client.withNpc(BARBARIAN, FakeNpcComposition.of("Barbarian", 400));
+		client.withNpc(LORD_MARSHAL, FakeNpcComposition.of("Lord Marshal Brogan", 400));
 
 		regions = new FakeRegions();
 		config = new FakeConfig();
@@ -264,7 +276,7 @@ public class CameoSceneTest
 	{
 		List<EntityDefinition> roster = Arrays.asList(
 			regions.cameo(GRAND_EXCHANGE, 3160, 3495, WHITE_KNIGHT),
-			regions.cameo(GRAND_EXCHANGE, 3164, 3495, BARBARIAN),
+			regions.cameo(GRAND_EXCHANGE, 3164, 3495, LORD_MARSHAL),
 			regions.citizen(GRAND_EXCHANGE, 3169, 3489, 0, 217));
 		regions.file(GRAND_EXCHANGE, roster);
 		config.setCameos(true);
@@ -412,7 +424,7 @@ public class CameoSceneTest
 	{
 		regions.file(GRAND_EXCHANGE, Arrays.asList(
 			regions.npcDressed(GRAND_EXCHANGE, 3160, 3495, WHITE_KNIGHT),
-			regions.cameo(GRAND_EXCHANGE, 3164, 3495, BARBARIAN)));
+			regions.cameo(GRAND_EXCHANGE, 3164, 3495, LORD_MARSHAL)));
 		config.setCameos(false);
 
 		pass();

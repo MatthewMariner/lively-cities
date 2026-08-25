@@ -393,7 +393,7 @@
             "baseOrientation": 0,
             "modelRecolorFind": [],
             "modelRecolorReplace": [],
-            "idleAnimation": "CurledUp"
+            "idleAnimation": "VarrockTrampReady"
         },
         {
             "name": "Butler Jarvis",
@@ -460,7 +460,7 @@
             "baseOrientation": 1024,
             "modelRecolorFind": [],
             "modelRecolorReplace": [],
-            "idleAnimation": "Crying"
+            "idleAnimation": "SlapHead"
         },
         {
             "name": "Rat",
@@ -669,7 +669,7 @@
             "name": "Bees!",
             "examineText": "Not the bees!",
             "remarks": [],
-            "moveAnimation": "HumanWalk",
+            "moveAnimation": "BeeIdle",
             "wanderBoxBL": {
                 "x": 3200,
                 "y": 3409,
@@ -704,7 +704,7 @@
             "name": "Dofur",
             "examineText": "A dwarf.",
             "remarks": [],
-            "moveAnimation": "HumanWalk",
+            "moveAnimation": "DwarfWalk",
             "uuid": "671be842-a89f-4825-85f3-1aaf6cf8d1e9",
             "regionId": 12853,
             "entityType": "StationaryCitizen",
@@ -736,7 +736,7 @@
             "name": "Rifur",
             "examineText": "A dwarf.",
             "remarks": [],
-            "moveAnimation": "HumanWalk",
+            "moveAnimation": "DwarfWalk",
             "uuid": "bc018a82-1bc9-4acf-90eb-f923d9c541c1",
             "regionId": 12853,
             "entityType": "StationaryCitizen",
@@ -847,7 +847,7 @@
             "remarks": [
                 "Meow!"
             ],
-            "moveAnimation": "HumanWalk",
+            "moveAnimation": "KittenWalk",
             "uuid": "be69d9d4-c3b6-455d-bf08-a03a8680f28c",
             "regionId": 12853,
             "entityType": "StationaryCitizen",
@@ -879,7 +879,7 @@
             "name": "Dorgud",
             "examineText": "A dwarf.",
             "remarks": [],
-            "moveAnimation": "HumanWalk",
+            "moveAnimation": "DwarfWalk",
             "uuid": "d873529b-b913-487e-b26d-92d6af2a2d81",
             "regionId": 12853,
             "entityType": "StationaryCitizen",
@@ -1477,7 +1477,7 @@
             "name": "Simon",
             "examineText": "A dwarf.",
             "remarks": [],
-            "moveAnimation": "HumanWalk",
+            "moveAnimation": "DwarfWalk",
             "uuid": "c1abbec2-2426-4ec5-8a34-98dcb9b3777c",
             "regionId": 12853,
             "entityType": "StationaryCitizen",

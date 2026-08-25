@@ -29,7 +29,7 @@
                 4,
                 5027
             ],
-            "idleAnimation": "ChildIdle"
+            "idleAnimation": "GnomeChildReady"
         },
         {
             "name": "Mary",
@@ -637,8 +637,7 @@
                 0.1
             ],
             "modelRecolorFind": [],
-            "modelRecolorReplace": [],
-            "idleAnimation": "HumanIdle"
+            "modelRecolorReplace": []
         },
         {
             "uuid": "953662e0-bd02-46a3-86cd-10e3c0c6e04b",

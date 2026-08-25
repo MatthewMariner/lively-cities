@@ -5,7 +5,7 @@
         {
             "name": "Draug",
             "examineText": "A dwarf.",
-            "moveAnimation": "HumanWalk",
+            "moveAnimation": "DwarfWalk",
             "uuid": "f53ec9a2-5ce3-4a2f-a63b-b371d6e38ebc",
             "regionId": 14936,
             "entityType": "StationaryCitizen",
