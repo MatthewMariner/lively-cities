@@ -103,8 +103,8 @@ This is the part that matters more than the citizens, and it is deliberate.
 - **It measures its own cost rather than promising there isn't one.** The clickbox — the
   expensive part — is computed when you right-click and never per frame, so the only
   per-frame work is sliding walking figures between tiles.
-  [`./gradlew runWithTimings`](#measuring-what-this-plugin-costs--gradlew-runwithtimings)
-  reports the distribution, and the acceptance thresholds are written down in advance.
+  Measured over 19,000 frames of ordinary play: **8µs at the 99th percentile**, about
+  half a percent of one frame. `./gradlew runWithTimings` reproduces it.
 
 <!-- SCREENSHOT: right-click menu on a citizen showing Examine / Hide / Mute below the real
      options, with the coloured target text visible. Save as docs/img/menu.png and replace
@@ -240,30 +240,12 @@ Stated plainly, because you will find them anyway.
   different id and is not covered; RuneLite's own minimap-anchored overlays do not handle it
   either. On that layout a citizen projecting under the minimap can still be offered a
   (harmless, local) Examine.
-- **Figures walking into Varrock arrive over a few game ticks rather than all at once**, and
-  that is deliberate. It came out of the first real measurement — 300 game ticks in Varrock,
-  a human playing, `./gradlew runWithTimings`. Two of the three pre-registered thresholds
-  passed comfortably: per-frame interpolation came in at a 99th percentile of **7µs** against
-  a 0.5ms bar, and no single model build came near the 20ms bar (worst 15.45ms, p99 1.50ms).
-  The visibility pass **failed**: a 99th percentile past 11ms and a worst tick of **53.73ms**,
-  against a bar of 8ms — three dropped frames, i.e. a visible hitch. The split meters said
-  why: 371 models were built across 331 ticks, so the spike was never one slow model, it was
-  forty ordinary ones landing in the same tick on the way into the square. So a pass now
-  builds at most **nine** models and the rest wait for the next one, nearest first.
-
-  **A second measurement then falsified the diagnosis behind that fix**, which is the more
-  useful half of the story. Capping builds did work — the worst tick fell from 53.73ms to
-  18.31ms — but the new report showed the worst tick happening with **three objects on
-  screen**, while the worst single build in the whole session was 8.61ms. Roughly ten
-  milliseconds of that tick was not model building at all. It was the **region load**: the
-  first tick after a scene change parses a region file, derives its `Crowded` figures and
-  builds their wrappers, and that had been averaged into the same number as an ordinary tick
-  ever since the meter existed. A steady-state tick and the tick you walk into a new city on
-  are different events with different acceptable costs, and one percentile over both describes
-  neither. They are now measured separately, and the cap is derived from the crossing tick it
-  actually has to fit inside: `(16.67ms − 3ms region load − 151µs overhead) / 1.4ms ≈ 9`, one
-  frame's worth. The old cap of three was buying protection from a spike that was never
-  building — and costing fourteen seconds to populate Varrock square to do it.
+- **Figures fill in over a few seconds rather than all at once**, and that is deliberate.
+  Walking into a busy square asks the client to build a lot of models in one go, which used
+  to cause a visible stutter, so the work is spread across ticks — nearest figures first.
+  The densest corner of Varrock takes about five seconds to finish arriving from cold.
+  The measurements behind that trade, and the thresholds they were judged against, are in
+  `FrameTimings`' javadoc and in `docs/SUBMISSION.md`.
 - **Crowded adds derived figures, not authored ones.** They are silent, they do not wander,
   and they wear their source's colours rearranged. They are ambience, not characters.
 - **The cameo tiles have not been walked on.** The six were placed off the Grand Exchange's
@@ -433,128 +415,6 @@ current cache — the exact failure mode that killed Citizens.
 Never ship a fix without re-running `auditCacheIds`: gc's own fix for Citizens
 was self-described as comprehensive only "for the most part," which is why
 that check exists at all rather than trusting a manual diff.
-
-### Measuring what this plugin costs — `./gradlew runWithTimings`
-
-Two people asked the predecessor's author about FPS on Reddit and got no
-answer, and its README said "no lag or resource issues" without ever having
-measured one. So the answer here is an instrument rather than a claim, and it
-is designed so that a real number falls out of ordinary play instead of out of
-a benchmark nobody runs.
-
-```
-./gradlew runWithTimings
-```
-
-Launches the same dev client `./gradlew run` does, with one extra system
-property. Then just play — walk into Varrock square, turn the density up, walk
-out again. Every three minutes (300 game ticks) the developer-only reporting
-plugin writes a summary line to the client log and a cumulative report to:
-
-```
-~/.runelite/lively-cities/frame-timings.txt
-```
-
-Three meters, on three different clocks:
-
-| Meter | Clock | What it covers |
-|---|---|---|
-| `visibility pass` | once per game tick (600ms) | deciding who is on screen — **includes** model building |
-| `model build` | once per figure, first spawn | merging, recolouring and lighting one model |
-| `interpolation` | once per rendered frame | sliding walking figures between tiles, and nothing else |
-
-Plus one counter that is not a timing: **model builds held over**, i.e. how many
-figures a pass declined to build because it had already built its three (see
-**What the first measurement said** below). A cold model cache is *not* counted
-there — that is a build the client could not satisfy rather than one this plugin
-chose to postpone, and the two have to stay legible apart or the report starts
-describing a burst it did not measure.
-
-Each reports a median, a 95th and a 99th percentile, an exact maximum, and the
-active-object count recorded at that maximum — because "1ms at 8 objects" and
-"1ms at 76" are different claims. A mean is deliberately not the headline: one
-40ms model-building tick inside three minutes of 30µs ticks averages away to
-nothing and is still a visible hitch.
-
-**What the numbers should say**, written down before they were taken so the
-result cannot be graded on a curve afterwards. A frame at 60fps is 16.7ms.
-
-- **Interpolation p99 ≤ 0.5ms** is acceptable (3% of a frame). Over **2ms** is
-  a problem: it is the only per-frame work here, and it should be close to
-  nothing — the right-click clickbox, which is the expensive part, is computed
-  in `MenuOpened` and never per frame.
-- **Visibility pass p99 ≤ 2ms** is acceptable — it lands in one frame in
-  thirty-six. Over **8ms** is a problem: half a frame on a schedule is a
-  rhythmic stutter.
-- **Model building: no single build over 20ms**, and the burst that lands on
-  entering a dense region inside 100ms. Any single build over **50ms** is a
-  problem, and the fix is known rather than hypothetical — spread the burst
-  across ticks instead of spending the whole 80-object cap in one pass.
-
-It costs nothing when it is off, which is every shipped client: both
-`--developer-mode` and the system property have to be set, and with the meter
-disabled the timing calls do not even read the clock.
-
-#### What the first measurement said
-
-300 game ticks in Varrock, a human playing, client 1.12.36:
-
-| Meter | median | p95 | p99 | max | verdict |
-|---|---|---|---|---|---|
-| visibility pass (331 samples) | 124µs | 2.80ms | ≥11.00ms | 53.73ms | **fails** (bar: p99 ≤ 2ms, > 8ms is a problem) |
-| model build (371 samples) | 478µs | 1.00ms | 1.50ms | 15.45ms | passes (bar: no single build > 20ms) |
-| interpolation (9384 samples) | 1µs | 3µs | 7µs | 308µs | passes by ~70× |
-
-The visibility figure is inclusive of model building, and 371 builds across 331
-passes is what the failure was: not one slow model but dozens in a single tick,
-which is what walking into Varrock square looks like from in here.
-
-So `RenderPolicy.MAX_MODEL_BUILDS_PER_PASS` capped a pass at three builds and the
-rest waited for the next one, nearest first — a figure appearing 600ms later is
-imperceptible, a 53ms stutter is not. Three was derived from
-`124µs overhead + builds × 570µs`, the largest cap fitting inside the 2ms line.
-
-#### What the second measurement said, and why it changed the answer
-
-300 game ticks, same protocol, 184 entities:
-
-| Meter | median | p95 | p99 | max | verdict |
-|---|---|---|---|---|---|
-| visibility pass (317 samples) | 151µs | 2.70ms | 5.50ms | 18.31ms **at 3 objects active** | the anomaly |
-| model build (132 samples) | 600µs | 1.40ms | 1.70ms | 8.61ms | passes |
-| interpolation (19000 samples) | 0µs | 3µs | 8µs | 95µs | passes by ~60× |
-
-The cap worked: 53.73ms became 18.31ms. But **the worst tick had three objects on
-screen**, and the worst build all session was 8.61ms — so about ten milliseconds
-of that tick was something else. It was the **region load**. The first tick after
-a scene change parses a region file, derives its `Crowded` figures and builds
-their wrappers, and that had been folded into the same number as an ordinary
-tick since the meter was written. One percentile over both describes neither.
-
-They are separate meters now — `game tick`, `visibility pass`, `model build
-burst`, `region load` — and the cap is derived from the crossing tick it has to
-fit inside, one frame at 60fps:
-
-```
-crossing tick =  3000µs region load + 151µs overhead + builds × 1400µs
-(16667 − 3000 − 151) / 1400  =  9.65  →  9 builds
-```
-
-Those figures are constants in `RenderPolicy` and `RenderPolicyTest` recomputes
-the cap from them, so a re-measurement moves the cap by editing what was measured
-rather than by picking a number.
-
-**What this cost, and what it bought.** Three was protecting against a spike that
-was never model building, and charging fourteen seconds to populate Varrock
-square for it — the field report held 72 builds over on the first pass and
-drained them three at a time over 24 more. At nine the densest corner fills in
-about five seconds. A citizen taking fourteen seconds to appear is its own
-defect, just a quieter one than a stutter.
-
-**What no cap can fix**: one pathological build is one pathological tick. The
-thresholds still do not fully reconcile on that point — a 20ms build is
-"acceptable" while the pass containing it is "a problem" — and that is recorded
-in `FrameTimings`' javadoc rather than quietly adjusted.
 
 ---
 

@@ -32,7 +32,16 @@
 # run, which is why it gets the character you actually picked.
 set -euo pipefail
 
-WIN_USER="${WIN_USER:-matth}"
+# Asked of Windows rather than hardcoded: this file is public, and a default here is
+# somebody's account name shipped to strangers for no benefit. Override with
+# WIN_USER=... if the detection is wrong, e.g. a Microsoft account whose profile
+# directory does not match the display name.
+WIN_USER="${WIN_USER:-$(cmd.exe /c 'echo %USERNAME%' 2>/dev/null | tr -d '\r\n')}"
+if [ -z "$WIN_USER" ] || [ ! -d "/mnt/c/Users/${WIN_USER}" ]; then
+	echo "could not work out your Windows username (got '${WIN_USER:-}')." >&2
+	echo "Run:  WIN_USER=yourname $0 $*" >&2
+	exit 1
+fi
 WIN_HOME_UNIX="/mnt/c/Users/${WIN_USER}"
 JRE="${WIN_HOME_UNIX}/AppData/Local/RuneLite/jre/bin/java.exe"
 STAGE_UNIX="${WIN_HOME_UNIX}/osrs-dev"
