@@ -14,11 +14,11 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 
 </div>
 
-> [!NOTE]
-> **Not yet on the Plugin Hub.** This is pre-release, and submission is deliberately on hold
-> until the dataset is fuller — a first impression is worth spending once. To try it today,
-> build it yourself: see [Development](#development). Everything needed to submit is already
-> written up in [docs/SUBMISSION.md](docs/SUBMISSION.md).
+> [!TIP]
+> **On the Plugin Hub.** Install it from inside RuneLite — the wrench icon, then **Plugin
+> Hub**, then search for *Lively Cities*. There is also a
+> [listing page](https://runelite.net/plugin-hub/show/lively-cities). To build it yourself
+> instead, see [Development](#development).
 
 <!-- SCREENSHOT: hero — Varrock square at Crowded density, mid-afternoon, no interface panels
      open. Wide, 16:9, showing several citizens at different distances. Save as

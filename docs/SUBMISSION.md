@@ -1,45 +1,43 @@
-# Submitting to the Plugin Hub
+# The Plugin Hub: shipping and updating
 
-Everything needed to file the submission, prepared in advance. **Deliberately not filed yet** —
-the decision (2026-08-23) is to wait until the content pass is done, because a first impression
-at 109 citizens is a first impression at 109 citizens.
+**Lively Cities is live.** Merged into `runelite/plugin-hub` on 2026-08-29 as
+[PR #15685](https://github.com/runelite/plugin-hub/pull/15685), automatically, with both
+checks green and no maintainer changes requested. Listing:
+<https://runelite.net/plugin-hub/show/lively-cities>.
 
-The dataset was cut from 24 places to 9 on 2026-08-24 (181 entities to 151, 135 citizens to
-109). That decision cuts the other way from the one above and is meant to: the wait is for
-*density*, and shipping twelve one-figure towns was buying breadth that read as breakage. The
-nine that remain are the ones worth topping up.
+```
+plugins/lively-cities  @  runelite/plugin-hub@master
+repository=https://github.com/MatthewMariner/lively-cities.git
+commit=76f14938836e9e9cdfcefa81884a4d3d625c6f0f
+authors=MatthewMariner
+```
 
-**The top-up landed on 2026-08-29**: 151 entities to 184, 109 citizens to 142, with Al Kharid,
-Catherby, Falador, Ardougne and Draynor all going from three or four figures to ten. That
-clears the density objection above. **One thing still blocks filing**, and it is not on the
-checklist below because no command can do it: none of the 33 new tiles has been walked in
-game. `docs/CITY-TOP-UP-CHECK.md` is the walk — 57 Ground Markers, one circuit — and a
-figure standing inside a wall is exactly the first-impression problem the wait exists for.
+**This document is now the update runbook, and that is the job that matters.** Filing once
+was the easy part. The hub rebuilds every plugin on its roughly weekly client bump, and a
+plugin that stops compiling keeps serving its last-good jar with a failure timestamp — so
+nothing on your end turns red. You fix the bug, commit, push, and the hub is still serving
+the old jar, because the manifest still names the old SHA.
 
-**Reviewed the same day.** An independent read of the top-up found a false line in the
-README's headline table (five figures were said to "follow a script"; nothing runs a script),
-three edits to the new records that survived all 449 tests, five numeric errors in the check
-doc, and eight stale figures in test comments. All are fixed, and the two things that were
-held only by discipline now have guards:
-`AuthoredRecordsTest.everyAuthoredKitIsAWholeCopyOfAShippedKitWithThePaletteReDealt` and the
-new `CityTopUpCheckTest`. Two records in the Ardougne monastery were re-authored as part of
-it — no tile moved — which took the `Crowded` crowd from 324 to 326.
+That gap is not hypothetical. It is exactly how this plugin's predecessor stayed dead for
+fourteen months with a working fix sitting in its repository: someone fixed the cache ids and
+nobody ever bumped `commit=`. **An update is a new PR against `plugins/lively-cities` changing
+one line.** Everything below is how to be confident before you send it.
 
-Nothing else below requires new work. Walk the check, fix whatever it finds, re-run the
-commands and file it.
+*(The Toolchain app's OSRS page watches this for you — it compares the `commit=` on hub master
+against your pushed HEAD and shows the plugin as **outdated** the moment they diverge.)*
 
 ---
 
-## Before you file
+## Before you file an update
 
 | Check | Command | Expected |
 |---|---|---|
-| Tests | `./gradlew clean test` | all green (459) |
-| Every new placement walked in game | `docs/CITY-TOP-UP-CHECK.md` | 57 markers imported, all 33 boxes ticked |
+| Tests | `./gradlew clean test` | all green (461) |
+| Every new placement walked in game | `docs/CITY-TOP-UP-CHECK.md` | 57 markers imported, all 33 boxes ticked — **still outstanding as of the 2026-08-29 release** |
 | Offline dataset audit | *(part of the above)* | green |
 | No filesystem API in `src/main` | *(part of the above — `ShippedSourceTest`)* | green; see [below](#no-filesystem-writes-in-the-shipped-jar) |
 | Cache ids still resolve | `./run-windows.sh --audit` | no failing ids outside the known-permanent-null section |
-| Frame cost measured | `./run-windows.sh --timings`, then play for a few minutes | a real figure in `frame-timings.txt`, inside the thresholds the README states — and **written into the README and the PR body below**, replacing the placeholder sentence |
+| Frame cost still inside its thresholds | `./run-windows.sh --timings`, then play for a few minutes | measured at release: per-frame p99 **8µs**, per-tick p99 **5.50ms**. Re-measure after anything that touches the visibility pass |
 | Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight ~/Workspaces/osrs/lively-cities` | `Result: PASS` |
 | Compiles under the hub's own build | see [Verifying the hub build](#verifying-the-hub-build) | `BUILD SUCCESSFUL` |
 | Screenshots in the README | — | *deliberately deferred (2026-08-24) — the page ships with placeholders* |
@@ -47,7 +45,7 @@ commands and file it.
 
 That last row is not ceremony. The guidelines page was revised once without changing its
 visible dateline, so "I read it months ago" is not the same as having read it. Do it per
-submission.
+submission, updates included.
 
 **Use `run-windows.sh`, not the Gradle tasks, on a WSL machine.** The two rows above name it
 deliberately. `./gradlew auditCacheIds` and `./gradlew runWithTimings` do the same work, but
@@ -76,8 +74,7 @@ cp -r gradle gradlew "$S/"
 ( cd "$S" && ./gradlew compileJava )
 ```
 
-Last verified **2026-08-24: BUILD SUCCESSFUL, 48 classes**, run against the working tree
-rather than a commit so the uncommitted work was included. Our source uses Gson and Guice,
+Last verified **2026-08-29 against the released commit: BUILD SUCCESSFUL, 48 classes**. Our source uses Gson and Guice,
 which look like third-party dependencies but arrive transitively through the client — worth
 re-proving rather than assuming, so **re-run this after any new import.**
 
@@ -165,7 +162,7 @@ One file, no extension, at `plugins/lively-cities` in a fork of
 
 ```
 repository=https://github.com/MatthewMariner/lively-cities.git
-commit=<the 40-hex sha you are submitting>
+commit=<the 40-hex sha you are shipping — 76f1493… as of the first release>
 authors=MatthewMariner
 ```
 
@@ -177,21 +174,43 @@ authors=MatthewMariner
   live-query design considered for a different plugin, it would have needed one *and* would
   have shipped disabled by default.)
 
-## Filing it
+## Sending an update
+
+The fork already exists. An update is one line changing in one file.
 
 ```bash
+cd /tmp && rm -rf plugin-hub
 gh repo fork runelite/plugin-hub --clone --remote
 cd plugin-hub
-git checkout -B lively-cities upstream/master
+git checkout -B lively-cities-update upstream/master        # always branch off fresh master
 printf 'repository=https://github.com/MatthewMariner/lively-cities.git\ncommit=%s\nauthors=MatthewMariner\n' \
   "$(git -C ~/Workspaces/osrs/lively-cities rev-parse HEAD)" > plugins/lively-cities
-git add plugins/lively-cities
-git commit -m "Add Lively Cities"
-git push -f -u origin lively-cities
-gh pr create --web
+git diff --stat                                             # expect: 1 file, 1 insertion, 1 deletion
+git commit -am "Update Lively Cities"
+git push -f -u origin lively-cities-update
+gh pr create --repo runelite/plugin-hub --base master --fill
 ```
 
-PR targets **`master`**.
+PR targets **`master`**. Two things that are easy to get wrong:
+
+- **Branch off `upstream/master`, not your fork's stale one.** Your fork does not follow the
+  hub, and a branch cut from a months-old copy carries every unrelated change since.
+- **Push the plugin repo first.** The `commit=` line names a SHA the hub will clone; if it is
+  only on your machine the build fails with something unhelpful. `git -C … status` should be
+  clean and `origin/main..HEAD` empty before you run the above.
+
+The body can be short for an update — what changed and why. The long-form pitch below was for
+the first submission and is kept as a record of what was claimed.
+
+### What the first submission looked like
+
+Filed 2026-08-29 as [#15685](https://github.com/runelite/plugin-hub/pull/15685) and merged
+about half an hour later by `runelite-github-app`, with `build: SUCCESS` and
+`RuneLite Plugin Hub Checks: SUCCESS`. **No maintainer asked for anything**, and the only
+comments were the two bots. That is the automatic lane, and the plugin qualified for it
+because the shipped jar does no file I/O — see
+[No filesystem writes in the shipped jar](#no-filesystem-writes-in-the-shipped-jar), which is
+the single change that bought it.
 
 ## The PR body
 
@@ -244,7 +263,7 @@ appears verbatim in merged hub PRs — it answers the reviewer's actual question
 > showed that spike was a region load being averaged in with ordinary ticks rather than the
 > model-building burst it was assumed to be. The README carries the full before-and-after.
 
-## After filing
+## After you send one
 
 Two status checks, read **separately**:
 
@@ -252,12 +271,29 @@ Two status checks, read **separately**:
 2. **The external "RuneLite Plugin Hub Checks" bot** — act only if it literally says
    *"Changes are needed"*.
 
-A stale-PR bot closes "waiting for author" PRs after 7 days, so watch it. Observed turnaround
-for simple submissions is under an hour, but that is an observation and not an SLA.
+A stale-PR bot closes "waiting for author" PRs after 7 days, so watch it. The first
+submission was merged in about half an hour with both checks green; that is an observation,
+not an SLA.
 
-**Updates forever after:** bump the `commit=` line, new PR. The hub rebuilds every plugin on
-its roughly weekly client bump; a plugin that stops compiling keeps serving its last-good jar
-with a failure timestamp, so a break is something to fix calmly rather than urgently.
+**Do not let the manifest go stale.** A fixed plugin whose `commit=` was never bumped is why
+Citizens stayed dead for fourteen months after it worked again — and it is invisible from
+this side, because the hub keeps serving the last-good jar rather than showing an error. The
+Toolchain OSRS page exists to make that visible: it compares hub master's `commit=` against
+your pushed HEAD and marks the plugin **outdated** the moment they diverge.
 
-**Do not let the manifest go stale.** That single omission — a fixed plugin whose `commit=`
-was never bumped — is why Citizens stayed dead for fourteen months after it worked again.
+## Known at release, and deliberately shipped
+
+Neither blocks anything; both are disclosed in the README rather than hidden. They are the
+first candidates for an update.
+
+- **Thirty-three placements have never been walked.** `docs/CITY-TOP-UP-CHECK.md` is the
+  walk — 57 Ground Markers, five stops, one circuit. Nothing offline can tell whether a tile
+  is walkable, so a figure could be standing in a wall. Riskiest: **Maud** and **Corliss** in
+  Draynor, and the thirteen with no wander box beneath them.
+- **Two re-kitted figures nobody has seen.** *Anselm* and *Brother Edwy* in the Ardougne
+  monastery were given different bodies late; the ids are verified against the cache but how
+  they read is not.
+- **The East bank workman** is missing leggings, and at `Crowded` his derived twin is
+  examined as an anonymous "Passer-by" while dressed in the same uniform. One fix covers
+  both: give him an `npcAppearanceId`, which dresses him properly *and* stops him seeding an
+  echo, since `CitizenEcho` refuses NPC-dressed sources.

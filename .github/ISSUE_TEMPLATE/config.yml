@@ -2,4 +2,4 @@ blank_issues_enabled: true
 contact_links:
   - name: Is it a known limitation?
     url: https://github.com/MatthewMariner/lively-cities#known-limitations
-    about: Pop-in past ~16 tiles, steppy animation without RuneLite's Animation Smoothing plugin, the one interface layout the right-click guard cannot see, and the thin dataset are all documented.
+    about: Pop-in past ~16 tiles, steppy animation without RuneLite's Animation Smoothing plugin, the one interface layout the right-click guard cannot see, and the fact that this covers nine cities rather than the whole map are all documented.
