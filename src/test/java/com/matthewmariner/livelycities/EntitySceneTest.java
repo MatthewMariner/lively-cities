@@ -768,7 +768,7 @@ public class EntitySceneTest
 			}
 		}
 
-		assertEquals("the shipped wander boxes", 39, wanderers);
+		assertEquals("the shipped wander boxes", 51, wanderers);
 		assertEquals("wanderers pacing across a region border", 3, crossing.size());
 		assertTrue("and they are the three the comments name: " + crossing,
 			crossing.contains("Ava") && crossing.contains("Dark wizard")
@@ -776,7 +776,7 @@ public class EntitySceneTest
 	}
 
 	/**
-	 * Three of the 39 shipped wanderers have boxes that straddle a region border.
+	 * Three of the 51 shipped wanderers have boxes that straddle a region border.
 	 * Membership is pinned to the authored tile and does not follow the walk, so
 	 * neither of the two failure modes is reachable: the citizen cannot be listed
 	 * twice, and it cannot be left registered once its home region goes.

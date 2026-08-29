@@ -45,6 +45,44 @@
                 5555
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Yusra",
+            "examineText": "The caravan left without her, and she has decided to take that personally.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10006-1005-4e37-b104-9d62ac54f307",
+            "regionId": 13361,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 3339,
+                "y": 3151,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18914,
+                3848,
+                353,
+                14421,
+                14395
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                43072,
+                8741,
+                4550,
+                6798
+            ],
+            "modelRecolorReplace": [
+                1686,
+                2524,
+                7613,
+                8472,
+                8472
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

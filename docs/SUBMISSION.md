@@ -9,7 +9,24 @@ The dataset was cut from 24 places to 9 on 2026-08-24 (181 entities to 151, 135 
 *density*, and shipping twelve one-figure towns was buying breadth that read as breakage. The
 nine that remain are the ones worth topping up.
 
-Nothing below requires new work. When the content lands, re-run the checks and file it.
+**The top-up landed on 2026-08-29**: 151 entities to 184, 109 citizens to 142, with Al Kharid,
+Catherby, Falador, Ardougne and Draynor all going from three or four figures to ten. That
+clears the density objection above. **One thing still blocks filing**, and it is not on the
+checklist below because no command can do it: none of the 33 new tiles has been walked in
+game. `docs/CITY-TOP-UP-CHECK.md` is the walk — 57 Ground Markers, one circuit — and a
+figure standing inside a wall is exactly the first-impression problem the wait exists for.
+
+**Reviewed the same day.** An independent read of the top-up found a false line in the
+README's headline table (five figures were said to "follow a script"; nothing runs a script),
+three edits to the new records that survived all 449 tests, five numeric errors in the check
+doc, and eight stale figures in test comments. All are fixed, and the two things that were
+held only by discipline now have guards:
+`AuthoredRecordsTest.everyAuthoredKitIsAWholeCopyOfAShippedKitWithThePaletteReDealt` and the
+new `CityTopUpCheckTest`. Two records in the Ardougne monastery were re-authored as part of
+it — no tile moved — which took the `Crowded` crowd from 324 to 326.
+
+Nothing else below requires new work. Walk the check, fix whatever it finds, re-run the
+commands and file it.
 
 ---
 
@@ -17,7 +34,8 @@ Nothing below requires new work. When the content lands, re-run the checks and f
 
 | Check | Command | Expected |
 |---|---|---|
-| Tests | `./gradlew clean test` | all green (446) |
+| Tests | `./gradlew clean test` | all green (459) |
+| Every new placement walked in game | `docs/CITY-TOP-UP-CHECK.md` | 57 markers imported, all 33 boxes ticked |
 | Offline dataset audit | *(part of the above)* | green |
 | No filesystem API in `src/main` | *(part of the above — `ShippedSourceTest`)* | green; see [below](#no-filesystem-writes-in-the-shipped-jar) |
 | Cache ids still resolve | `./run-windows.sh --audit` | no failing ids outside the known-permanent-null section |

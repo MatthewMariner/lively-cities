@@ -35,8 +35,8 @@ public class CitizenRemarksTest
 	/**
 	 * All four spellings of silence, side by side.
 	 *
-	 * <p>All four are in the shipped data — 34 citizens carry remarks, 51 carry
-	 * {@code "remarks": []}, 24 carry no field at all, and all 42 scenery records
+	 * <p>All four are in the shipped data — 44 citizens carry remarks, 66 carry
+	 * {@code "remarks": []}, 32 carry no field at all, and all 42 scenery records
 	 * omit it — so this is a fixture matching reality rather than an invented edge
 	 * case. Flattening them at the validation gate is what lets every later reader
 	 * ask one question. {@link #theShippedRemarksPartitionAddsUpToTheRoster()} is
@@ -207,8 +207,11 @@ public class CitizenRemarksTest
 	 * <p><b>Why a test and not a javadoc sentence.</b> The split was written down in
 	 * two places and drifted in both, and the drift was invisible because nothing
 	 * added the parts together: one version of it claimed 39 + 54 + 24 remark
-	 * spellings across a roster of 109 citizens, which is 117 citizens and therefore
-	 * could not have been true of any dataset. A partition is the cheapest kind of
+	 * spellings across the 109-citizen roster of the day, which is 117 citizens and
+	 * therefore could not have been true of any dataset. (The roster is 142 now. The
+	 * example is left in the numbers it happened in, because what it demonstrates is a
+	 * split that does not sum, and rescaling it to today's roster would turn a real
+	 * defect into an invented one.) A partition is the cheapest kind of
 	 * claim to guard — the parts have to be the whole — so this asserts both the
 	 * parts and the sum, and the totals it checks them against are counted rather
 	 * than typed.
@@ -275,25 +278,25 @@ public class CitizenRemarksTest
 			sceneryWithARemarksField += sceneryRecordsCarryingRemarks(regionId);
 		}
 
-		assertEquals("citizens carrying at least one remark", 34, carryRemarks);
-		assertEquals("citizens carrying \"remarks\": []", 51, carryAnEmptyArray);
-		assertEquals("citizens carrying no remarks field at all", 24, carryNoField);
+		assertEquals("citizens carrying at least one remark", 44, carryRemarks);
+		assertEquals("citizens carrying \"remarks\": []", 66, carryAnEmptyArray);
+		assertEquals("citizens carrying no remarks field at all", 32, carryNoField);
 		assertEquals("scenery records, none of which carry the field", 42, scenery);
 		assertEquals("and none of them carry it", 0, sceneryWithARemarksField);
 
 		assertEquals("the three citizen spellings have to be the whole roster and nothing "
 				+ "more — a split that does not add up is the failure this test exists for",
 			citizens, carryRemarks + carryAnEmptyArray + carryNoField);
-		assertEquals("and the roster is the shipped one", 109, citizens);
+		assertEquals("and the roster is the shipped one", 142, citizens);
 
 		assertEquals("every spelling of silence ends up as one empty array, which is what "
 				+ "EntityDefinition.NO_REMARKS is shared across",
 			carryAnEmptyArray + carryNoField + scenery, silent);
 		assertEquals("and that shared array covers this many of the shipped entities — the "
 				+ "figure EntityDefinition.NO_REMARKS and LivelyEntity.remarks both quote",
-			117, silent);
-		assertEquals("151 shipped entities, and the ones with nothing to say",
-			151, silent + carryRemarks);
+			140, silent);
+		assertEquals("184 shipped entities, and the ones with nothing to say",
+			184, silent + carryRemarks);
 	}
 
 	/**

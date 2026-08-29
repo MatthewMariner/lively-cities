@@ -92,6 +92,128 @@
                 8400
             ],
             "idleAnimation": "GoatIdle"
+        },
+        {
+            "name": "Tarik",
+            "examineText": "Twice a day, every goat.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10001-1000-4f0a-8c31-6b19d24e70a1",
+            "regionId": 13105,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 3310,
+                "y": 3143,
+                "plane": 0
+            },
+            "modelIds": [
+                6086,
+                249,
+                28515,
+                26619,
+                54275,
+                185,
+                176
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4550
+            ],
+            "modelRecolorReplace": [
+                10351,
+                5555,
+                10351
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Nadir",
+            "examineText": "He walks the road to the pass and back.",
+            "remarks": [
+                "Water is a long way off.",
+                "Mind the goats.",
+                "Two hours to the pass, if you keep moving."
+            ],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 3306,
+                "y": 3137,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 3311,
+                "y": 3142,
+                "plane": 0
+            },
+            "uuid": "add10002-1001-4b73-9e02-51ac8d3f6b24",
+            "regionId": 13105,
+            "entityType": "WanderingCitizen",
+            "worldLocation": {
+                "x": 3309,
+                "y": 3139,
+                "plane": 0
+            },
+            "modelIds": [
+                6085,
+                247,
+                28515,
+                27139,
+                27139,
+                176,
+                6090,
+                26630
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                43072,
+                4550
+            ],
+            "modelRecolorReplace": [
+                4537,
+                4525,
+                10353
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Halima",
+            "examineText": "Waiting for the shade.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10003-1002-4d18-8a4f-7c0b5e93a2d6",
+            "regionId": 13105,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 3316,
+                "y": 3143,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                364,
+                18554,
+                3848,
+                353,
+                431,
+                14395
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                4550,
+                8741,
+                25238,
+                59515
+            ],
+            "modelRecolorReplace": [
+                127,
+                127,
+                127,
+                6705
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

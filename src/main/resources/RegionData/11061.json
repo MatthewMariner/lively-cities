@@ -76,6 +76,88 @@
                 10508
             ],
             "idleAnimation": "Woodcutting"
+        },
+        {
+            "name": "Aldous",
+            "examineText": "The yews are further in, apparently.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10011-1010-4f29-8071-5c6ab48e3d90",
+            "regionId": 11061,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 2755,
+                "y": 3431,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                247,
+                28515,
+                26632,
+                179,
+                28346,
+                26630,
+                196,
+                27139,
+                323,
+                510
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                7700,
+                8741,
+                43072,
+                11200
+            ],
+            "modelRecolorReplace": [
+                11148,
+                4550,
+                10508,
+                13200
+            ],
+            "idleAnimation": "Woodcutting"
+        },
+        {
+            "name": "Peri",
+            "examineText": "Well clear of the bees, and staying that way.",
+            "remarks": [
+                "They only sting if you flap."
+            ],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2755,
+                "y": 3441,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2758,
+                "y": 3445,
+                "plane": 0
+            },
+            "uuid": "add10012-1011-4b64-9a38-e2075c1df843",
+            "regionId": 11061,
+            "entityType": "WanderingCitizen",
+            "worldLocation": {
+                "x": 2757,
+                "y": 3443,
+                "plane": 0
+            },
+            "modelIds": [
+                47706
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                6798,
+                6674,
+                4550
+            ],
+            "modelRecolorReplace": [
+                4921,
+                4564,
+                4919
+            ],
+            "idleAnimation": "SuzieIdle"
         }
     ],
     "sceneryRoster": []

@@ -27,7 +27,7 @@ import static org.junit.Assert.assertTrue;
  * <p>Everything here is offline — {@link CitizenEcho#echoesOfRegion} touches nothing
  * but its argument — so these run against the real shipped dataset as well as
  * against hand-built fixtures. The shipped-data tests are the ones that keep the
- * feature's headline claim honest: they recompute the echo count from the 27 vendored
+ * feature's headline claim honest: they recompute the echo count from the 27 shipped
  * region files rather than trusting the number written in a comment, and they are the
  * only tests that can see a citizen colliding with somebody else's echo — a fixture
  * holding one citizen has no other lineage to collide with.
@@ -556,8 +556,13 @@ public class CitizenEchoTest
 	 * <p>Separate from the test above, and it is the one that earns its place: making
 	 * an echo carry its source's {@code remarks} array left the whole suite green
 	 * until this fixture existed, because no other fixture had a source with both a
-	 * palette and a line to speak. 34 of the 109 shipped citizens have both, so the
+	 * palette and a line to speak. 24 of the 142 shipped citizens have both, so the
 	 * gap was in the fixtures rather than in the dataset.
+	 *
+	 * <p>(That sentence used to read "34 of the 109", which was the count of citizens
+	 * carrying <i>remarks</i> rather than the intersection it claimed to be — the real
+	 * figure at the time was 14. Corrected in the top-up pass on 2026-08-29 rather than
+	 * merely rescaled.)
 	 */
 	@Test
 	public void anEchoOfATalkativeCitizenStillHasNothingToSay()
@@ -695,15 +700,15 @@ public class CitizenEchoTest
 	// --- The shipped dataset --------------------------------------------------
 
 	/**
-	 * The headline claim, recomputed from the vendored files.
+	 * The headline claim, recomputed from the shipped files.
 	 *
-	 * <p>109 authored citizens and 121 echoes, i.e. 230 in total. The band is wide
+	 * <p>142 authored citizens and 184 echoes, i.e. 326 in total. The band is wide
 	 * on purpose — what it is guarding is "roughly twice as many", not an exact
 	 * figure — but the exact figures are asserted too, so a data change that moved
 	 * them says so instead of drifting.
 	 *
-	 * <p><b>Why 121 and not 122.</b> 63 citizens have a palette rich enough to dress
-	 * an echo differently, and between them they ask for 122 echoes; one of those has
+	 * <p><b>Why 184 and not 185.</b> 96 citizens have a palette rich enough to dress
+	 * an echo differently, and between them they ask for 185 echoes; one of those has
 	 * nowhere left in its region to stand that is
 	 * {@link CitizenEcho#MIN_SEPARATION_TILES} from everything else the plugin renders
 	 * there — the "Mysterious Old Man" in Varrock (region 12853) gets one echo instead
@@ -712,7 +717,24 @@ public class CitizenEchoTest
 	 * of rendered entities ended up closer than the minimum, three of them on the same
 	 * tile — see {@link #noTwoShippedRenderedEntitiesStandCloserThanTheMinimum}.
 	 *
-	 * <p><b>Why 63 seeds and not 64.</b> "Rufus" in Varrock square used to seed two
+	 * <p><b>These figures moved on 2026-08-29</b>, when 33 citizens were authored into
+	 * Al Kharid, Catherby, Falador, Ardougne and Draynor. They read 109 / 63 / 121 / 230
+	 * before that. All 33 carry a re-dealable palette, so the seed count rose by 33 and
+	 * the echoes by 63: the new citizens ask for 63 echoes rather than 66 because three
+	 * of them ("Corliss", "Maud" and "Cuthbert") carry two recolour pairs, which admit
+	 * exactly one distinct re-deal between them. The one blocked echo is still the
+	 * Mysterious Old Man's, in a region this pass did not touch.
+	 *
+	 * <p>The first revision of that pass shipped a thirty-fourth figure that seeded
+	 * nothing — "Brother Alfric", who copied the "Saradomin priest"'s kit and that
+	 * record's empty recolour arrays with it, and so was a pixel-for-pixel twin of a
+	 * citizen already in Varrock. He was re-authored as "Anselm" on the same uuid in
+	 * the review pass, wearing "Morten"'s kit with the palette actually re-dealt; the
+	 * seed count, the echo count and the uuid count each moved by his two echoes, and
+	 * {@link AuthoredRecordsTest} now holds the rule he was the only exception to.
+	 *
+	 * <p><b>Why the seed count is one short of the citizens that reach the palette
+	 * check with a usable wardrobe.</b> "Rufus" in Varrock square used to seed two
 	 * echoes and now seeds none: he is dressed from an {@code npcAppearanceId} (GitHub
 	 * issue #1 — his authored {@code modelIds} carried no footwear), and a source whose
 	 * colours come from a composition rather than from its own record has no palette to
@@ -744,12 +766,12 @@ public class CitizenEchoTest
 			seeds.add(echo.getEchoSourceUuid());
 		}
 
-		assertEquals("the authored citizen roster", 109, citizens);
-		assertEquals("citizens that seeded at least one echo", 63, seeds.size());
-		assertEquals("echoes derived from them", 121, echoes);
-		assertEquals("of which this many stand inside an authored wander box", 43, fromBoxes);
+		assertEquals("the authored citizen roster", 142, citizens);
+		assertEquals("citizens that seeded at least one echo", 96, seeds.size());
+		assertEquals("echoes derived from them", 184, echoes);
+		assertEquals("of which this many stand inside an authored wander box", 61, fromBoxes);
 		assertEquals("the rest stand on a derived offset the collision map has to vouch for",
-			78, echoes - fromBoxes);
+			123, echoes - fromBoxes);
 
 		// Stated as the two rosters rather than as `echoes >= 0`, which is what this
 		// line used to say: `echoes` is a counter that is only ever incremented, so the
@@ -773,10 +795,10 @@ public class CitizenEchoTest
 	 * Why the other 46 citizens seed nothing, gate by gate, and the fact that the
 	 * gates partition the roster.
 	 *
-	 * <p>{@link #theShippedRosterRoughlyDoublesUnderCrowded()} pins the 63 that do
+	 * <p>{@link #theShippedRosterRoughlyDoublesUnderCrowded()} pins the 96 that do
 	 * seed. The counts for the ones that do not are written into
 	 * {@link CitizenEcho}'s javadoc and into the comment beside each {@code return
-	 * NONE} — "36 of the 102 shipped citizens that reach this line land here" — and
+	 * NONE} — "36 of the 135 shipped citizens that reach this line land here" — and
 	 * nothing was checking them, so they went on saying 49 of 128 after the dataset
 	 * was cut to 109 citizens. Six numbers that have to sum to a seventh is the
 	 * cheapest possible guard, and this is it.
@@ -835,19 +857,19 @@ public class CitizenEchoTest
 		assertEquals("cameos, refused before anything else is asked", 6, cameos);
 		assertEquals("dressed from a composition, so there is no palette to re-deal",
 			1, dressedFromAnNpc);
-		assertEquals("citizens that get as far as the palette check", 102, reachThePaletteCheck);
+		assertEquals("citizens that get as far as the palette check", 135, reachThePaletteCheck);
 		assertEquals("of those, the ones with no second slot to deal into", 36, tooFewPairs);
 		assertEquals("and the ones whose every re-deal is the deal it started with",
 			3, everyRedealIsTheSame);
-		assertEquals("leaving the seeds", 63, seeds);
+		assertEquals("leaving the seeds", 96, seeds);
 
 		assertEquals("the palette check sees everything the two gates above it let through",
 			reachThePaletteCheck, tooFewPairs + everyRedealIsTheSame + seeds);
 		assertEquals("and the gates between them account for every citizen in the dataset "
 				+ "exactly once — a set of counts that does not add up is the drift this "
 				+ "test exists to catch",
-			109, cameos + dressedFromAnNpc + reachThePaletteCheck);
-		assertEquals("citizens that seed nothing", 36 + 3 + 6 + 1, 109 - seeds);
+			142, cameos + dressedFromAnNpc + reachThePaletteCheck);
+		assertEquals("citizens that seed nothing", 36 + 3 + 6 + 1, 142 - seeds);
 	}
 
 	/**
@@ -880,16 +902,23 @@ public class CitizenEchoTest
 			}
 		}
 
-		assertEquals("the authored citizen roster", 109, citizens);
+		assertEquals("the authored citizen roster", 142, citizens);
 		assertEquals("citizens with no authored box, for whom the ring is the only source "
-				+ "of candidate ground", 70, withNoBox);
-		assertEquals("the rest carry one", 39, citizens - withNoBox);
+				+ "of candidate ground", 91, withNoBox);
+		assertEquals("the rest carry one", 51, citizens - withNoBox);
 
 		int toppedUpFromTheRing = 0;
+		int echoesPushedOffABox = 0;
 		List<String> where = new ArrayList<>();
 		for (Map.Entry<Integer, List<EntityDefinition>> region : shippedRosters().entrySet())
 		{
 			List<EntityDefinition> roster = region.getValue();
+
+			Map<UUID, EntityDefinition> byUuid = new HashMap<>();
+			for (EntityDefinition entity : roster)
+			{
+				byUuid.put(entity.getUuid(), entity);
+			}
 
 			Map<UUID, Integer> fromTheBox = new HashMap<>();
 			for (EntityDefinition echo : CitizenEcho.echoesOfRegion(roster))
@@ -897,6 +926,13 @@ public class CitizenEchoTest
 				if (echo.isEchoOnAuthoredGround())
 				{
 					fromTheBox.merge(echo.getEchoSourceUuid(), 1, Integer::sum);
+					continue;
+				}
+
+				EntityDefinition source = byUuid.get(echo.getEchoSourceUuid());
+				if (source != null && source.getWanderBox() != null)
+				{
+					echoesPushedOffABox++;
 				}
 			}
 
@@ -926,11 +962,19 @@ public class CitizenEchoTest
 		}
 
 		assertEquals("wanderers whose own box could not supply every echo they asked for: "
-				+ where, 5, toppedUpFromTheRing);
+				+ where, 8, toppedUpFromTheRing);
+
+		// The same fact counted in echoes rather than in sources, because CitizenEcho's
+		// "What that costs" paragraph quotes it in echoes and said "four" for as long as
+		// nothing checked it. A wanderer that gets neither of its two echoes out of its
+		// own box contributes two to this and one to the count above.
+		assertEquals("echoes whose source carries a box but which stand on a ring offset "
+				+ "instead, because no box tile was far enough from everything else",
+			13, echoesPushedOffABox);
 	}
 
 	/**
-	 * Every uuid in play — 109 authored citizens, 42 scenery records and 121 echoes —
+	 * Every uuid in play — 142 authored citizens, 42 scenery records and 184 echoes —
 	 * has to be distinct.
 	 *
 	 * <p>A collision would mean two entities the user cannot tell apart in the
@@ -961,7 +1005,7 @@ public class CitizenEchoTest
 		}
 
 		assertTrue("uuid collision(s): " + clashes, clashes.isEmpty());
-		assertEquals("151 authored entities plus 121 echoes", 272, seen.size());
+		assertEquals("184 authored entities plus 184 echoes", 368, seen.size());
 	}
 
 	/**
@@ -1041,7 +1085,7 @@ public class CitizenEchoTest
 			}
 		}
 
-		assertEquals("the fixture has to be the whole authored roster", 151, authoredCount);
+		assertEquals("the fixture has to be the whole authored roster", 184, authoredCount);
 		assertTrue("separation violation(s) involving a derived citizen: " + violations,
 			violations.isEmpty());
 		assertEquals("hand-placed entities closer than the minimum to each other, which is "
@@ -1052,7 +1096,7 @@ public class CitizenEchoTest
 	/**
 	 * Every shipped echo wears its source's own colours, re-dealt.
 	 *
-	 * <p>The same three claims as the fixture test, over the 121 real echoes. What
+	 * <p>The same three claims as the fixture test, over the 184 real echoes. What
 	 * this adds is coverage of the dataset's awkward palettes — repeated colours,
 	 * eleven-pair wardrobes — where a rotation can quietly come out as the identity.
 	 */
@@ -1124,13 +1168,15 @@ public class CitizenEchoTest
 	 * to the checkbox that governs the citizen they are copies of.
 	 *
 	 * <p><b>Those four are gone, and the shipped data has no replacement for them.</b>
-	 * The nine-city cut on 2026-08-24 removed both Piscatoris and Camelot, and all 121
+	 * The nine-city cut on 2026-08-24 removed both Piscatoris and Camelot, and all 184
 	 * echoes the surviving 27 regions seed now stand in a region their own source's
 	 * city claims. So the stray count below is asserted at zero and is no longer the
-	 * interesting assertion in this method.
+	 * interesting assertion in this method. The 33 citizens added on 2026-08-29 did not
+	 * reintroduce the case: every one of them stands well inside its own region, so
+	 * their echoes cannot reach a border.
 	 *
 	 * <p>What is still asserted over the real files, and is the claim that actually
-	 * matters, is the rule itself: <b>every one of the 121 echoes takes its governing
+	 * matters, is the rule itself: <b>every one of the 184 echoes takes its governing
 	 * region from its source's tile, not from its own.</b> That is checked echo by
 	 * echo below and cannot go green by there being nothing to check. The two
 	 * behavioural halves the strays used to demonstrate are checked directly instead —
@@ -1172,7 +1218,7 @@ public class CitizenEchoTest
 
 		// The sample guard, in the same spirit as the rest of this file: the rule above
 		// is inside the loop, so an empty roster would pass it having asked nothing.
-		assertEquals("the whole shipped echo roster has to have been asked", 121, checked);
+		assertEquals("the whole shipped echo roster has to have been asked", 184, checked);
 
 		assertEquals("echoes standing in a region their source's city does not claim — the "
 				+ "shipped data no longer contains this case at all: " + strayRegions,
@@ -1217,7 +1263,7 @@ public class CitizenEchoTest
 			checked++;
 		}
 
-		assertEquals("the shipped echo roster", 121, checked);
+		assertEquals("the shipped echo roster", 184, checked);
 	}
 
 	private static String describe(EntityDefinition entity)
@@ -1265,7 +1311,7 @@ public class CitizenEchoTest
 			out.addAll(roster);
 		}
 
-		assertEquals("the whole shipped roster", 151, out.size());
+		assertEquals("the whole shipped roster", 184, out.size());
 		return out;
 	}
 

@@ -31,6 +31,89 @@
             "modelRecolorFind": [],
             "modelRecolorReplace": [],
             "idleAnimation": "GhostIdle"
+        },
+        {
+            "name": "Marlow",
+            "examineText": "Keeps the grounds. Never after dark.",
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 3116,
+                "y": 3376,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 3119,
+                "y": 3377,
+                "plane": 0
+            },
+            "uuid": "add10032-1031-4e95-8c40-2f18b6d537a0",
+            "regionId": 12340,
+            "entityType": "WanderingCitizen",
+            "worldLocation": {
+                "x": 3116,
+                "y": 3377,
+                "plane": 0
+            },
+            "modelIds": [
+                230,
+                251,
+                28515,
+                4391,
+                26619,
+                179,
+                28285,
+                183,
+                7368,
+                4843,
+                11812
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                4550,
+                8741,
+                25238,
+                123
+            ],
+            "modelRecolorReplace": [
+                16026,
+                37394,
+                5572,
+                3507
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Cuthbert",
+            "examineText": "He came to value the manor, and now cannot get the smell of it out of his coat.",
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10033-1032-4a70-9b21-c5039e847d16",
+            "regionId": 12340,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 3118,
+                "y": 3376,
+                "plane": 0
+            },
+            "modelIds": [
+                208,
+                10304,
+                25675,
+                317,
+                25643,
+                25652,
+                25668,
+                25650
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                7952,
+                8741
+            ],
+            "modelRecolorReplace": [
+                38160,
+                38156
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

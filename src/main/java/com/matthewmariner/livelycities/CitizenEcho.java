@@ -16,7 +16,7 @@ import net.runelite.api.coords.WorldPoint;
  * Extra citizens, derived from the authored ones — the whole of
  * {@link CrowdDensity#CROWDED}.
  *
- * <p>The dataset holds 109 hand-placed citizens and the user asked for twice as
+ * <p>The dataset holds 142 hand-placed citizens and the user asked for twice as
  * many. There is no second dataset, so the second half has to come from the first:
  * an <b>echo</b> is a citizen built entirely out of one authored citizen's own
  * record, standing on separately-validated ground a few tiles away, wearing that
@@ -56,20 +56,28 @@ import net.runelite.api.coords.WorldPoint;
  *       and not the one above — "Rufus" in Varrock square, who wears
  *       {@code NpcID.FARMER1} because his authored {@code modelIds} had no footwear
  *       in them (GitHub issue #1). He used to seed two echoes and now seeds none;</li>
- *   <li>of the 102 that remain, 32 carry no recolour at all and 4 carry a single
+ *   <li>of the 135 that remain, 32 carry no recolour at all and 4 carry a single
  *       pair — no second slot to deal into, so 36 seed nothing;</li>
  *   <li>3 more carry two or more pairs whose {@code replace} values are all
  *       identical ("Brother Keptic", "Dark wizard", "Ambatu"), so every re-deal is
  *       the deal it started with — they seed nothing either;</li>
- *   <li>the remaining <b>63</b> seed {@link #MAX_ECHOES_PER_CITIZEN} echoes each
+ *   <li>the remaining <b>96</b> seed {@link #MAX_ECHOES_PER_CITIZEN} echoes each
  *       where their palette supports two <i>distinct</i> re-deals, and one where it
- *       supports only one — 122 echoes asked for, of which 121 find somewhere legal
+ *       supports only one — 185 echoes asked for, of which 184 find somewhere legal
  *       to stand (see below).</li>
  * </ul>
- * That comes to <b>121 echoes against 109 authored citizens — 230 in total,
- * 2.11×</b>, which is the "roughly twice as many" the request asked for.
+ * That comes to <b>184 echoes against 142 authored citizens — 326 in total,
+ * 2.30×</b>, which is the "roughly twice as many" the request asked for.
  * {@code CitizenEchoTest} recomputes all of those numbers from the shipped files
  * rather than trusting this paragraph.
+ *
+ * <p>(This total read 324 between the top-up on 2026-08-29 and the review pass that
+ * followed it, and a comment here observed that the dataset also held 324 distinct
+ * model ids. That was a coincidence and is now not even that: re-authoring the one
+ * top-up record whose palette could not be re-dealt gave it two echoes and took the
+ * total to 326, while the model-id figure did not move and never could have — it is
+ * pinned by {@code ModelIdAuditTest.theDistinctModelIdFigureIsPinned} and this pass
+ * added no cache id. Two unrelated numbers that briefly agreed.)
  *
  * <p>The cap of two per citizen is a judgement and is written down as one: a
  * single richly-recoloured citizen with ten viable re-deals would otherwise become
@@ -95,12 +103,21 @@ import net.runelite.api.coords.WorldPoint;
  * {@link #MIN_SEPARATION_TILES} from all of them, whoever they belong to.
  *
  * <p><b>What that costs.</b> An echo with nowhere legal left to stand is not derived
- * at all: across the shipped files that is exactly one of the 142 asked for — the
- * "Mysterious Old Man" in Varrock gets one echo instead of two — and it moves four
- * others off a wander-box tile onto a ring offset the collision map then has to
- * vouch for. Skipping is the same answer this class already gives an echo whose tile
- * the collision map refuses, and for the same reason: the alternative is moving it
- * somewhere nobody has vouched for.
+ * at all: across the shipped files that is exactly one of the <b>185</b> asked for —
+ * the "Mysterious Old Man" in Varrock gets one echo instead of two — and it moves
+ * <b>13</b> others, belonging to 8 wanderers, off a wander-box tile onto a ring
+ * offset the collision map then has to vouch for. Skipping is the same answer this
+ * class already gives an echo whose tile the collision map refuses, and for the same
+ * reason: the alternative is moving it somewhere nobody has vouched for.
+ *
+ * <p>(Both of those figures were wrong here until the 2026-08-29 review pass, and
+ * wrong in the direction that flatters: this paragraph said "one of the 142" when
+ * 142 is the citizen roster and not the number of echoes anybody asked for, and
+ * "four others" when the real figure was already in double digits. Neither was
+ * checked by anything. Both are now — {@code CitizenEchoTest}'s
+ * {@code theRingServesTheCitizensWithNoBoxAndTheWanderersWhoseBoxIsNotEnough}
+ * recomputes the 13 and the 8, and {@code theShippedRosterRoughlyDoublesUnderCrowded}
+ * the 185 and the 184.)
  *
  * <p><b>Determinism survives it</b>, which it would not if the answer depended on
  * the order the region file happens to list its citizens in. Sources are walked in
@@ -115,7 +132,7 @@ import net.runelite.api.coords.WorldPoint;
  * two sources of known-good ground are used, in this order:
  *
  * <ol>
- *   <li><b>The source's authored wander box.</b> The 39 {@code WanderingCitizen}s
+ *   <li><b>The source's authored wander box.</b> The 51 {@code WanderingCitizen}s
  *       carry a box a human drew, so every tile in it is ground that person already
  *       decided a citizen could walk on. Box tiles are tried first, in a
  *       hash-rotated pass over the box, and an echo placed on one is marked
@@ -197,8 +214,8 @@ final class CitizenEcho
 	 *
 	 * <p>A judgement, not arithmetic. The palette of the richest shipped citizen
 	 * supports ten distinct re-deals; letting it spend all ten would put eleven
-	 * copies of one body in one doorway. Two is what turns 109 authored citizens
-	 * into 230 — the "twice as many" that was asked for — and it is the number the
+	 * copies of one body in one doorway. Two is what turns 142 authored citizens
+	 * into 326 — the "twice as many" that was asked for — and it is the number the
 	 * count in this class's javadoc is computed from.
 	 */
 	static final int MAX_ECHOES_PER_CITIZEN = 2;
@@ -239,7 +256,7 @@ final class CitizenEcho
 	private static final long ECHO_UUID_SALT_HIGH = 0x9E3779B97F4A7C15L;
 	private static final long ECHO_UUID_SALT_LOW = 0xBF58476D1CE4E5B9L;
 
-	/** Shared, so the 36 citizens that seed nothing do not each allocate a list. */
+	/** Shared, so the 46 citizens that seed nothing do not each allocate a list. */
 	private static final List<EntityDefinition> NONE = Collections.emptyList();
 
 	/**
@@ -369,7 +386,7 @@ final class CitizenEcho
 		short[] replace = source.getRecolorReplace();
 		if (find.length < 2 || replace.length < 2)
 		{
-			// Nothing to re-deal — see the class javadoc. 36 of the 102 shipped citizens
+			// Nothing to re-deal — see the class javadoc. 36 of the 135 shipped citizens
 			// that reach this line land here.
 			return NONE;
 		}
@@ -627,8 +644,8 @@ final class CitizenEcho
 	 * The ring of tiles at exactly {@link #MIN_SEPARATION_TILES} from the source, in
 	 * a hash-rotated pass.
 	 *
-	 * <p>The fallback for the 70 shipped citizens with no box, and the top-up for the
-	 * five shipped wanderers whose box cannot hold two well-separated echoes — either
+	 * <p>The fallback for the 91 shipped citizens with no box, and the top-up for the
+	 * eight shipped wanderers whose box cannot hold two well-separated echoes — either
 	 * because it is too small, or because somebody else is already standing in the
 	 * part of it that would do. These are candidates and nothing more: the ring says
 	 * "this tile is the right distance away", and {@link StandableGround} is what says

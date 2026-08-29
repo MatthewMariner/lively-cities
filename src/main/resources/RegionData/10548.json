@@ -31,6 +31,55 @@
             "modelRecolorFind": [],
             "modelRecolorReplace": [],
             "idleAnimation": "PigletIdle"
+        },
+        {
+            "name": "Hesper",
+            "examineText": "Pigs, barley, and a strong opinion about which belongs where.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2662,
+                "y": 3373,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2665,
+                "y": 3376,
+                "plane": 0
+            },
+            "uuid": "add10021-1020-4d24-9f57-6082e4c1a3b8",
+            "regionId": 10548,
+            "entityType": "WanderingCitizen",
+            "worldLocation": {
+                "x": 2662,
+                "y": 3373,
+                "plane": 0
+            },
+            "modelIds": [
+                405,
+                15939,
+                3848,
+                353,
+                14421,
+                14395,
+                377
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                38814,
+                27548,
+                8741
+            ],
+            "modelRecolorReplace": [
+                10508,
+                4550,
+                10508,
+                10508,
+                10508
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

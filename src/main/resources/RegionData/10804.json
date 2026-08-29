@@ -53,6 +53,181 @@
                 127
             ],
             "idleAnimation": "HumanWithStickIdle"
+        },
+        {
+            "name": "Coren",
+            "examineText": "The other guard. He has the gate at night.",
+            "remarks": [],
+            "moveAnimation": "HumanWithStickWalk",
+            "uuid": "add10022-1021-4b95-8206-f7d31c95e04a",
+            "regionId": 10804,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 2728,
+                "y": 3362,
+                "plane": 0
+            },
+            "modelIds": [
+                219,
+                253,
+                306,
+                164,
+                179,
+                268,
+                184,
+                540,
+                317
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                7952,
+                61,
+                41,
+                926,
+                57,
+                10004
+            ],
+            "modelRecolorReplace": [
+                43181,
+                127,
+                43218,
+                127,
+                127,
+                43218
+            ],
+            "idleAnimation": "HumanWithStickIdle"
+        },
+        {
+            "name": "Idris",
+            "examineText": "He has been told to come back with a better letter.",
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10023-1022-4a52-b478-093a6e2df851",
+            "regionId": 10804,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 2729,
+                "y": 3358,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                5215,
+                5221,
+                26619,
+                176,
+                5217,
+                26630,
+                241,
+                5233
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                7281,
+                4550,
+                6798,
+                25238
+            ],
+            "modelRecolorReplace": [
+                65313,
+                5565,
+                43030,
+                65313,
+                65075
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Wilhelm",
+            "examineText": "Somebody's luggage came up this hill on his back, and he is still getting his breath.",
+            "remarks": [
+                "It was heavier than it looked."
+            ],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10024-1023-4e19-9c63-5b840f17d2a6",
+            "regionId": 10804,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 2728,
+                "y": 3354,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                4123,
+                11115,
+                34283,
+                11732,
+                5218
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                8741,
+                8078,
+                21776,
+                25238,
+                5231,
+                6798
+            ],
+            "modelRecolorReplace": [
+                7496,
+                127,
+                1451,
+                64156,
+                10378,
+                18
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Sela",
+            "examineText": "Silver, mostly. She says the guild pays better than the market.",
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2728,
+                "y": 3351,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2729,
+                "y": 3356,
+                "plane": 0
+            },
+            "uuid": "add10025-1024-4c76-8d31-a20e59b6f403",
+            "regionId": 10804,
+            "entityType": "WanderingCitizen",
+            "worldLocation": {
+                "x": 2729,
+                "y": 3352,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                302,
+                252,
+                159,
+                179,
+                28346,
+                185,
+                281,
+                238
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                9152,
+                11183,
+                43072,
+                54397,
+                25238
+            ],
+            "modelRecolorReplace": [
+                4550,
+                5555,
+                5584,
+                107,
+                107
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

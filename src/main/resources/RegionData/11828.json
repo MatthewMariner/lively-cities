@@ -54,6 +54,183 @@
                 4442
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Alwin",
+            "examineText": "In armour, off duty, and adamant that this is not a contradiction.",
+            "remarks": [
+                "It is easier to wear than to carry.",
+                "The park is quieter than the courtyard."
+            ],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10013-1012-4a17-8b59-3d6e0f47c281",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 2965,
+                "y": 3386,
+                "plane": 0
+            },
+            "modelIds": [
+                206,
+                249,
+                306,
+                323,
+                164,
+                179,
+                546,
+                7723,
+                268,
+                184
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                70,
+                5532,
+                41,
+                61,
+                7700,
+                4550
+            ],
+            "modelRecolorReplace": [
+                99,
+                103,
+                4442,
+                99,
+                82,
+                82
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Berta",
+            "examineText": "She comes to the park to get away from the forge.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10014-1013-4e50-9d26-7a81b3f05c69",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 2962,
+                "y": 3383,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                8798,
+                390,
+                7366,
+                18914,
+                4392,
+                3848,
+                353,
+                46747,
+                14395
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                4550,
+                25238,
+                6798,
+                9096,
+                54397,
+                8741
+            ],
+            "modelRecolorReplace": [
+                7465,
+                5400,
+                8497,
+                12700,
+                4562,
+                5400
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Dunstan",
+            "examineText": "Pacing out a measurement, and losing count.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2963,
+                "y": 3382,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2970,
+                "y": 3387,
+                "plane": 0
+            },
+            "uuid": "add10015-1014-4c05-8347-b91e6d0a52f7",
+            "regionId": 11828,
+            "entityType": "WanderingCitizen",
+            "worldLocation": {
+                "x": 2967,
+                "y": 3383,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                247,
+                302,
+                27139,
+                179,
+                54275,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                6798,
+                8741
+            ],
+            "modelRecolorReplace": [
+                61,
+                8472,
+                7236
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Nessa",
+            "examineText": "She has read the same page four times.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10016-1015-4d72-9e18-406fc8b3a175",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 2968,
+                "y": 3388,
+                "plane": 0
+            },
+            "modelIds": [
+                378,
+                18914,
+                479,
+                3848,
+                433,
+                11357,
+                19950
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798,
+                6032,
+                5276,
+                5400
+            ],
+            "modelRecolorReplace": [
+                5421,
+                11187,
+                6817,
+                10308,
+                10279,
+                7353
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

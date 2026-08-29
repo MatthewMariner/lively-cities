@@ -43,6 +43,54 @@
                 3738
             ],
             "idleAnimation": "SquirrelIdle"
+        },
+        {
+            "name": "Marta",
+            "examineText": "Walks this way whatever the weather.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2958,
+                "y": 3432,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2962,
+                "y": 3435,
+                "plane": 0
+            },
+            "uuid": "add10018-1017-4a86-b013-25f78c6e0d94",
+            "regionId": 11829,
+            "entityType": "WanderingCitizen",
+            "worldLocation": {
+                "x": 2960,
+                "y": 3433,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                28515,
+                26632,
+                176,
+                54275,
+                26630,
+                194
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                43072,
+                6798
+            ],
+            "modelRecolorReplace": [
+                10508,
+                43420,
+                40485,
+                4550
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

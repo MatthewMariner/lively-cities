@@ -72,9 +72,15 @@ public class AnimationSkeletonTest
 	 * <p>Pinned, and load-bearing. The comparison below skips a record with only one
 	 * animation, so a bug that made {@link EntityDefinition} drop move animations
 	 * entirely would empty the sample and turn every assertion green. This is the
-	 * number that stops that: 73 of the 109 shipped citizens have both.
+	 * number that stops that: 106 of the 142 shipped citizens have both.
+	 *
+	 * <p>It was 73 of 109 before the top-up pass on 2026-08-29 added 33 citizens to the
+	 * five thin cities. All 33 carry an idle <i>and</i> a move, because each one reuses a
+	 * shipped citizen's whole {@code modelIds} array and is animated on that body's own
+	 * framemap — so the sample this rule can speak about grew by exactly the number of
+	 * records added.
 	 */
-	private static final int CITIZENS_WITH_BOTH_ANIMATIONS = 73;
+	private static final int CITIZENS_WITH_BOTH_ANIMATIONS = 106;
 
 	/**
 	 * The one that would have caught all thirteen.
@@ -125,11 +131,15 @@ public class AnimationSkeletonTest
 	 * skips a record whose models nothing in the cache is built out of, so a bug that
 	 * emptied {@link ModelSkeletons} would turn every assertion green.
 	 *
-	 * <p>The arithmetic: 151 shipped records, 14 of them carrying no animation at all,
-	 * leaves 137 this rule could apply to. 112 of those have a body the cache can put a
+	 * <p>The arithmetic: 184 shipped records, 14 of them carrying no animation at all,
+	 * leaves 170 this rule could apply to. 145 of those have a body the cache can put a
 	 * rig on and 25 do not — see {@link #RECORDS_WITH_NO_RIG_EVIDENCE}.
+	 *
+	 * <p>It read 112 of 137 before the top-up pass on 2026-08-29. Every one of the 33
+	 * citizens it added wears a body already in this table, so all 33 landed in the
+	 * traceable bucket and the other one did not move at all.
 	 */
-	private static final int RECORDS_WITH_A_TRACEABLE_RIG = 112;
+	private static final int RECORDS_WITH_A_TRACEABLE_RIG = 145;
 
 	/**
 	 * The other side of that split, pinned so it cannot quietly grow.
@@ -363,7 +373,7 @@ public class AnimationSkeletonTest
 	 *
 	 * <p>This is the fake-test guard, and it is not hypothetical: a table that mapped
 	 * every animation to {@link AnimationSkeletons#HUMAN} would pass the comparison for
-	 * all 73 records including the thirteen broken ones, because every pair would agree
+	 * all 106 records including the thirteen broken ones, because every pair would agree
 	 * on 0. So the six skeletons the thirteen fixes actually turned on are named here
 	 * individually, asserted distinct from the human one and from each other, and the
 	 * distinct-framemap count across the whole table is pinned on top.

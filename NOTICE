@@ -14,7 +14,7 @@ The files under src/main/resources/RegionData/ are derived from that project's
 region data (format version 0.8). Redistribution of those files retains the
 copyright notice above as the BSD 2-Clause License requires.
 
-They are no longer byte-identical to upstream, in seven ways.
+They are no longer byte-identical to upstream, in eight ways.
 
   1. Only a subset ships. This plugin carried 45 of their region files; as of
      2026-08-24 it carries 27, covering nine places. The other eighteen files —
@@ -151,7 +151,84 @@ They are no longer byte-identical to upstream, in seven ways.
      scenery in this dataset already does. Nothing else on any of the three
      records moved.
 
-BSD-2 permits all seven modifications, the subsetting at item 1 included — this
+  8. Thirty-three citizen records were added on 2026-08-29, spread across thirteen
+     of the twenty-seven files. They are ours, not theirs. They bring the five
+     places that came out of the 2026-08-24 cut holding three or four figures each
+     — Al Kharid, Catherby, Falador, Ardougne and Draynor — up to ten citizens
+     apiece, which is the count at which a city stops reading as broken software.
+     The citizen roster goes from 109 to 142 and the whole dataset from 151 records
+     to 184; the 42 scenery records are untouched.
+
+     How a reader tells ours from theirs. These are ordinary townsfolk, so unlike
+     the cameos at item 2 they carry no "cameo": true — a marker meaning "opt-in
+     content" would be a lie on a figure that is on by default. The marker is in
+     the uuid instead: every record this project authored in this pass has a "uuid"
+     beginning "add1", and no record from upstream does.
+
+         grep '"uuid": "add1' src/main/resources/RegionData/*.json
+
+     returns exactly these thirty-three and nothing else. That claim is not left to
+     this file to keep true:
+     src/test/java/com/matthewmariner/livelycities/AuthoredRecordsTest.java reads
+     the table below straight out of this NOTICE and checks it against the shipped
+     data, so a thirty-fourth record, or a moved one, fails the build.
+
+     Where they went:
+
+       10290   2   Ardougne monastery      Anselm, Brother Edwy
+       10548   1   Ardougne farm           Hesper
+       10804   4   Legends' Guild path     Coren, Idris, Wilhelm, Sela
+       11061   2   Catherby woods          Aldous, Peri
+       11317   4   Catherby town           Merryn, Osric, Wynn, Ilsa
+       11828   4   Falador park            Alwin, Berta, Dunstan, Nessa
+       11829   1   North of Falador        Marta
+       12083   1   The cabbage field       Tobias
+       12338   6   Draynor village         Bram, Odell, Corliss, Maud, Perrin, Hollis
+       12340   2   Draynor Manor grounds   Marlow, Cuthbert
+       13105   3   Al Kharid goat pen      Tarik, Nadir, Halima
+       13106   2   North of the toll gate  Fahd, Reza
+       13361   1   The eastern desert      Yusra
+
+     What they are made of is entirely theirs. Every one of the thirty-three reuses
+     a "modelIds" array copied whole out of a record already in this dataset, with
+     that record's own "modelRecolorFind" kept as-is and its "modelRecolorReplace"
+     rotated so the copy is not simply its donor standing somewhere else. Nothing
+     new was invented and no new cache id enters the data: the dataset still holds
+     exactly 324 distinct model ids and 72 distinct animation names, the same two
+     figures it held before this pass. Each record's animations are its donor's own
+     or another animation on the same framemap as the body it wears, which is what
+     kept the skeleton guard green.
+
+     That sentence is the rule the whole pass rests on, and it is now enforced
+     rather than promised: AuthoredRecordsTest.everyAuthoredKitIsAWholeCopyOfA
+     ShippedKitWithThePaletteReDealt finds each record's donor in the shipped files
+     and checks that the palette is one of the rotations CitizenEcho.distinctDeals
+     would offer — so a hand-assembled kit, a reordered one, or a copy that forgot
+     to re-deal is a red build. It was worth writing down because a review on
+     2026-08-29 made all three of those edits and the suite stayed green.
+
+     One record was re-authored after that review. As first shipped, "Brother
+     Alfric" (10290) copied the "Saradomin priest" (12854) — a donor carrying no
+     recolour arrays at all, so there was nothing to rotate and the result was a
+     visually identical copy of a citizen who walks Varrock's church. He was also
+     one letter from "Brother Althric", a real NPC standing in that same monastery.
+     He now ships as "Anselm" on the same uuid, wearing "Morten"'s (12853) kit with
+     its five-pair palette re-dealt, and the exception this paragraph used to
+     record no longer exists: all thirty-three are re-dealt.
+
+     What is ours on these records is the writing and the placement: names, examine
+     text, remarks, tiles, orientations and wander boxes. No upstream record was
+     edited by this modification — the thirteen files gained records and lost
+     nothing.
+
+     None of the thirty-three tiles has been verified in game. Everything offline
+     can say is that each figure stands within a few tiles of a placement upstream
+     made, or inside a wander box upstream drew. docs/CITY-TOP-UP-CHECK.md is the
+     list of what still has to be walked, and this is disclosed here because a
+     licensee taking this data should know which placements carry a human's word
+     and which carry ours.
+
+BSD-2 permits all eight modifications, the subsetting at item 1 included — this
 note exists so nobody assumes the vendored data still matches the source it came
 from, or that what ships here is all of what they published.
 

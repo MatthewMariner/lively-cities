@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-446-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-459-brightgreen)](#development)
 
 </div>
 
@@ -32,7 +32,7 @@ Varrock square has a handful of guards and a general store. Falador's streets ar
 Lumbridge is a castle with nobody in it. The world is beautifully built and almost entirely
 unpopulated, and once you notice it you cannot stop noticing it.
 
-Lively Cities adds **151 hand-placed figures** across **27 regions** — a fletching apprentice
+Lively Cities adds **184 hand-placed figures** across **27 regions** — a fletching apprentice
 working at her bench, a drunken peasant near the tavern, two thieves sitting on a wall in
 Varrock, a squirrel, a rat, someone cooking over a fire. Some stand, some sit, some walk a
 route. They talk occasionally. They are entirely local to your client: no packets, no server
@@ -40,10 +40,10 @@ load, and **nothing another player can see**.
 
 | | |
 |---|---|
-| **151 entities** | 109 citizens + 42 pieces of scenery |
-| **39 wander**, 65 stand still, 5 follow a script | |
-| **9 places** | Varrock (97), Lumbridge (21), the Grand Exchange (10), Edgeville (5), Falador (4), Catherby (4), Al Kharid (4), Ardougne (3), Draynor (3) |
-| **~230 at Crowded** | an optional density that roughly doubles the streets |
+| **184 entities** | 142 citizens + 42 pieces of scenery |
+| **51 wander**, 91 stand still | 5 of the 91 are `ScriptedCitizen` records whose script nothing runs — [see below](#known-limitations) |
+| **9 places** | Varrock (97), Lumbridge (21), Al Kharid (10), Ardougne (10), Catherby (10), Falador (10), the Grand Exchange (10), Draynor (11), Edgeville (5) |
+| **326 at Crowded** | an optional density that roughly doubles the streets |
 
 <!-- SCREENSHOT: a close-up of two or three citizens with distinct appearances, ideally one
      mid-walk. Save as docs/img/citizens.png and replace with:
@@ -127,7 +127,7 @@ revived. The demand outlived the maintenance by well over a year.
 retained — that data is hundreds of hours of walking around Gielinor deciding where a person
 should stand, and throwing it away would have been vandalism. See [NOTICE](NOTICE) for exactly
 what is derived: the dataset, the animation-name table, the model lighting constants, and the
-five modifications we have made to their data.
+eight modifications we have made to their data.
 
 What is new is everything that stops it dying the same way:
 
@@ -141,10 +141,15 @@ What is new is everything that stops it dying the same way:
   reworks, it is a named constant in `gameval.NpcID`, and the audit above covers it — which
   is the whole reason to prefer it. The vendored figures keep their `modelIds`; the one
   exception is Rufus, who had no boots in his (see below).
+- **New figures introduce no new cache ids at all.** The 33 citizens added to the thin
+  cities on 2026-08-29 each wear a `modelIds` array copied whole out of a record already
+  in the dataset, with that record's own recolour palette re-dealt so the copy is not its
+  donor twice. Distinct model ids: 324 before, 324 after. A new number here is a new thing
+  that can break on a game update, and this pass added none — see [NOTICE](NOTICE) item 8.
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they were renamed
   to anonymous barrow wights, and the Barrows has since left the dataset entirely.
-- **446 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **459 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -153,18 +158,48 @@ What is new is everything that stops it dying the same way:
 
 Stated plainly, because you will find them anyway.
 
-- **The dataset is thin and lopsided, and it is now nine places rather than twenty-four.**
-  109 citizens for the whole game, 40 of them in a single Varrock region and 63 in Varrock
-  altogether. Falador, Catherby, Al Kharid, Ardougne and Draynor have three or four figures
-  each — enough to read as a quiet town, not enough to read as a populated one.
+- **The dataset is still lopsided, and it is nine places rather than twenty-four.**
+  142 citizens for the whole game, 40 of them in a single Varrock region and 63 in Varrock
+  altogether. Varrock is the flagship and everywhere else is a town rather than a city.
+
+  The five thinnest survivors were brought up to ten citizens each on 2026-08-29 — Al
+  Kharid, Catherby, Falador, Ardougne and Draynor had three or four figures apiece before
+  that, which reads as a quiet town rather than a populated one. **None of those 33 tiles
+  has been walked in game.** Nothing offline can tell you whether a tile is walkable, so
+  each new figure was placed within a few tiles of a placement the predecessor's authors
+  made, or inside a wander box they drew; both are inferences, and a figure standing in a
+  wall is the way they fail. Every one is listed with its tile in
+  [docs/CITY-TOP-UP-CHECK.md](docs/CITY-TOP-UP-CHECK.md), with a Ground Markers import
+  block, and that walk is the next thing this plugin needs.
+
+  Even topped up, three of those five are populated somewhere other than where a player
+  would look for them. This plugin ships no region file for East Ardougne's market square,
+  so Ardougne's seven are at the monastery, the farm and the Legends' Guild path. Falador's
+  four new park figures all stand inside Sir Wendes' authored wander box, which is the only
+  vouched-for ground anywhere in region 11828 — so Falador is a park scene rather than a
+  street scene. Draynor's eight are in two groups: six on the ground north of Ned's house
+  and east toward the manor gate, and two in the manor grounds (region 12340) beside the
+  Ghost's box. That first group is the thinnest evidence in the whole pass rather than
+  vouched-for ground — region 12338 shipped exactly two entities before this, so six
+  figures hang off two proven tiles, and `docs/CITY-TOP-UP-CHECK.md` says which two.
 
   Fifteen thinner places were removed outright on 2026-08-24 rather than shipped as they
   were: thirteen of the original twenty-four held one or two figures, and ticking "Canifis"
   to find one person there reads as a broken plugin, not as a sparse one. Those were
   Barrows, Piscatoris, the Ranging Guild, Camelot, Taverley, Castle Wars, the Farming Guild,
   the Lumber Yard, the Motherlode Mine, Otto's Grotto, Trollheim, Paterdomus, Canifis, Musa
-  Point and Rimmington. Bringing the nine survivors up, and earning those places back with
-  enough content to deserve a checkbox, is content authoring and it is the main work left.
+  Point and Rimmington. Earning those places back with enough content to deserve a checkbox
+  is content authoring, and it is the main work left.
+- **Five figures are typed `ScriptedCitizen` and no script runs.** The vendored format has
+  a `startScript` field naming a behaviour — `edgevilleSmith`, `gardenerScript`,
+  `apothecaryScript`, `lumbridgeGardenerScript`, `testScript` — and this plugin parses it and
+  executes nothing. There is no script engine here and none is planned. The five records
+  (Eugene in Edgeville, the Assistant Apothecary and the Gardener in Varrock, Mike in
+  Lumbridge, Emme in Varrock) therefore stand exactly where they were placed, playing their
+  idle animation, indistinguishable in behaviour from the 86 `StationaryCitizen`s. The field
+  is carried through the loader rather than dropped so that the shipped files stay a faithful
+  copy of the format they came from — see `EntityRecord`, which says the same thing at the
+  field. Anything a reader might think those five do, they do not.
 - **A figure whose record was short a model is re-dressed rather than patched.** Rufus in
   Varrock square had no footwear model in his twelve — the record simply never carried one.
   Guessing which raw id to add could have given him a hat for feet, so he now wears
@@ -172,8 +207,8 @@ Stated plainly, because you will find them anyway.
   replaces his whole appearance rather than patching it, so the twelve hand-picked ids and
   their six recolour pairs are gone; he reads as an ordinary farming trader now, complete,
   rather than as a distinctive barefoot one. He also stops seeding `Crowded` extras, because
-  an NPC-dressed citizen has no record palette to re-deal — two ambient bodies, 123 down to
-  121.
+  an NPC-dressed citizen has no record palette to re-deal — two ambient bodies fewer at
+  that density than he would otherwise have contributed.
 - **Twenty-nine figures sit down and nobody has checked what they sit on.** `Sitting`
   played on a tile with no bench under it renders as squatting in mid-air, and whether
   a seat is there is a question only a live client can answer — the dataset stores a
@@ -248,7 +283,7 @@ Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires 
 the Gradle wrapper handles the rest.
 
 ```bash
-./gradlew build            # compile and run the 446 tests
+./gradlew build            # compile and run the 459 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)
@@ -315,7 +350,11 @@ and `RegionDataLoaderTest` already assert, over the shipped JSON alone:
   distinct-`npcAppearanceId` count is pinned (currently 7) — if either test
   fails after you *intentionally* changed the dataset, update the pinned
   number in `ModelIdAuditTest`; if you did not touch the dataset, something
-  else changed it
+  else changed it. (The crowd at `Crowded` is 326 — 142 authored citizens
+  plus 184 derived ones. It briefly read 324 as well, and a note here called
+  that a coincidence; it is not even that any more. The two are unrelated
+  quantities and neither should ever be "corrected" to agree with the other:
+  one is a property of the game cache and the other of the echo derivation)
 - every animation name the dataset uses resolves in `LivelyAnimation`
 - the whole dataset loads with zero skipped records
 

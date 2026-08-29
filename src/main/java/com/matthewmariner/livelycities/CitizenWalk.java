@@ -78,12 +78,16 @@ import net.runelite.api.coords.WorldPoint;
  * <p>This class must never call {@code tick()} itself — the client already does,
  * once per frame, and a second caller runs every animation at double speed.
  *
- * <p><b>Scripted citizens are not wandering citizens.</b> The six
+ * <p><b>Scripted citizens are not wandering citizens.</b> The five
  * {@code ScriptedCitizen} records carry a {@code startScript} name and no wander
  * box, so they get no {@code CitizenWalk} and stand exactly where L1 put them.
  * That is on purpose and not an oversight: running authored scripts is a later
  * phase, and a scripted citizen wandering at random would be worse than one
- * standing still.
+ * standing still. Nothing runs those scripts today and nothing ever has — see
+ * {@code ShippedSourceTest.noShippedClassReadsTheStartScriptField}, which is what
+ * stops that sentence quietly becoming untrue. (It read "six" until 2026-08-29:
+ * there were six until the nine-city cut on 2026-08-24 took "Draug" and region
+ * 14936 with it, and this line was not counted again afterwards.)
  *
  * <p><b>Client-thread-free.</b> Nothing here touches the client;
  * {@link #localPoint} only reads the world view's scene rectangle. That is what

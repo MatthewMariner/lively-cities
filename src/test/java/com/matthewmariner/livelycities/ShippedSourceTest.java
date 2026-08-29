@@ -87,6 +87,20 @@ public class ShippedSourceTest
 	private static final String CLASSPATH_READER = "RegionDataLoader.java";
 
 	/**
+	 * {@code startScript} as it appears in a class file's constant pool: a
+	 * {@code CONSTANT_Utf8} is {@code u2} length then the bytes, so the eleven-character
+	 * name is {@code 00 0B} followed by the name itself. Read back through
+	 * {@code ISO-8859-1}, which maps every byte to the char of the same value, that is
+	 * this string.
+	 *
+	 * <p>The length prefix is the whole point: without it, a search for the name also
+	 * matches {@code startScriptRunner} or the field renamed, and a rename is exactly
+	 * what the sample guard in {@link #noShippedClassReadsTheStartScriptField()} exists
+	 * to notice.
+	 */
+	private static final String START_SCRIPT_POOL_ENTRY = "\000\013startScript";
+
+	/**
 	 * The compiled classes, not the source text — and that difference is the test.
 	 *
 	 * <p>A source scan is an approximation of the program and it leaks. Review found
@@ -262,6 +276,76 @@ public class ShippedSourceTest
 	 * <p>Fails loudly rather than scanning an empty list: a scan of nothing passes, and
 	 * "passed" is the answer this test must never give by accident.
 	 */
+	/**
+	 * <b>Nothing in the shipped jar reads {@code startScript}.</b>
+	 *
+	 * <p>A different rule from the one above, sharing its mechanism because the
+	 * mechanism is the point. The vendored format has a {@code startScript} field
+	 * naming a behaviour, five shipped records carry one, and this plugin has no
+	 * script engine: {@link EntityRecord} parses the field so the redistributed files
+	 * stay a faithful copy of the format they came from, and the render core ignores
+	 * it entirely. Those five {@code ScriptedCitizen}s stand exactly where they were
+	 * placed and are indistinguishable in behaviour from a {@code StationaryCitizen}.
+	 *
+	 * <p>That is a limitation the README states in as many words, and a limitation
+	 * stated in prose is one refactor away from being wrong in prose. It is checkable
+	 * exactly: reading {@code record.startScript} from anywhere puts a {@code Fieldref}
+	 * in the <i>reading</i> class's constant pool, and with it the UTF-8 entry
+	 * {@code startScript}. So the name may appear in {@code EntityRecord.class}, which
+	 * declares it, and in no other shipped class. Javadoc mentioning the field is
+	 * invisible here, which is the right way round — a comment about a field is not a
+	 * use of it.
+	 *
+	 * <p>If a script engine is ever built, this test is the thing that says so, and
+	 * deleting it is part of shipping one. It is not a rule against the feature; it is
+	 * a rule against the README quietly ceasing to be true.
+	 *
+	 * <p><b>The search is for the exact constant-pool entry, not the substring.</b> A
+	 * {@code contains("startScript")} is also satisfied by {@code startScriptRunner},
+	 * {@code startScriptName} and the field simply renamed — which is how the sample
+	 * guard at the bottom first passed a mutation that renamed the field out from under
+	 * it. A pool {@code CONSTANT_Utf8} is length-prefixed, so the eleven-character name
+	 * is the bytes {@code 00 0B} followed by {@code startScript} and nothing longer
+	 * matches. See {@link #START_SCRIPT_POOL_ENTRY}.
+	 */
+	@Test
+	public void noShippedClassReadsTheStartScriptField() throws IOException
+	{
+		List<String> readers = new ArrayList<>();
+		boolean declared = false;
+
+		for (Path classFile : shippedClasses())
+		{
+			String constants = new String(
+				Files.readAllBytes(classFile), StandardCharsets.ISO_8859_1);
+			if (!constants.contains(START_SCRIPT_POOL_ENTRY))
+			{
+				continue;
+			}
+
+			String name = classFile.getFileName().toString();
+			if ("EntityRecord.class".equals(name))
+			{
+				declared = true;
+			}
+			else
+			{
+				readers.add(name);
+			}
+		}
+
+		assertTrue("classes naming startScript other than the DTO that declares it — if a"
+				+ " script engine has landed, the README's \"and no script runs\" limitation"
+				+ " has to go with this test: " + readers,
+			readers.isEmpty());
+
+		// The sample guard: the rule above is a search for absence, and a scan that
+		// found the name nowhere at all would pass while proving nothing about whether
+		// the field still exists to be read.
+		assertTrue("EntityRecord has to still declare a field named exactly startScript,"
+			+ " or this test is checking that nobody reads a field nobody has", declared);
+	}
+
 	private static List<Path> shippedClasses() throws IOException
 	{
 		Path root = Paths.get("build/classes/java/main");

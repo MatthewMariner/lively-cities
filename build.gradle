@@ -41,6 +41,26 @@ tasks.named('test') {
 		showStandardStreams = false
 		exceptionFormat = 'full'
 	}
+
+	// Two files outside the source sets are read by tests, and Gradle cannot know
+	// that on its own. Without these declarations, editing NOTICE or the top-up
+	// check and running `./gradlew test` reports nothing and exits 0: the task is
+	// up to date, because none of its declared inputs appeared to change, and the
+	// tests that read them never run. `clean build` and CI were always fine; this
+	// makes the ordinary edit-and-test loop fine too, which is where a stale
+	// disclosure actually gets written.
+	//
+	//   NOTICE                     AuthoredRecordsTest
+	//   docs/CITY-TOP-UP-CHECK.md  CityTopUpCheckTest
+	//
+	// A test that reads a file the task does not declare is a test that does not
+	// run when that file changes, which is the one moment it had a job to do.
+	inputs.file(rootProject.file('NOTICE'))
+		.withPropertyName('notice')
+		.withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.file(rootProject.file('docs/CITY-TOP-UP-CHECK.md'))
+		.withPropertyName('cityTopUpCheck')
+		.withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 tasks.register('run', JavaExec) {

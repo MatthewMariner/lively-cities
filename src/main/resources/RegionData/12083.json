@@ -40,6 +40,50 @@
             "modelRecolorFind": [],
             "modelRecolorReplace": [],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Tobias",
+            "examineText": "Somebody has to count the cabbages.",
+            "remarks": [
+                "Two hundred and six.",
+                "It was two hundred and eight yesterday."
+            ],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10017-1016-4b39-8564-cd207e91f4a8",
+            "regionId": 12083,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 3059,
+                "y": 3292,
+                "plane": 0
+            },
+            "modelIds": [
+                230,
+                251,
+                28515,
+                4391,
+                26619,
+                179,
+                54275,
+                183,
+                7368,
+                4843,
+                11812
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                4550,
+                8741,
+                25238,
+                123
+            ],
+            "modelRecolorReplace": [
+                37394,
+                5572,
+                3507,
+                16026
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

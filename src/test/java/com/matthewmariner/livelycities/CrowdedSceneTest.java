@@ -631,7 +631,7 @@ public class CrowdedSceneTest
 	 *
 	 * <p><b>This used to run against the real dataset and no longer can.</b> The
 	 * nine-city cut on 2026-08-24 removed Piscatoris, and with it the only place in the
-	 * shipped data where an echo crossed into a region no city claims: all 121 echoes
+	 * shipped data where an echo crossed into a region no city claims: all 184 echoes
 	 * the surviving 27 regions seed now stand in a region their own city claims. That
 	 * is a real reduction in what this test proves — a hand-built fixture rather than a
 	 * live case — and it is stated here rather than absorbed, because the instruction

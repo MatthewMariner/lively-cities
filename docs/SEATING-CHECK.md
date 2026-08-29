@@ -12,6 +12,14 @@ and none of the fifteen removed places held a seated or leaning figure at all. T
 was within three tiles of any tile below, so not one of those lines moved. Grimefang,
 in the open question at the end, is in Lumbridge and also survives.
 
+**Still thirty-one after the top-up (2026-08-29), on purpose.** That pass added 33
+citizens to Al Kharid, Catherby, Falador, Ardougne and Draynor, and not one of them
+is posed `Sitting`, `DwarfSit`, `CatSit`, `ChurchSitting` or leaning — there was no
+reason to lengthen an unwalked list. Their own tiles are unwalked too and are a
+separate list: `docs/CITY-TOP-UP-CHECK.md`. The one new figure whose pose needs
+scenery under it is "Aldous" in Catherby, who is `Woodcutting` and wants a tree;
+he is flagged there rather than here, because this file is about seats.
+
 Five of the figures below — Thalindra, the Dark wizard, Nightfire, Dofur and Simon —
 did have their `moveAnimation` corrected in the same pass that produced this file,
 because it named a different creature's skeleton from their pose and their models. That

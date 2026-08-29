@@ -37,7 +37,7 @@ public final class EntityDefinition
 	private static final int JAU_FULL_ROTATION = 2048;
 	private static final int MAX_PLANE = 3;
 
-	/** Shared, so 117 of the 151 entities do not each allocate an empty array. */
+	/** Shared, so 140 of the 184 entities do not each allocate an empty array. */
 	private static final String[] NO_REMARKS = new String[0];
 
 	private final UUID uuid;
@@ -554,9 +554,9 @@ public final class EntityDefinition
 	 * The one-liners this entity may say, with the four ways of having nothing to
 	 * say flattened into one empty array.
 	 *
-	 * <p>All four occur in the shipped data: 34 citizens carry remarks, 51 carry
-	 * {@code "remarks": []}, 24 carry no {@code remarks} field at all — 34 + 51 + 24
-	 * being the 109 shipped citizens — and all 42 scenery records omit it.
+	 * <p>All four occur in the shipped data: 44 citizens carry remarks, 66 carry
+	 * {@code "remarks": []}, 32 carry no {@code remarks} field at all — 44 + 66 + 32
+	 * being the 142 shipped citizens — and all 42 scenery records omit it.
 	 * {@link CitizenRemarks#forDefinition} then has one condition to check rather
 	 * than four, and {@link CitizenChatter} never has to ask what kind of silence it
 	 * is looking at. {@code CitizenRemarksTest} recomputes the partition from the
@@ -816,7 +816,7 @@ public final class EntityDefinition
 
 	/**
 	 * @return the one-liners this entity may say, never null and never containing a
-	 * blank. Empty for scenery and for the 96 shipped citizens with nothing
+	 * blank. Empty for scenery and for the 98 shipped citizens with nothing
 	 * authored.
 	 *
 	 * <p>The array itself, not a copy — the same call this class already makes for

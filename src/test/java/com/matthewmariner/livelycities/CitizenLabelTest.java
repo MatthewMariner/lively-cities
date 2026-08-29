@@ -115,7 +115,7 @@ public class CitizenLabelTest
 
 	/**
 	 * A citizen with no authored examine text still gets the sentence that matters.
-	 * The shipped data has one for all 109, but a future record or a hand-written
+	 * The shipped data has one for all 142, but a future record or a hand-written
 	 * contribution need not.
 	 */
 	@Test
@@ -135,7 +135,7 @@ public class CitizenLabelTest
 
 	/**
 	 * Authored examine text that is already a sentence must not gain a second full
-	 * stop, and text that is not one must gain its first. All 109 shipped records
+	 * stop, and text that is not one must gain its first. All 142 shipped records
 	 * end in a full stop; a hand-written contribution will not.
 	 */
 	@Test

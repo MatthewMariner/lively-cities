@@ -27,6 +27,256 @@
             "modelRecolorFind": [],
             "modelRecolorReplace": [],
             "idleAnimation": "Sitting"
+        },
+        {
+            "name": "Bram",
+            "examineText": "Minding somebody else's cart, and taking it seriously.",
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10026-1025-4b03-9448-71c6ea25d098",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 3096,
+                "y": 3261,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                25676,
+                14373,
+                54275,
+                12138,
+                26630
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                8481,
+                8472,
+                35908,
+                11146,
+                8481,
+                8472
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Odell",
+            "examineText": "He starts up the manor path and thinks better of it.",
+            "remarks": [
+                "Not today."
+            ],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 3101,
+                "y": 3260,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 3105,
+                "y": 3262,
+                "plane": 0
+            },
+            "uuid": "add10027-1026-4f87-8b12-3e05d7a49c61",
+            "regionId": 12338,
+            "entityType": "WanderingCitizen",
+            "worldLocation": {
+                "x": 3103,
+                "y": 3261,
+                "plane": 0
+            },
+            "modelIds": [
+                208,
+                4123,
+                28515,
+                11766,
+                11809,
+                54275,
+                256,
+                26630,
+                54165
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798
+            ],
+            "modelRecolorReplace": [
+                262,
+                103,
+                262
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Corliss",
+            "examineText": "Somebody gave him directions and he is still working through them.",
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10028-1027-4a34-9e70-c8615b03f2d7",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 3106,
+                "y": 3259,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                246,
+                28515,
+                26632,
+                54275,
+                54275,
+                26630
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                25238
+            ],
+            "modelRecolorReplace": [
+                7331,
+                21541
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Maud",
+            "examineText": "Out at the west end, where it is quiet.",
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10029-1028-4d61-8025-96af3c74e1b0",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 3093,
+                "y": 3258,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                228,
+                246,
+                28515,
+                27139,
+                26619,
+                179,
+                54275,
+                185,
+                317
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741
+            ],
+            "modelRecolorReplace": [
+                8728,
+                3486
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Perrin",
+            "examineText": "Counting windows. He says he likes the architecture.",
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10030-1029-4c48-b396-08d2f571a6e4",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 3103,
+                "y": 3256,
+                "plane": 0
+            },
+            "modelIds": [
+                207,
+                296,
+                18958,
+                27139,
+                4924,
+                25669,
+                246,
+                25651
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                43072,
+                25238,
+                10138,
+                13196,
+                6798,
+                127,
+                8741,
+                8720,
+                8472,
+                38160,
+                38036
+            ],
+            "modelRecolorReplace": [
+                7187,
+                7187,
+                7187,
+                7196,
+                7187,
+                37888,
+                138,
+                5260,
+                5132,
+                5384,
+                7634
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Hollis",
+            "examineText": "He is here about the willow trees.",
+            "remarks": [
+                "They are not all mine."
+            ],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add10031-1030-4b12-9583-d764e0a219cf",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "worldLocation": {
+                "x": 3099,
+                "y": 3258,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                249,
+                25676,
+                14373,
+                54275,
+                12138,
+                26630
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                8481,
+                8472,
+                8481,
+                8472,
+                35908,
+                11146
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": [

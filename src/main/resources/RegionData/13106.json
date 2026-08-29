@@ -45,6 +45,102 @@
                 5555
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Fahd",
+            "examineText": "On this road since dawn.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 3281,
+                "y": 3242,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 3287,
+                "y": 3246,
+                "plane": 0
+            },
+            "uuid": "add10004-1003-4a65-9b17-2e84f01c9d53",
+            "regionId": 13106,
+            "entityType": "WanderingCitizen",
+            "worldLocation": {
+                "x": 3284,
+                "y": 3244,
+                "plane": 0
+            },
+            "modelIds": [
+                6086,
+                249,
+                28515,
+                26619,
+                54275,
+                185,
+                176
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4550
+            ],
+            "modelRecolorReplace": [
+                5555,
+                10351,
+                10351
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Reza",
+            "examineText": "Heading north, if the gate is open.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 3283,
+                "y": 3240,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 3290,
+                "y": 3245,
+                "plane": 0
+            },
+            "uuid": "add10005-1004-4c92-8d06-3a5f7b21e8c4",
+            "regionId": 13106,
+            "entityType": "WanderingCitizen",
+            "worldLocation": {
+                "x": 3287,
+                "y": 3241,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                252,
+                295,
+                323,
+                283,
+                26619,
+                176,
+                268,
+                183
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                8090,
+                7700,
+                6798,
+                16,
+                8741
+            ],
+            "modelRecolorReplace": [
+                99,
+                11208,
+                37807,
+                37807,
+                9661
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []
