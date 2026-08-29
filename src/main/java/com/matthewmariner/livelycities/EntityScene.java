@@ -76,9 +76,12 @@ import net.runelite.api.coords.WorldPoint;
  * active wanderers rather than the whole cache, because a frame handler that
  * scans every wrapper is a frame handler that shows up in a profile.
  *
- * <p><b>Both clocks are metered</b>, along with model building, so that claim is a
- * figure rather than an argument — see {@link FrameTimings}. Off for every shipped
- * client, and off is one field read per pass.
+ * <p><b>Both clocks are metered</b>, along with model building and with the region
+ * loading in {@link #ensureBuilt}, so that claim is a figure rather than an argument —
+ * see {@link FrameTimings}. Off for every shipped client, and off is one field read per
+ * pass. The region-load meter is the one that closes the gap the 2026-08-29 measurement
+ * opened: {@code syncRegions} runs <i>before</i> the visibility pass rather than inside
+ * it, so until then a scene load was per-tick work no meter could see.
  *
  * <p><b>Two budgets, and they bound different things.</b>
  * {@link RenderPolicy#MAX_ACTIVE_OBJECTS} caps how many objects may be <i>active</i>
@@ -91,6 +94,9 @@ import net.runelite.api.coords.WorldPoint;
  * always the far end of the crowd, and a citizen that waits is one that has not
  * appeared yet rather than one that flickers — it is never activated, never
  * despawned, and does not spend one of its {@link LivelyEntity#MAX_MODEL_ATTEMPTS}.
+ * The cap is nine rather than the three it was first set to; the 2026-08-29
+ * re-measurement is what moved it, and {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS}
+ * carries the arithmetic.
  *
  * <p><b>Where a border-crossing wanderer lives.</b> Scope membership is decided
  * once, from the entity's authored tile, and a citizen walking across a region
@@ -621,7 +627,10 @@ class EntityScene
 				// The burst brake. This pass has already built its
 				// MAX_MODEL_BUILDS_PER_PASS models, so this one waits for the next —
 				// 600ms later, which nobody can see, against the 53.73ms stutter that
-				// forty builds in one tick produced.
+				// forty builds in one tick produced. The wait is bounded on the other
+				// side too: at a budget of nine, the densest shipped neighbourhood
+				// finishes arriving in about five seconds rather than the fourteen the
+				// 2026-08-29 run measured at three.
 				//
 				// Nothing else happens to it: spawn() is never called, so the entity
 				// does not spend one of its MAX_MODEL_ATTEMPTS and does not touch its
@@ -1182,9 +1191,21 @@ class EntityScene
 			return;
 		}
 
+		// Metered from here rather than from syncRegions, because "what does one region
+		// file cost?" is the question with a threshold against it — a crossing brings in
+		// between zero and nine files and their sizes differ by a factor of forty. The
+		// clock starts before load() so that the JSON parse is inside the figure the
+		// first time a file is seen, and a region whose wrappers were evicted and are
+		// being rebuilt is still a sample: it really does pay the echo derivation and
+		// the wrapper construction again.
+		final long startedAt = timings.start();
+
 		RegionDefinition region = load(regionId);
 		if (region == null)
 		{
+			// No file for this region, or it would not parse. Nothing happened, so
+			// nothing is recorded — a meter full of zero-cost non-events would drag every
+			// percentile of a real load down.
 			return;
 		}
 
@@ -1214,6 +1235,12 @@ class EntityScene
 			entities.add(new LivelyEntity(client, echo));
 		}
 		built.put(regionId, entities);
+
+		// Everything above, timed: the parse, every EntityDefinition.fromRecord, the
+		// echo derivation and the wrappers. It is the only per-tick work this plugin does
+		// that the visibility meter never saw — syncRegions runs before the pass, not
+		// inside it — and it is charged to the game-tick total by FrameTimings.
+		timings.recordRegionLoad(startedAt, entities.size());
 
 		if (!echoes.isEmpty())
 		{

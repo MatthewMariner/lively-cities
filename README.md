@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-459-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-460-brightgreen)](#development)
 
 </div>
 
@@ -149,7 +149,7 @@ What is new is everything that stops it dying the same way:
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they were renamed
   to anonymous barrow wights, and the Barrows has since left the dataset entirely.
-- **459 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **460 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -249,15 +249,21 @@ Stated plainly, because you will find them anyway.
   against a bar of 8ms — three dropped frames, i.e. a visible hitch. The split meters said
   why: 371 models were built across 331 ticks, so the spike was never one slow model, it was
   forty ordinary ones landing in the same tick on the way into the square. So a pass now
-  builds at most **three** models and the rest wait for the next one, nearest first. Three is
-  arithmetic off those figures, not a round number: a pass with no building in it measured
-  124µs and a build measured 570µs on average, so `124 + 3 × 570 = 1.83ms` fits inside the 2ms
-  "acceptable" line and a fourth build (2.40ms) would not. The cost is that the densest corner
-  of Varrock takes about fifteen seconds to fill from cold instead of one stutter, and the
-  report now prints how many builds were held over so the next measurement can be read against
-  this one. **What no per-pass cap can fix**: one unusually slow model is still one unusually
-  slow tick — the worst build measured, 15.45ms, is inside the "acceptable single build" bar
-  and would still put its tick over the 8ms pass bar on its own.
+  builds at most **nine** models and the rest wait for the next one, nearest first.
+
+  **A second measurement then falsified the diagnosis behind that fix**, which is the more
+  useful half of the story. Capping builds did work — the worst tick fell from 53.73ms to
+  18.31ms — but the new report showed the worst tick happening with **three objects on
+  screen**, while the worst single build in the whole session was 8.61ms. Roughly ten
+  milliseconds of that tick was not model building at all. It was the **region load**: the
+  first tick after a scene change parses a region file, derives its `Crowded` figures and
+  builds their wrappers, and that had been averaged into the same number as an ordinary tick
+  ever since the meter existed. A steady-state tick and the tick you walk into a new city on
+  are different events with different acceptable costs, and one percentile over both describes
+  neither. They are now measured separately, and the cap is derived from the crossing tick it
+  actually has to fit inside: `(16.67ms − 3ms region load − 151µs overhead) / 1.4ms ≈ 9`, one
+  frame's worth. The old cap of three was buying protection from a spike that was never
+  building — and costing fourteen seconds to populate Varrock square to do it.
 - **Crowded adds derived figures, not authored ones.** They are silent, they do not wander,
   and they wear their source's colours rearranged. They are ambience, not characters.
 - **The cameo tiles have not been walked on.** The six were placed off the Grand Exchange's
@@ -283,7 +289,7 @@ Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires 
 the Gradle wrapper handles the rest.
 
 ```bash
-./gradlew build            # compile and run the 459 tests
+./gradlew build            # compile and run the 460 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)
@@ -503,30 +509,52 @@ The visibility figure is inclusive of model building, and 371 builds across 331
 passes is what the failure was: not one slow model but dozens in a single tick,
 which is what walking into Varrock square looks like from in here.
 
-So `RenderPolicy.MAX_MODEL_BUILDS_PER_PASS` caps a pass at three builds and the
-rest wait for the next pass, nearest first — a figure appearing 600ms later is
-imperceptible, a 53ms stutter is not. **Three is derived, not chosen:**
+So `RenderPolicy.MAX_MODEL_BUILDS_PER_PASS` capped a pass at three builds and the
+rest waited for the next one, nearest first — a figure appearing 600ms later is
+imperceptible, a 53ms stutter is not. Three was derived from
+`124µs overhead + builds × 570µs`, the largest cap fitting inside the 2ms line.
+
+#### What the second measurement said, and why it changed the answer
+
+300 game ticks, same protocol, 184 entities:
+
+| Meter | median | p95 | p99 | max | verdict |
+|---|---|---|---|---|---|
+| visibility pass (317 samples) | 151µs | 2.70ms | 5.50ms | 18.31ms **at 3 objects active** | the anomaly |
+| model build (132 samples) | 600µs | 1.40ms | 1.70ms | 8.61ms | passes |
+| interpolation (19000 samples) | 0µs | 3µs | 8µs | 95µs | passes by ~60× |
+
+The cap worked: 53.73ms became 18.31ms. But **the worst tick had three objects on
+screen**, and the worst build all session was 8.61ms — so about ten milliseconds
+of that tick was something else. It was the **region load**. The first tick after
+a scene change parses a region file, derives its `Crowded` figures and builds
+their wrappers, and that had been folded into the same number as an ordinary
+tick since the meter was written. One percentile over both describes neither.
+
+They are separate meters now — `game tick`, `visibility pass`, `model build
+burst`, `region load` — and the cap is derived from the crossing tick it has to
+fit inside, one frame at 60fps:
 
 ```
-pass cost  =  124µs overhead  +  builds × 570µs mean build
-3 builds:  124 + 3 × 570 = 1834µs  ≤ 2000µs   acceptable
-4 builds:  124 + 4 × 570 = 2404µs  > 2000µs   over
+crossing tick =  3000µs region load + 151µs overhead + builds × 1400µs
+(16667 − 3000 − 151) / 1400  =  9.65  →  9 builds
 ```
 
-Those three figures are constants in `RenderPolicy`, and `RenderPolicyTest`
-recomputes the cap from them — so a fresh measurement moves the cap by editing
-what was measured rather than by picking a new number.
+Those figures are constants in `RenderPolicy` and `RenderPolicyTest` recomputes
+the cap from them, so a re-measurement moves the cap by editing what was measured
+rather than by picking a number.
 
-What it does *not* claim: a pass whose three builds all land in the top 1% costs
-`124 + 3 × 1500 = 4.62ms`, over "acceptable" and inside the 8ms problem line; and
-one pathological build is one pathological tick whatever the cap is, since the
-worst measured build (15.45ms) exceeds the pass threshold on its own. The
-thresholds themselves do not fully reconcile on that point — a 20ms build is
+**What this cost, and what it bought.** Three was protecting against a spike that
+was never model building, and charging fourteen seconds to populate Varrock
+square for it — the field report held 72 builds over on the first pass and
+drained them three at a time over 24 more. At nine the densest corner fills in
+about five seconds. A citizen taking fourteen seconds to appear is its own
+defect, just a quieter one than a stutter.
+
+**What no cap can fix**: one pathological build is one pathological tick. The
+thresholds still do not fully reconcile on that point — a 20ms build is
 "acceptable" while the pass containing it is "a problem" — and that is recorded
 in `FrameTimings`' javadoc rather than quietly adjusted.
-
-The performance line of the hub PR body in `docs/SUBMISSION.md` still needs the
-figure above.
 
 ---
 

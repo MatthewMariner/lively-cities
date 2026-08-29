@@ -3,6 +3,9 @@ package com.matthewmariner.livelycities;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -365,8 +368,15 @@ public class FrameTimingsTest
 		assertTrue(report, report.contains("A problem:"));
 		assertTrue("the per-frame budget", report.contains("interpolation p99 <= 0.5ms"));
 		assertTrue("the per-tick budget", report.contains("visibility p99 <= 2ms"));
-		assertTrue("and the fact that one figure contains the other",
-			report.contains("INCLUSIVE of model building"));
+		assertTrue("the whole-tick budget, which is the one nothing can hide inside",
+			report.contains("game tick"));
+		assertTrue("the burst budget, tightened on 2026-08-29 from 100ms to one frame",
+			report.contains("no build\n# burst over 16.7ms"));
+		assertTrue("and the region-load budget, registered on 2026-08-29",
+			report.contains("no region load over 5ms"));
+		assertTrue("and the fact that the visibility figure no longer contains the build "
+				+ "figure, which is the whole of the 2026-08-29 attribution fix",
+			report.contains("EXCLUSIVE of model building"));
 	}
 
 	// --- the cadence -----------------------------------------------------------
@@ -609,13 +619,19 @@ public class FrameTimingsTest
 	public void everyVisibilityPassIsOneSampleCarryingTheActiveObjectCount()
 	{
 		FrameTimings timings = new FrameTimings(true, true);
-		EntityScene scene = sceneWith(timings, 5);
+
+		// Two more than the budget, so the first pass genuinely leaves somebody behind.
+		// Sized off the constant rather than written as a number: at a budget of nine a
+		// fixture of five would all arrive on pass one and this would be asserting about
+		// a crowd the budget never touched.
+		int crowd = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS + 2;
+		EntityScene scene = packedSceneWith(timings, crowd);
 
 		scene.updateVisibility(PLAYER, view);
 
 		assertEquals(1L, timings.sampleCount(FrameTimings.Pass.VISIBILITY));
-		assertEquals("the first pass builds its budget and no more, so five citizens are "
-				+ "not five on screen any more",
+		assertEquals("the first pass builds its budget and no more, so " + crowd
+				+ " citizens are not " + crowd + " on screen any more",
 			RenderPolicy.MAX_MODEL_BUILDS_PER_PASS, scene.countActive());
 
 		// The load-bearing one, and it is the guard on `planned - failed - buildsDeferred`
@@ -630,7 +646,7 @@ public class FrameTimingsTest
 		scene.updateVisibility(PLAYER, view);
 		assertEquals("a second pass is a second sample",
 			2L, timings.sampleCount(FrameTimings.Pass.VISIBILITY));
-		assertEquals("and the other two arrive on it", 5, scene.countActive());
+		assertEquals("and the other two arrive on it", crowd, scene.countActive());
 	}
 
 	/**
@@ -730,26 +746,31 @@ public class FrameTimingsTest
 	{
 		FrameTimings timings = new FrameTimings(true, true);
 		int crowd = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS * 3;
-		EntityScene scene = sceneWith(timings, crowd);
+
+		// Packed rather than strung out in a line: at a budget of nine this fixture is
+		// twenty-seven citizens, and a line of twenty-seven reaches past the default
+		// cull radius — so the crowd would be thinned by the wrong guard and the
+		// deferral arithmetic below would be counting the cull.
+		EntityScene scene = packedSceneWith(timings, crowd);
 
 		scene.updateVisibility(PLAYER, view);
 
 		assertEquals("the pass builds its budget and no more",
 			(long) RenderPolicy.MAX_MODEL_BUILDS_PER_PASS,
 			timings.sampleCount(FrameTimings.Pass.MODEL_BUILD));
-		assertEquals("and the other six are held over, not lost and not failed",
+		assertEquals("and the other two budgets' worth are held over, not lost and not failed",
 			crowd - RenderPolicy.MAX_MODEL_BUILDS_PER_PASS, timings.getBuildsDeferred());
 		assertEquals("over the one pass that held them", 1L, timings.getPassesWithDeferredBuilds());
 
-		// The second pass builds three more and holds three over; the third builds the
-		// last three and holds none, so the pass counter has to stop at two.
+		// The second pass builds another budget and holds one over; the third builds the
+		// last of them and holds none, so the pass counter has to stop at two.
 		scene.updateVisibility(PLAYER, view);
 		scene.updateVisibility(PLAYER, view);
 
 		assertEquals("every citizen is built exactly once", (long) crowd,
 			timings.sampleCount(FrameTimings.Pass.MODEL_BUILD));
 		assertEquals(crowd, scene.countActive());
-		assertEquals("six held over on the first pass and three on the second",
+		assertEquals("two budgets held over on the first pass and one on the second",
 			(crowd - RenderPolicy.MAX_MODEL_BUILDS_PER_PASS)
 				+ (crowd - 2 * RenderPolicy.MAX_MODEL_BUILDS_PER_PASS),
 			timings.getBuildsDeferred());
@@ -770,7 +791,7 @@ public class FrameTimingsTest
 	public void aColdCacheDeferralIsNotABudgetDeferral()
 	{
 		FrameTimings timings = new FrameTimings(true, true);
-		EntityScene scene = sceneWith(timings, RenderPolicy.MAX_MODEL_BUILDS_PER_PASS * 3);
+		EntityScene scene = packedSceneWith(timings, RenderPolicy.MAX_MODEL_BUILDS_PER_PASS * 3);
 		client.setCacheCold(true);
 
 		scene.updateVisibility(PLAYER, view);
@@ -972,7 +993,14 @@ public class FrameTimingsTest
 		assertEquals("two passes, two samples", 2L,
 			timings.sampleCount(FrameTimings.Pass.VISIBILITY));
 
-		String section = meterSection(timings.toReportText(), "visibility pass (per game tick)");
+		// Deliberately the heading's *prefix*, not the whole thing. The full name gained
+		// ", excluding model builds" when the meters were split on 2026-08-29 and this
+		// assertion went red on the rename alone, having caught nothing. "visibility
+		// pass (per game tick" already identifies exactly one meter — no other heading
+		// begins with it, which theReportNamesEachMeterOnce pins — so matching on it
+		// keeps the guard pointed at the right section without re-breaking every time
+		// the parenthetical is reworded.
+		String section = meterSection(timings.toReportText(), "visibility pass (per game tick");
 		assertTrue("both passes left three objects with the client, so neither sample may "
 				+ "read 0:\n" + section,
 			section.contains("objects active: min 3, mean 3, max 3"));
@@ -1104,6 +1132,57 @@ public class FrameTimingsTest
 	 * in the two-pass fixture it is, which would make the assertion green against the
 	 * exact mutation it exists to catch.
 	 */
+	/**
+	 * Every meter heading is unique, and none is a prefix of another.
+	 *
+	 * <p>This is what makes {@link #meterSection} safe to call with a prefix, which
+	 * several assertions do — the full headings carry parentheticals that get reworded
+	 * (the visibility one gained ", excluding model builds" when the meters were split
+	 * on 2026-08-29, and every test naming it in full went red on the rename alone,
+	 * having caught nothing). A prefix is only a legitimate shorthand while it can name
+	 * exactly one section, so that property is asserted rather than assumed.
+	 *
+	 * <p>The headings are discovered from the report rather than listed here, so adding
+	 * a seventh meter is covered without editing this test — and a heading that
+	 * accidentally extends another goes red the moment it is added.
+	 */
+	@Test
+	public void theReportNamesEachMeterOnce()
+	{
+		FrameTimings timings = new FrameTimings(true, true);
+		for (FrameTimings.Pass pass : FrameTimings.Pass.values())
+		{
+			timings.recordElapsed(pass, 500 * MICRO, 1);
+		}
+
+		String[] lines = timings.toReportText().split("\n", -1);
+		List<String> headings = new ArrayList<>();
+		for (int i = 0; i < lines.length - 1; i++)
+		{
+			// A meter heading is the only "# " line immediately followed by "samples:".
+			if (lines[i].startsWith("# ") && lines[i + 1].startsWith("samples:"))
+			{
+				headings.add(lines[i].substring(2));
+			}
+		}
+
+		assertEquals("one section per Pass, discovered from the report itself",
+			FrameTimings.Pass.values().length, headings.size());
+		assertEquals("and no heading may be written twice",
+			headings.size(), new HashSet<>(headings).size());
+
+		for (String one : headings)
+		{
+			for (String other : headings)
+			{
+				assertFalse("'" + other + "' begins with '" + one + "', so a prefix no"
+						+ " longer names one section and meterSection() could silently"
+						+ " return the wrong meter",
+					!one.equals(other) && other.startsWith(one));
+			}
+		}
+	}
+
 	private static String meterSection(String report, String heading)
 	{
 		int start = report.indexOf("# " + heading);

@@ -228,12 +228,21 @@ appears verbatim in merged hub PRs — it answers the reviewer's actual question
 >
 > On frame cost: the clickbox hull is computed in `MenuOpened` rather than per tick or per
 > frame, so the only per-frame work is interpolating walking figures between tiles. That is
-> instrumented rather than asserted — `./gradlew runWithTimings` reports median/p95/p99 for
-> the per-tick pass, model building and the per-frame pass, with the active-object count
-> beside them. **<<FILL IN before filing: the measured p99 for the per-frame pass and for
-> the per-tick pass, at N active objects. Do not file this paragraph with the placeholder
-> still in it — an unmeasured performance claim is exactly what got the predecessor
-> dismissed.>>**
+> measured rather than asserted, with the acceptance thresholds written down before any
+> number existed. Over 19,000 frames and 300 game ticks of ordinary play in Varrock, at up
+> to the 80-object cap: **the per-frame pass is 0µs median and 8µs at p99, worst frame 95µs**
+> — about half a percent of a 60fps frame. Per game tick the work splits three ways, because
+> a steady-state tick and the tick you cross a region boundary on are different events:
+> deciding who is on screen is **151µs median, 5.50ms p99**; the models a tick builds are
+> capped so a crossing tick fits inside one frame; and the region load itself is the
+> expensive part, at roughly 3ms. `./gradlew runWithTimings` reproduces all of it, with the
+> active-object count beside every figure.
+>
+> One number is worth flagging rather than burying: the per-tick p99 of 5.50ms sits between
+> this project's own "acceptable" line (2ms) and its "a problem" line (8ms). The first
+> measurement failed outright at ≥11ms p99 and a 53.73ms worst tick; splitting the meters
+> showed that spike was a region load being averaged in with ordinary ticks rather than the
+> model-building burst it was assumed to be. The README carries the full before-and-after.
 
 ## After filing
 

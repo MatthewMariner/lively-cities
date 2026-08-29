@@ -221,8 +221,12 @@ public class EntitySceneTest
 	@Test
 	public void theBudgetHoldsBackTheFarCitizensAndNeverTheNearOnes()
 	{
+		// Longer than the budget, or the assertion below is satisfied by a version with
+		// no budget in it at all — every citizen would be near enough to build and
+		// "distance <= budget" would be true for all of them. Sized off the constant so
+		// a re-measurement that moves the cap cannot quietly hollow this out.
 		List<EntityDefinition> line = new ArrayList<>();
-		for (int distance = 8; distance >= 1; distance--)
+		for (int distance = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS + 3; distance >= 1; distance--)
 		{
 			line.add(regions.citizen(
 				VARROCK_SOUTH, PLAYER.getX(), PLAYER.getY() + distance, 0));

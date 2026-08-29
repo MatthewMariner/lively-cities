@@ -41,74 +41,131 @@ public final class RenderPolicy
 	public static final int MAX_ACTIVE_OBJECTS = 80;
 
 	/**
-	 * The visibility pass's own acceptance threshold, in microseconds: 2ms.
+	 * What one region-crossing tick is allowed to cost, in microseconds: 16667, one
+	 * frame at 60fps.
 	 *
-	 * <p>Not invented here — it is the "acceptable" figure {@link FrameTimings}
-	 * registered in its javadoc, in the report header and in the README <i>before</i>
-	 * anything was measured. Restated as a number so the build budget below can be
-	 * arithmetic against it rather than a guess that happens to agree with it.
+	 * <p><b>This replaces a threshold rather than inventing one, and it is stricter
+	 * than what it replaces.</b> {@link FrameTimings} registered "no more than 100ms for
+	 * the burst that lands on entering a dense region" before anything was measured.
+	 * 100ms is six frames, and it was written when there was no per-pass cap at all — so
+	 * it was a statement about what the plugin would tolerate rather than about what it
+	 * would do. Now that the burst is something this class bounds, the acceptable figure
+	 * is the one the cap can actually hold: a crossing costs the player at most one
+	 * dropped frame, once, at a border where the client is already rebuilding a 104x104
+	 * scene.
+	 *
+	 * <p><b>Why not the visibility pass's own 2ms line, which the cap used to be
+	 * derived from.</b> That line was registered for the per-tick decision work — a cost
+	 * paid every 600ms for as long as the plugin is on — and "half a frame, on a
+	 * schedule, is a rhythmic stutter" is the sentence that justifies its 8ms sibling. A
+	 * model build is not that: it is paid once per entity, at a crossing, and never
+	 * again for that entity. Charging a once-per-crossing burst against a rhythmic-cost
+	 * threshold is what made the old derivation say three, and re-running it against the
+	 * honest 2026-08-29 figures would have said <i>two</i> — a tighter cap and a crowd
+	 * that took twenty-one seconds to arrive, paying for a spike the measurement has
+	 * since attributed elsewhere. The visibility meter is now exclusive of building (see
+	 * {@link FrameTimings}), so the 2ms line still applies, to a figure it describes.
 	 */
-	static final int VISIBILITY_BUDGET_MICROS = 2_000;
+	static final int CROSSING_TICK_BUDGET_MICROS = 16_667;
 
 	/**
-	 * What a visibility pass costs when it builds nothing: 124µs.
+	 * What a visibility pass costs when it builds nothing: 151µs.
 	 *
-	 * <p>The measured median pass, 300 game ticks in Varrock (331 samples, 371 model
-	 * builds). The median is the right term for "the pass minus its building": most
-	 * passes build nothing, and a single median model build is 478µs — four times this
-	 * — so a pass at the median plainly contains no build.
+	 * <p>The measured median pass, 300 game ticks in Varrock on 2026-08-29 (317 samples,
+	 * 132 model builds). The median is the right term for "the pass minus its building":
+	 * most passes build nothing, and a single median model build is 600µs — four times
+	 * this — so a pass at the median plainly contains no build. (124µs in the previous
+	 * run, against a smaller dataset; the pass walks everything in scope, and the scene
+	 * around Varrock square now holds 164 definitions rather than 151.)
 	 */
-	static final int MEASURED_PASS_OVERHEAD_MICROS = 124;
+	static final int MEASURED_PASS_OVERHEAD_MICROS = 151;
 
 	/**
-	 * What building one model costs: 570µs, the measured mean over 371 builds.
+	 * What the region files one scene load brings in cost to parse, derive echoes for
+	 * and wrap: 3000µs.
 	 *
-	 * <p>The <b>mean</b> rather than the median (478µs) or the p99 (1.50ms), and which
-	 * one is used decides the cap, so it is worth saying why. The budget below bounds a
-	 * <i>sum</i> of up to {@link #MAX_MODEL_BUILDS_PER_PASS} draws, and the expected
-	 * value of a sum is the sum of the means whatever the shape of the distribution.
-	 * Budgeting on the median would understate a right-skewed tail; budgeting on the
-	 * p99 would assume every build in a burst lands in the worst one percent, which
-	 * yields a cap of 1 and a city that takes 48 seconds to populate.
+	 * <p>Charged here because it lands on the <i>same game tick</i> as the burst below —
+	 * {@code LivelyCitiesPlugin.tick()} calls {@code syncRegions} and then the visibility
+	 * pass — so a budget that ignored it would be a budget for a tick that does not
+	 * happen. It is the one term here measured off the client rather than in it:
+	 * {@code EntityScene.ensureBuilt}'s whole path is a pure function of the shipped
+	 * JSON, so it was timed directly against {@code src/main/resources/RegionData} over
+	 * every 3x3 block of regions a 104x104 scene can bring in at once. The worst block
+	 * came to 2997µs, of which region 12853 alone — 57 authored entities seeding 53
+	 * echoes, the densest file that ships — is 1913µs.
+	 *
+	 * <p>{@link FrameTimings} now meters this in the field too, under {@code region
+	 * load}, so the next report can replace this figure with one measured in the client
+	 * instead of beside it.
 	 */
-	static final int MEASURED_MEAN_MODEL_BUILD_MICROS = 570;
+	static final int MEASURED_REGION_LOAD_MICROS = 3_000;
 
 	/**
-	 * Hard ceiling on the number of models one visibility pass may <b>build</b>: three.
+	 * What one model build costs <b>inside a burst</b>: 1400µs, the measured p95 over
+	 * 132 builds.
+	 *
+	 * <p>The <b>p95</b> rather than the mean (712µs), and that change is what this
+	 * re-derivation turns on. The old constant argued that "the expected value of a sum
+	 * is the sum of the means whatever the shape of the distribution", which is true of
+	 * independent draws and false of a burst: the builds in one are consecutive, contend
+	 * for the same model cache and the same young generation, and are exactly the samples
+	 * in the tail. The measurement says so directly — the 53.73ms pass that produced the
+	 * original cap was roughly forty builds, i.e. <b>1.34ms a build</b>, against a mean
+	 * of 570µs. Budgeting a burst on the mean understates it by a factor of two; 1.34ms
+	 * is what the only burst ever measured actually cost per build, and the p95 is the
+	 * published statistic nearest to it.
+	 *
+	 * <p>Not the p99 (1.70ms) and not the maximum (8.61ms): assuming every build in a
+	 * burst lands in the worst one percent yields a cap small enough that the crowd never
+	 * arrives, and no per-pass cap can bound the maximum anyway — a pass containing an
+	 * 8.61ms build costs at least 8.61ms however low the cap goes.
+	 */
+	static final int MEASURED_BURST_MODEL_BUILD_MICROS = 1_400;
+
+	/**
+	 * Hard ceiling on the number of models one visibility pass may <b>build</b>: nine.
 	 *
 	 * <p><b>Not the same thing as {@link #MAX_ACTIVE_OBJECTS}, and conflating them is
 	 * the mistake this constant exists to avoid.</b> That one is a ceiling on how many
 	 * objects the client may have registered at once — a memory and draw-call bound,
 	 * spent down and refunded as the player walks. This one is a ceiling on how much
 	 * <i>work</i> a single pass may do, spent and refunded every 600ms. A pass may
-	 * activate eighty objects and build three of them; the other seventy-seven are
-	 * models it already holds, and reactivating one is free.
+	 * activate eighty objects and build nine of them; the other seventy-one are models
+	 * it already holds, and reactivating one is free.
 	 *
-	 * <p><b>Where the three comes from.</b> The visibility figure is inclusive of model
-	 * building, so a pass costs its own overhead plus whatever it built:
+	 * <p><b>Where the nine comes from.</b> A crossing tick pays for the region files it
+	 * brought in, then for the pass that decides who is visible, then for whatever that
+	 * pass built:
 	 *
 	 * <pre>
-	 *   pass = MEASURED_PASS_OVERHEAD_MICROS + builds x MEASURED_MEAN_MODEL_BUILD_MICROS
-	 *   3 builds: 124 + 3 x 570 = 1834us  <= 2000us  (acceptable)
-	 *   4 builds: 124 + 4 x 570 = 2404us  >  2000us  (over)
+	 *   tick = MEASURED_REGION_LOAD_MICROS + MEASURED_PASS_OVERHEAD_MICROS
+	 *          + builds x MEASURED_BURST_MODEL_BUILD_MICROS
+	 *    9 builds: 3000 + 151 +  9 x 1400 = 15751us  <= 16667us  (inside a frame)
+	 *   10 builds: 3000 + 151 + 10 x 1400 = 17151us  >  16667us  (over)
 	 * </pre>
 	 *
-	 * So three is the largest cap whose full-budget pass, at the measured mean cost of a
-	 * build, still lands inside the pre-registered acceptable threshold — and the
-	 * expression below is that sentence rather than the number 3 typed in.
+	 * So nine is the largest cap whose full-budget crossing tick still fits in one frame
+	 * <i>with every build in it costing what the worst 5% of builds cost</i> — and the
+	 * expression below is that sentence rather than the number 9 typed in.
 	 *
-	 * <p><b>What it does not promise.</b> A pass that spends its whole budget on three
-	 * p99 builds costs {@code 124 + 3 x 1500 = 4.62ms}: over "acceptable", still inside
-	 * the 8ms "a problem" line. And no per-pass cap can help the other tail at all — the
-	 * worst single build measured was 15.45ms, so a pass containing it costs at least
-	 * that however low the cap goes. What the cap removes is the burst: the worst pass
-	 * measured was 53.73ms, which was roughly forty builds landing in one tick on the
-	 * way into Varrock.
+	 * <p><b>What it does not promise.</b> A pass that spends its whole budget at the
+	 * measured <i>mean</i> costs {@code 151 + 9 x 712 = 6.56ms}, so the ordinary case is
+	 * well inside and the arithmetic above is deliberately the bad case. And no per-pass
+	 * cap can help the other tail at all — the worst single build measured was 8.61ms,
+	 * so a pass containing it costs at least that however low the cap goes. What the cap
+	 * removes is the unbounded burst: before it existed the worst pass measured was
+	 * 53.73ms, which was roughly forty builds landing in one tick on the way into
+	 * Varrock.
 	 *
-	 * <p><b>What it costs.</b> A cold walk into the densest shipped neighbourhood — 76
-	 * entities inside {@link #MAX_CULL_RADIUS} — now fills over {@code ceil(76 / 3)} =
-	 * 26 passes, about 15 seconds, instead of one 53ms stutter. Nearest first, so the
-	 * ones that arrive last are the ones furthest away.
+	 * <p><b>What it costs, and why three was too tight.</b> A cold walk into the densest
+	 * shipped neighbourhood — 76 entities inside {@link #MAX_CULL_RADIUS} — fills over
+	 * {@code ceil(76 / 9)} = 9 passes, about five seconds. At three it was 26 passes,
+	 * and the field measurement bears that out exactly: walking into Varrock square on
+	 * 2026-08-29 held 72 builds over on the first pass and drained them three at a time
+	 * over 24 further passes, so the crowd took <b>fourteen seconds</b> to finish
+	 * arriving. A citizen that takes fourteen seconds to appear is its own defect, and it
+	 * was being paid for a spike the measurement has since attributed elsewhere. Nearest
+	 * first either way, so the ones that arrive last are the ones furthest away.
 	 *
 	 * <p>Not a config dial, for {@link #MAX_ACTIVE_OBJECTS}'s reason: a guard rather
 	 * than a preference. {@code RenderPolicyTest} recomputes the arithmetic above, so
@@ -120,8 +177,8 @@ public final class RenderPolicy
 		// plugin that never spawns anything, and integer division makes that one bad
 		// re-measurement away.
 		1,
-		(VISIBILITY_BUDGET_MICROS - MEASURED_PASS_OVERHEAD_MICROS)
-			/ MEASURED_MEAN_MODEL_BUILD_MICROS);
+		(CROSSING_TICK_BUDGET_MICROS - MEASURED_REGION_LOAD_MICROS - MEASURED_PASS_OVERHEAD_MICROS)
+			/ MEASURED_BURST_MODEL_BUILD_MICROS);
 
 	/**
 	 * The cull radius a fresh install gets: a Chebyshev tile radius around the

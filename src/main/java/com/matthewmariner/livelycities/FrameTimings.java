@@ -24,16 +24,28 @@ import javax.inject.Singleton;
  * nothing calls {@link #onGameTick()} at all: the meters exist, the gate below keeps
  * them empty, and there is no reporting branch anywhere in {@code src/main} to look at.
  *
- * <p><b>Three meters, and the split is the whole point</b>, because they run on
- * different clocks and only one of them competes with the frame rate:
+ * <p><b>Six meters, and the split is the whole point</b>, because they run on
+ * different clocks and only one of them competes with the frame rate. Three of them
+ * are the plugin's per-tick work broken apart, one is their sum, and one is per
+ * frame:
  * <ul>
+ *   <li><b>{@code game tick}</b> — the sum: every microsecond this plugin spends on
+ *       one game tick, region loading included. The honest headline, and the reason
+ *       the split below cannot hide anything.</li>
+ *   <li><b>{@code region load}</b> — once per region <i>file</i>, when a scene load
+ *       first brings it into scope: parse the JSON, validate every record, derive the
+ *       echoes, build the wrappers. It happens in {@code syncRegions}, which
+ *       {@code LivelyCitiesPlugin.tick()} calls immediately before the visibility
+ *       pass, so it lands on the same tick and on no other.</li>
  *   <li><b>{@code visibility pass}</b> — once per game tick (600ms) and once per
- *       settings change. It decides who is on screen, and it is where model
- *       building happens, so this figure is <i>inclusive</i> of the next one.</li>
+ *       settings change: who is on screen, who is not, and who walks. <b>Exclusive of
+ *       model building</b> — see below.</li>
  *   <li><b>{@code model build}</b> — once per entity, the first time it spawns.
- *       Bursty by nature: walking into Varrock builds dozens of models inside one
- *       visibility pass. Broken out so a spike in the pass above can be attributed
- *       instead of guessed at.</li>
+ *       Bursty by nature: walking into Varrock wants dozens of models inside one
+ *       visibility pass.</li>
+ *   <li><b>{@code model build burst}</b> — what one pass spent building, summed.
+ *       This is precisely the quantity {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS}
+ *       exists to bound, so it is the line a re-measurement checks the cap against.</li>
  *   <li><b>{@code interpolation}</b> — once per rendered frame, and the only
  *       per-frame work this plugin does. It walks the active wandering citizens and
  *       nothing else; the right-click clickbox — the cost centre the plan named — is
@@ -41,6 +53,22 @@ import javax.inject.Singleton;
  *       expected to be near zero and the point of measuring it is to be able to say
  *       so with a figure instead of an argument.</li>
  * </ul>
+ *
+ * <h2>Why the visibility figure is exclusive of building, as of 2026-08-29</h2>
+ *
+ * <p>It used to be inclusive, and that made its percentiles describe two different
+ * events at once. A steady-state pass and the pass that walks into a new city are not
+ * the same product: one is a rhythmic cost paid every 600ms forever, the other is a
+ * one-off at a region border. Averaging them into one p99 makes both figures less
+ * meaningful, and it made the 2026-08-29 report unreadable in exactly that way — a
+ * visibility p99 of 5.50ms and a worst pass of 18.31ms, both of which turn out to be
+ * model building and neither of which says anything about deciding who is visible.
+ *
+ * <p>So the visibility meter now records the pass <i>minus</i> whatever it spent
+ * building, the builds are reported as their own burst, and the two are added back up
+ * in {@code game tick}. Nothing is discarded and nothing is hidden; three numbers with
+ * three thresholds replace one number judged against a threshold written for a
+ * different thing.
  *
  * <p><b>A distribution, not a mean.</b> A mean hides exactly the thing that matters:
  * one 40ms model-building tick inside three minutes of 30µs ticks averages to
@@ -68,49 +96,92 @@ import javax.inject.Singleton;
  *       given it is a loop over at most a few dozen wanderers doing one
  *       {@code setLocation} each, anything at all is a surprise. <b>p99 &gt; 2ms</b>
  *       (12% of a frame, every frame) is <b>a problem</b> and means the per-frame pass
- *       has acquired work that belongs on the tick.</li>
+ *       has acquired work that belongs on the tick. <i>(Registered 2026-08-24,
+ *       unchanged.)</i></li>
  *   <li><b>Visibility pass, p99 ≤ 2ms</b> is <b>acceptable</b>: it lands in one frame
  *       out of every thirty-six, and an eighth of a frame once every 600ms is not
  *       something a player can see. <b>p99 &gt; 8ms</b> is <b>a problem</b> — half a
- *       frame, on a schedule, is a rhythmic stutter.</li>
- *   <li><b>Model building, max ≤ 20ms for one model and ≤ 100ms for the burst that
- *       lands on entering a dense region</b> is <b>acceptable</b> — a sixth of a game
- *       tick, once, at a region border where the client is already busy. <b>Any single
- *       build over 50ms</b> is <b>a problem</b>, and the fix is known rather than
- *       hypothetical: spread the burst across ticks instead of spending the whole
- *       80-object cap in one pass.</li>
+ *       frame, on a schedule, is a rhythmic stutter. <i>(Registered 2026-08-24. The
+ *       numbers are unchanged; what changed on 2026-08-29 is that the figure they
+ *       judge no longer contains model building, which is not a rhythmic cost and was
+ *       never what this sentence was about.)</i></li>
+ *   <li><b>Model building, max ≤ 20ms for one model</b> is <b>acceptable</b> — a
+ *       thirtieth of a game tick, once, at a region border where the client is already
+ *       busy. <b>Any single build over 50ms</b> is <b>a problem</b>. <i>(Registered
+ *       2026-08-24, unchanged.)</i></li>
+ *   <li><b>A model build burst, max ≤ one frame (16.7ms) for what a single pass
+ *       spends building</b> is <b>acceptable</b>; <b>over 50ms</b> is <b>a
+ *       problem</b>. <i>(Registered 2026-08-24 as "≤ 100ms for the burst that lands on
+ *       entering a dense region", tightened 2026-08-29 — see
+ *       {@link RenderPolicy#CROSSING_TICK_BUDGET_MICROS}. 100ms is six frames, and it
+ *       was written when nothing capped the burst at all. Now that
+ *       {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS} bounds it, the acceptable figure
+ *       is the one the cap is derived to hold. A threshold that moves has to move in
+ *       public; this one moved down.)</i></li>
+ *   <li><b>Region load, max ≤ 5ms for one region file</b> is <b>acceptable</b>;
+ *       <b>over 20ms</b> is <b>a problem</b>. <i>(Registered 2026-08-29, newly
+ *       measured and newly metered.)</i> It is paid once per file per scene load, on a
+ *       tick where the client is already rebuilding a 104x104 scene: 5ms is under a
+ *       third of a frame, and 20ms is more than a whole one at every border crossing,
+ *       which is a hitch a player would learn to expect. The densest shipped file,
+ *       region 12853, times at 1.9ms offline.</li>
+ *   <li><b>A game tick, p99 ≤ 2ms and max ≤ one frame (16.7ms)</b> is
+ *       <b>acceptable</b>; <b>p99 &gt; 8ms or any tick over 50ms</b> is <b>a
+ *       problem</b>. <i>(Registered 2026-08-29, newly metered.)</i> The p99 is the
+ *       visibility pass's own pair of lines, because the overwhelming majority of ticks
+ *       are exactly a visibility pass and nothing else; the maximum is the crossing
+ *       tick, which is allowed one dropped frame and no more.</li>
  * </ul>
  *
  * <h2>What the numbers actually said, and what changed because of it</h2>
  *
- * <p>300 game ticks in Varrock, a human playing, client 1.12.36. Interpolation passed
- * by seventy times (p99 7µs against a 0.5ms bar) and no single model build came near
- * the 20ms bar (max 15.45ms, p99 1.50ms). <b>The visibility pass failed</b>: p99 in the
- * overflow bucket at ≥11ms and a worst pass of 53.73ms, against a bar of 8ms.
+ * <p><b>2026-08-24, 300 game ticks in Varrock, a human playing, client 1.12.36.</b>
+ * Interpolation passed by seventy times (p99 7µs against a 0.5ms bar) and no single
+ * model build came near the 20ms bar (max 15.45ms, p99 1.50ms). <b>The visibility pass
+ * failed</b>: p99 in the overflow bucket at ≥11ms and a worst pass of 53.73ms, against a
+ * bar of 8ms. 371 builds landed across 331 passes, so the spike was never one slow
+ * model — it was <i>forty</i> ordinary ones inside one game tick, which is what walking
+ * into Varrock square looked like from here. The answer was
+ * {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS}: cap a pass's builds, and let the rest
+ * wait a tick, nearest first.
  *
- * <p>The split above is what made that diagnosable rather than a mystery. 371 builds
- * landed across 331 passes, and since the visibility figure is inclusive of building,
- * the spike was never one slow model — it was <i>forty</i> ordinary ones inside one
- * game tick, which is what walking into Varrock square looks like from here.
+ * <p><b>2026-08-29, the same walk, 300 game ticks, 184 entities.</b> The cap worked —
+ * max 18.31ms against 53.73ms, p99 5.50ms against ≥11ms — and the measurement then
+ * falsified the theory it was built on. The worst pass had <b>three objects active</b>,
+ * i.e. it was the pass that could build almost nothing, and the worst model build in
+ * the session was 8.61ms, so most of an 18ms pass was not model building at all.
  *
- * <p>So the fix named above is now implemented rather than named:
- * {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS} caps a pass at three builds and the
- * rest wait a tick, nearest first. Three is arithmetic off these figures rather than a
- * round number — see that constant. {@link #recordBuildsDeferred(int)} counts what the
- * cap held back, so the next report can be read against this one instead of against a
- * memory of it.
+ * <p>The client log identifies that pass exactly, and it is the answer:
+ * {@code visibility pass: +3 -0 (failed 0, 72 build(s) held over), 3 active of 164 in
+ * scope} — the <b>first</b> pass of the session, on the scene load that brought Varrock
+ * in. Twenty-three later passes have that same shape, 164 in scope and three built, and
+ * every one of them is under 5.50ms because the p99 says only three samples are not. So
+ * the extra fifteen milliseconds are not the shape of the pass. They are the cost of
+ * running it for the first time: class loading, lambda linkage and interpretation for
+ * the whole spawn path, on top of the session's first model build, which cost 8.61ms
+ * for the same reason. A benchmark of the same scene against the real shipped data
+ * makes that arithmetic rather than an argument — 32ms for the first
+ * {@code updateVisibility} in a fresh JVM with a fake client that builds nothing, 921µs
+ * for the identical pass on a second scene in the same JVM, and 25µs steady state.
  *
- * <p><b>One thing the thresholds above do not reconcile</b>, recorded here rather than
- * quietly adjusted: they call a single 20ms model build acceptable and a visibility p99
- * over 8ms a problem, while every build happens <i>inside</i> a visibility pass. A lone
- * 20ms build is therefore an acceptable build inside a problem pass, and no per-pass
- * cap can be the thing that fixes that — the measured worst build, 15.45ms, is already
- * in the gap. What the cap addresses is the burst, which is what the measurement showed
- * the problem to be.
+ * <p>Two things changed because of it, and neither is a widened threshold. The
+ * visibility figure became <b>exclusive</b> of model building, so its pre-registered
+ * 2ms/8ms lines judge the decision work they were written for; and
+ * {@link RenderPolicy#MAX_MODEL_BUILDS_PER_PASS} was re-derived against a crossing-tick
+ * budget instead of against the visibility pass's line, which raised it from three to
+ * nine — because at three the measurement shows Varrock's crowd taking fourteen seconds
+ * to arrive, and it was paying that for a spike that was never model building.
  *
- * <p>Once measured, the figure belongs in the README's Known limitations section and
- * in the performance sentence of {@code docs/SUBMISSION.md}'s PR body — both of which
- * currently say the measurement exists rather than what it said.
+ * <p><b>The thing the old thresholds did not reconcile is now reconciled.</b> They
+ * called a single 20ms model build acceptable and a visibility p99 over 8ms a problem,
+ * while every build happened <i>inside</i> a visibility pass — so a lone acceptable
+ * build sat inside a problem pass and no cap could fix it. The two figures no longer
+ * contain each other: a build is judged as a build, a burst of them as a burst, the
+ * decision work on its own, and {@code game tick} adds all of it back up so the split
+ * cannot be used to make a slow tick look fast.
+ *
+ * <p>Once measured, the figures belong in the README's Known limitations section and
+ * in the performance sentence of {@code docs/SUBMISSION.md}'s PR body.
  *
  * <h2>Cost when nobody is looking</h2>
  *
@@ -168,9 +239,45 @@ final class FrameTimings
 
 	private final boolean enabled;
 
-	private final Meter visibility = new Meter("visibility pass (per game tick)", "objects active");
+	private final Meter gameTick = new Meter(
+		"game tick (region load + visibility pass, all of it)", "objects active");
+	private final Meter visibility = new Meter(
+		"visibility pass (per game tick, excluding model builds)", "objects active");
 	private final Meter modelBuild = new Meter("model build (per first spawn)", "objects active");
+	private final Meter buildBurst = new Meter(
+		"model build burst (per visibility pass)", "models built");
+	private final Meter regionLoad = new Meter("region load (per region file)", "entities");
 	private final Meter interpolation = new Meter("interpolation (per frame)", "walkers");
+
+	/**
+	 * What the visibility pass currently in flight has spent building, and how many
+	 * builds that was.
+	 *
+	 * <p><b>Accumulated here rather than in {@link EntityScene}</b>, and that is what
+	 * keeps "off costs one field read" true. The scene would have to subtract
+	 * {@code System.nanoTime()} twice per build to hand over a figure, which is a clock
+	 * read per build in a client that is not measuring anything;
+	 * {@link #recordModelBuild} already has the elapsed time in a local, inside the
+	 * {@link #enabled} guard, so adding it up costs a disabled client nothing at all.
+	 *
+	 * <p>Reset by {@link #recordVisibility}, which is the end of the pass these belong
+	 * to. A build outside a pass is impossible — {@code EntityScene} only ever builds
+	 * inside {@code runVisibilityPass} — so there is no path that leaks one burst into
+	 * the next.
+	 */
+	private long passBuildNanos;
+	private int passBuilds;
+
+	/**
+	 * What {@code syncRegions} spent loading region files since the last visibility
+	 * pass, for the {@code game tick} total.
+	 *
+	 * <p>Sound because of the order {@code LivelyCitiesPlugin.tick()} runs things in:
+	 * {@code syncRegions} first, then the pass. So everything accumulated here belongs
+	 * to the tick the next visibility sample closes, and there is no tick boundary for
+	 * this class to be told about.
+	 */
+	private long tickRegionLoadNanos;
 
 	private long ticks;
 	private int ticksSinceReport;
@@ -246,13 +353,46 @@ final class FrameTimings
 	}
 
 	/**
+	 * Closes one visibility pass, and with it one game tick.
+	 *
+	 * <p>Three samples come out of this call, and the arithmetic is the whole point of
+	 * the 2026-08-29 split:
+	 * <ul>
+	 *   <li>{@code visibility} gets the elapsed time <b>minus</b> what the pass spent
+	 *       building, which is the cost of deciding who is on screen;</li>
+	 *   <li>{@code model build burst} gets what it spent building, if anything;</li>
+	 *   <li>{@code game tick} gets the elapsed time <b>plus</b> the region loads that
+	 *       ran in {@code syncRegions} before this pass — the whole of what this plugin
+	 *       cost the tick.</li>
+	 * </ul>
+	 *
+	 * <p>The subtraction is clamped at zero. It cannot go negative — the builds happened
+	 * inside the interval being measured — but a meter that could index a histogram with
+	 * a negative number inside an event handler is a bad way to find out otherwise.
+	 *
 	 * @param startedAt     the value {@link #start()} returned
 	 * @param activeObjects how many {@code RuneLiteObject}s this pass left the client
 	 *                      holding
 	 */
 	void recordVisibility(long startedAt, int activeObjects)
 	{
-		record(Pass.VISIBILITY, startedAt, activeObjects);
+		if (!enabled)
+		{
+			return;
+		}
+
+		final long elapsed = System.nanoTime() - startedAt;
+
+		visibility.record(Math.max(0L, elapsed - passBuildNanos), activeObjects);
+		if (passBuilds > 0)
+		{
+			buildBurst.record(passBuildNanos, passBuilds);
+		}
+		gameTick.record(elapsed + tickRegionLoadNanos, activeObjects);
+
+		passBuildNanos = 0L;
+		passBuilds = 0;
+		tickRegionLoadNanos = 0L;
 	}
 
 	/**
@@ -262,7 +402,39 @@ final class FrameTimings
 	 */
 	void recordModelBuild(long startedAt, int activeObjects)
 	{
-		record(Pass.MODEL_BUILD, startedAt, activeObjects);
+		if (!enabled)
+		{
+			return;
+		}
+
+		final long elapsed = System.nanoTime() - startedAt;
+		modelBuild.record(elapsed, activeObjects);
+
+		// The burst this build belongs to, and the subtraction the pass is about to do.
+		passBuildNanos += elapsed;
+		passBuilds++;
+	}
+
+	/**
+	 * One region file brought into scope: parsed, validated, echoed and wrapped.
+	 *
+	 * @param startedAt the value {@link #start()} returned
+	 * @param entities  how many wrappers came out of it, authored and derived together —
+	 *                  "2.4ms for four entities" and "2.4ms for a hundred and ten" are
+	 *                  different claims about the same milliseconds
+	 */
+	void recordRegionLoad(long startedAt, int entities)
+	{
+		if (!enabled)
+		{
+			return;
+		}
+
+		final long elapsed = System.nanoTime() - startedAt;
+		regionLoad.record(elapsed, entities);
+
+		// Charged to the tick the next visibility pass closes — see tickRegionLoadNanos.
+		tickRegionLoadNanos += elapsed;
 	}
 
 	/**
@@ -333,10 +505,16 @@ final class FrameTimings
 	{
 		switch (pass)
 		{
+			case GAME_TICK:
+				return gameTick;
 			case VISIBILITY:
 				return visibility;
 			case MODEL_BUILD:
 				return modelBuild;
+			case BUILD_BURST:
+				return buildBurst;
+			case REGION_LOAD:
+				return regionLoad;
 			default:
 				return interpolation;
 		}
@@ -370,13 +548,20 @@ final class FrameTimings
 	}
 
 	/**
-	 * The three things measured, and the three different clocks they run on. See the
-	 * class javadoc.
+	 * The six things measured, and the clocks they run on. See the class javadoc.
+	 *
+	 * <p>{@link #GAME_TICK} is the sum of {@link #VISIBILITY}, {@link #BUILD_BURST} and
+	 * whatever {@link #REGION_LOAD} ran on the same tick, so it is derived rather than
+	 * separately clocked — but it is a distribution in its own right, and the maximum of
+	 * a sum is not the sum of the maxima.
 	 */
 	enum Pass
 	{
+		GAME_TICK,
 		VISIBILITY,
 		MODEL_BUILD,
+		BUILD_BURST,
+		REGION_LOAD,
 		INTERPOLATION
 	}
 
@@ -418,7 +603,12 @@ final class FrameTimings
 	 */
 	boolean hasSamples()
 	{
-		return visibility.count > 0 || modelBuild.count > 0 || interpolation.count > 0;
+		return gameTick.count > 0
+			|| visibility.count > 0
+			|| modelBuild.count > 0
+			|| buildBurst.count > 0
+			|| regionLoad.count > 0
+			|| interpolation.count > 0;
 	}
 
 	/**
@@ -428,8 +618,9 @@ final class FrameTimings
 	String summaryLine()
 	{
 		return "Lively Cities frame timings after " + ticks + " game tick(s) — "
-			+ visibility.summary() + "; " + modelBuild.summary()
-			+ "; " + deferralSummary() + "; " + interpolation.summary();
+			+ gameTick.summary() + "; " + visibility.summary() + "; " + modelBuild.summary()
+			+ "; " + buildBurst.summary() + "; " + deferralSummary()
+			+ "; " + regionLoad.summary() + "; " + interpolation.summary();
 	}
 
 	/**
@@ -461,16 +652,25 @@ final class FrameTimings
 		sb.append("# Lively Cities frame timings\n");
 		sb.append("# game ticks measured: ").append(ticks).append('\n');
 		sb.append("#\n");
-		sb.append("# The visibility figure is INCLUSIVE of model building: models are built\n");
-		sb.append("# inside the visibility pass, so a spike in one explains a spike in the other.\n");
+		sb.append("# The visibility figure is EXCLUSIVE of model building, as of 2026-08-29. A\n");
+		sb.append("# steady-state pass and the pass that walks into a new city are different\n");
+		sb.append("# events with different acceptable costs, and one p99 over both describes\n");
+		sb.append("# neither. So: 'visibility pass' is the cost of deciding who is on screen,\n");
+		sb.append("# 'model build burst' is what that pass spent building, 'region load' is the\n");
+		sb.append("# scene load that happened just before it, and 'game tick' is all of it added\n");
+		sb.append("# back up. Nothing is dropped; the total is the first line.\n");
+		sb.append("#\n");
 		sb.append("# Percentiles are over the whole session, from a 1us-resolution histogram;\n");
 		sb.append("# the maximum is exact. A percentile printed with a leading '>=' fell in the\n");
 		sb.append("# overflow bucket.\n");
 		sb.append("#\n");
-		sb.append("# Acceptable: interpolation p99 <= 0.5ms, visibility p99 <= 2ms, no single\n");
-		sb.append("# model build over 20ms. A problem: interpolation p99 > 2ms, visibility\n");
-		sb.append("# p99 > 8ms, or any single model build over 50ms. See FrameTimings' javadoc\n");
-		sb.append("# for where those thresholds come from.\n");
+		sb.append("# Acceptable: interpolation p99 <= 0.5ms, visibility p99 <= 2ms, game tick\n");
+		sb.append("# p99 <= 2ms and max <= 16.7ms, no single model build over 20ms, no build\n");
+		sb.append("# burst over 16.7ms, no region load over 5ms. A problem: interpolation\n");
+		sb.append("# p99 > 2ms, visibility p99 > 8ms, game tick p99 > 8ms or any tick over 50ms,\n");
+		sb.append("# any single model build over 50ms, any burst over 50ms, any region load\n");
+		sb.append("# over 20ms. See FrameTimings' javadoc for where each of those comes from and\n");
+		sb.append("# when it was registered.\n");
 		sb.append("#\n");
 		sb.append("# A pass builds at most ").append(RenderPolicy.MAX_MODEL_BUILDS_PER_PASS)
 			.append(" model(s); the rest wait for the next one, nearest\n");
@@ -479,8 +679,10 @@ final class FrameTimings
 		sb.append("# that has never appeared in this report and still does not.\n");
 		sb.append('\n');
 
+		gameTick.appendTo(sb);
 		visibility.appendTo(sb);
 		modelBuild.appendTo(sb);
+		buildBurst.appendTo(sb);
 
 		sb.append("# model builds held over by the per-pass build budget\n");
 		sb.append("budget:    ").append(RenderPolicy.MAX_MODEL_BUILDS_PER_PASS)
@@ -489,6 +691,7 @@ final class FrameTimings
 			.append("  (over ").append(passesWithDeferredBuilds).append(" pass(es))\n");
 		sb.append('\n');
 
+		regionLoad.appendTo(sb);
 		interpolation.appendTo(sb);
 
 		return sb.toString();

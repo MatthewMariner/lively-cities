@@ -1,5 +1,6 @@
 package com.matthewmariner.livelycities;
 
+import java.nio.file.Paths;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -15,6 +16,7 @@ import net.runelite.api.Constants;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -141,35 +143,110 @@ public class RenderPolicyTest
 	 * the threshold it was derived from.
 	 *
 	 * <p><b>Both halves, because only the second one is a test.</b> Asserting the cap is
-	 * three restates the constant; what makes it a claim about the measurement is that
-	 * four does not fit. The figures are the ones from the 300-tick Varrock run: a
-	 * visibility pass with no building in it took 124µs at the median, one model build
-	 * cost 570µs at the mean, and the pass's pre-registered acceptable threshold is 2ms.
+	 * nine restates the constant; what makes it a claim about the measurement is that ten
+	 * does not fit. The figures are the ones from the 300-tick Varrock run on 2026-08-29:
+	 * a visibility pass with no building in it took 151µs at the median, one model build
+	 * inside a burst costs 1.40ms (the measured p95 — see the constant for why not the
+	 * mean), the region files one scene load brings in cost 3.0ms, and a crossing tick's
+	 * budget is one frame.
+	 *
+	 * <p><b>The third half, which is new and is the point of the 2026-08-29 pass.</b>
+	 * The budget the cap is derived from has to be the <i>crossing tick</i> budget and
+	 * not the visibility pass's own acceptable threshold. Those are different events —
+	 * one is paid at a border, the other every 600ms forever — and the old derivation
+	 * conflated them. Re-running the old formula on the new figures would have tightened
+	 * the cap to two; the assertion below records that, so nobody re-derives it that way
+	 * again without seeing what it costs.
 	 *
 	 * <p>Deliberately recomputed from {@code RenderPolicy}'s own constants rather than
 	 * from literals, so a re-measurement moves the cap and this test with it — and a
 	 * hand-typed cap that no longer follows from the figures beside it goes red.
 	 */
 	@Test
-	public void theBuildBudgetIsTheLargestOneTheMeasuredPassCostAllows()
+	public void theBuildBudgetIsTheLargestOneTheMeasuredCrossingTickAllows()
 	{
 		int budget = RenderPolicy.MAX_MODEL_BUILDS_PER_PASS;
 		int overhead = RenderPolicy.MEASURED_PASS_OVERHEAD_MICROS;
-		int perBuild = RenderPolicy.MEASURED_MEAN_MODEL_BUILD_MICROS;
-		int acceptable = RenderPolicy.VISIBILITY_BUDGET_MICROS;
+		int regionLoad = RenderPolicy.MEASURED_REGION_LOAD_MICROS;
+		int perBuild = RenderPolicy.MEASURED_BURST_MODEL_BUILD_MICROS;
+		int acceptable = RenderPolicy.CROSSING_TICK_BUDGET_MICROS;
 
-		assertEquals("the measured figures the cap is derived from: 124us of pass overhead, "
-				+ "570us a build, against a 2ms acceptable threshold",
-			3, budget);
+		assertEquals("the measured figures the cap is derived from: 3.0ms of region load, "
+				+ "151us of pass overhead and 1.40ms a build, against a one-frame crossing "
+				+ "tick",
+			9, budget);
 
-		assertTrue("a pass that spends its whole budget has to land inside the threshold: "
-				+ (overhead + budget * perBuild) + "us against " + acceptable + "us",
-			overhead + budget * perBuild <= acceptable);
+		assertTrue("a crossing tick that spends the whole budget has to land inside the "
+				+ "threshold: " + (regionLoad + overhead + budget * perBuild)
+				+ "us against " + acceptable + "us",
+			regionLoad + overhead + budget * perBuild <= acceptable);
 
 		assertTrue("and one more build has to break it, or the cap is lower than the data "
 				+ "allows and citizens are being made to wait for nothing: "
-				+ (overhead + (budget + 1) * perBuild) + "us against " + acceptable + "us",
-			overhead + (budget + 1) * perBuild > acceptable);
+				+ (regionLoad + overhead + (budget + 1) * perBuild) + "us against "
+				+ acceptable + "us",
+			regionLoad + overhead + (budget + 1) * perBuild > acceptable);
+
+		// The conflation that used to set this number. 2ms was registered for the
+		// per-tick decision work, and charging a once-per-crossing burst to it is what
+		// made the cap three when the pass overhead was 124us — and would make it two
+		// now, for a spike the measurement has since attributed to first-execution cost
+		// rather than to building at all.
+		int visibilityAcceptableMicros = 2_000;
+		assertTrue("deriving the burst cap from the visibility pass's own threshold has to "
+				+ "give a strictly smaller number, or this guard is comparing the budget "
+				+ "with itself",
+			(visibilityAcceptableMicros - overhead) / perBuild < budget);
+	}
+
+	/**
+	 * The cap is <b>computed</b> from the measured figures, not written down as a number
+	 * that happens to match them.
+	 *
+	 * <p>Everything above checks that 9 is the right answer, and every one of those
+	 * assertions passes against {@code MAX_MODEL_BUILDS_PER_PASS = 9} typed as a
+	 * literal — I checked, by making exactly that change and watching all 460 tests stay
+	 * green. No assertion on a value can tell a computed 9 from a typed one, because
+	 * both are 9.
+	 *
+	 * <p>That matters because {@code RenderPolicy}'s own javadoc and the README both
+	 * promise that "a re-measurement moves the cap by editing the measured figures
+	 * rather than by picking a new number". With a literal, re-measuring would move the
+	 * figures and leave the cap where it was — the tests above would eventually catch
+	 * the resulting inconsistency, but only on the next edit, and the documented
+	 * property would already be false.
+	 *
+	 * <p>So this reads the source, the same way
+	 * {@link #everyDensityFigureInTheSourceIsTheOneItsSentenceNames()} does for the
+	 * density sentences: the initialiser has to mention all three measured constants and
+	 * the threshold it divides into. A literal mentions none of them.
+	 */
+	@Test
+	public void theBuildBudgetIsComputedFromTheMeasuredFiguresRatherThanTypedIn()
+		throws IOException
+	{
+		Path source = Paths.get(
+			"src/main/java/com/matthewmariner/livelycities/RenderPolicy.java");
+		assertTrue("expected " + source.toAbsolutePath()
+				+ " — if the source layout moved, this test has to move with it",
+			Files.isRegularFile(source));
+
+		String text = new String(Files.readAllBytes(source), StandardCharsets.UTF_8);
+
+		int at = text.indexOf("MAX_MODEL_BUILDS_PER_PASS =");
+		assertNotEquals("no initialiser for MAX_MODEL_BUILDS_PER_PASS", -1, at);
+		String initialiser = text.substring(at, text.indexOf(';', at));
+
+		for (String required : new String[]{
+			"CROSSING_TICK_BUDGET_MICROS",
+			"MEASURED_REGION_LOAD_MICROS",
+			"MEASURED_PASS_OVERHEAD_MICROS",
+			"MEASURED_BURST_MODEL_BUILD_MICROS"})
+		{
+			assertTrue("the cap has to be derived from " + required + ", not typed in — "
+					+ "its initialiser reads: " + initialiser.replaceAll("\\s+", " "),
+				initialiser.contains(required));
+		}
 	}
 
 	/**
