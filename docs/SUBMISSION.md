@@ -247,22 +247,33 @@ appears verbatim in merged hub PRs — it answers the reviewer's actual question
 > dataset itself whether every human figure has geometry at the shin, at the hand and on the
 > floor.
 >
-> **The geometry half is closed; the colour half is disclosed rather than closed.** A trouser
+> **The geometry half and the colour half are both closed now.** A trouser
 > model painted the colour of a face looks the same in a screenshot as no trouser at all, and
 > six citizens this project authored were doing exactly that — answering a `find` slot aimed
 > at trousers, a tunic, hair, a boot or a collar with `4550`, the value the client
 > substitutes for a player's face. They were repaletted on 2026-08-30 and a second rule in `BodySlotLintTest`
-> now refuses it categorically. Two further records of ours wear a flesh-*class* tan where a
-> garment goes rather than the face colour itself; no categorical rule separates those from a
-> brown trouser, so they are named in `NOTICE` item 10 rather than quietly repainted. Six
-> upstream records paint the face colour onto arm, hand and head geometry, which is where
-> skin belongs; they are counted and named by a test so the figure cannot grow in silence.
+> now refuses it categorically.
+>
+> That rule was one value wide and the fault was a gamut wide. Playing at `Full` on
+> 2026-08-31 — where no derived figure exists — still showed trouserless figures, because
+> seventeen records painted the legs base a flesh-*class* tan and the nearest of them was one
+> hue step and two lightness steps from the face colour. A third rule now refuses any
+> flesh-gamut colour on a legs slot, using the plugin's own `CitizenEcho.isFlesh` rather than
+> a second copy of it, and all seventeen were repainted — ten upstream's, disclosed as
+> `NOTICE` item 11. It is deliberately not widened to the other garment slots: the hair and
+> boots bases are inside the gamut themselves, so the rule there would refuse the game's own
+> colours. Six upstream records paint the face colour onto arm, hand and head geometry, which
+> is where skin belongs; they are counted and named by a test so the figure cannot grow in
+> silence.
 >
 > The same fault existed in the derivation and shipped: two of the 44 echoes at `Crowded`
 > wore the face colour on a garment, one of them on the legs. The re-deal rule compared
 > flesh-*classes*, so a dark leather brown swapping places with the face colour looked
 > class-preserving. The face colour is now its own class and cannot be moved off the slot the
-> author put it on.
+> author put it on. The derived half of the trousers rule follows from the authored half
+> rather than being enforced separately — a surviving deal keeps every colour on its own side
+> of the flesh boundary, so no echo can wear a complexion on its legs while no authored record
+> does — and `CitizenEchoTest` asserts it over both populations rather than reasoning about it.
 >
 > Fake-vs-real legibility was treated as the licence to exist rather than polish: menu entries
 > are always deprioritised, no clickbox is generated while an item or spell is on the cursor,

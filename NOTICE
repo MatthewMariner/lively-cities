@@ -14,7 +14,7 @@ The files under src/main/resources/RegionData/ are derived from that project's
 region data (format version 0.8). Redistribution of those files retains the
 copyright notice above as the BSD 2-Clause License requires.
 
-They are no longer byte-identical to upstream, in ten ways.
+They are no longer byte-identical to upstream, in eleven ways.
 
   1. Only a subset ships. This plugin carried 45 of their region files; as of
      2026-08-24 it carries 27, covering nine places. The other eighteen files —
@@ -323,17 +323,132 @@ They are no longer byte-identical to upstream, in ten ways.
      BodySlotLintTest.theSkinBaseOnANonGarmentSlotIsUpstreamsAloneAndIsNamed, so the
      figure cannot grow in silence.
 
-     Two of ours were left as they are and are disclosed rather than fixed. "Tobias"
-     (12083) wears a very dark blue where his face goes and a mid tan on both his
-     torso and his legs; "Marlow" (12340) wears a dark yellow-green face and mid-tan
-     legs. Both are rotations of the Varrock "Gardener"'s palette. They are wearing
-     flesh-coloured cloth rather than the face colour itself, so no categorical rule
-     reaches them and repainting them would be a taste judgement rather than a
-     repair.
+     Two of ours were left as they are on 2026-08-30 and are disclosed rather than
+     fixed. "Tobias" (12083) wears a very dark blue where his face goes and a mid tan
+     on both his torso and his legs; "Marlow" (12340) wears a dark yellow-green face
+     and mid-tan legs. Both are rotations of the Varrock "Gardener"'s palette. The
+     reasoning was that they wear flesh-coloured cloth rather than the face colour
+     itself, so no categorical rule reached them and repainting them would be a taste
+     judgement rather than a repair.
+
+     That was wrong, and item 11 is the correction. Their legs were repainted on
+     2026-08-31. Their faces were not, so the first two sentences of the paragraph
+     above still describe what ships.
 
      None of the six has been verified in game.
 
-BSD-2 permits all ten modifications, the subsetting at item 1 included — this
+ 11. Ten vendored citizen records had one recolour value changed on 2026-08-31,
+     because the slot they aimed at the legs was painted a colour out of the flesh
+     gamut and the figure read as bare legs. Seven records of ours had the same fault
+     and are listed with them.
+
+     What "the flesh gamut" means here is not a judgement of this project's. The game
+     packs a model colour as six bits of hue, three of saturation and seven of
+     lightness, and a read-only decode of every "find = 4550" recolour in the 1.12.36
+     cache — 3,320 of them, i.e. every recolour the game itself applies to the base
+     colour it paints a face with — puts 83% of them inside hue 2..7, saturation 1..6.
+     That box is the gamut. Item 10 only refused the single value 4550; the owner
+     played the shipped plugin at the "Full" crowd density on 2026-08-31, where no
+     derived citizen exists at all, and reported figures that still looked as though
+     they had no trousers. He was right: "Marlow" wore hue 5, saturation 3, lightness
+     68 against 4550's hue 4, saturation 3, lightness 70. One hue step and two
+     lightness steps. On a leg that is not a colour resembling skin, it is skin.
+
+     Ten of the seventeen are upstream's rather than ours. They are repainted rather
+     than left alone because an upstream record renders bare legs to every user at the
+     default density exactly as one of ours does, and because a plugin that can name a
+     defect and ships it anyway is worse than a modification a licensee can read. This
+     is the modification, disclosed.
+
+       ours
+       Marlow                12340   5572 (h5/s3/l68) -> 61    (h0/s0/l61)
+       Tobias                12083   3507 (h3/s3/l51) -> 12700 (h12/s3/l28)
+       Brother Edwy          10290   4329 (h4/s1/l105) -> 103  (h0/s0/l103)
+       Osric                 11317   6709 (h6/s4/l53) -> 43181 (h42/s1/l45)
+       Berta                 11828   5400 (h5/s2/l24) -> 8472  (h8/s2/l24)
+       Nessa                 11828   5421 (h5/s2/l45) -> 10539 (h10/s2/l43)
+       Tarik                 13105   5555 (h5/s3/l51) -> 10421 (h10/s1/l53)
+
+       upstream
+       Brother Keptic        10290   4769 (h4/s5/l33) -> 8481  (h8/s2/l33)
+       Assistant Apothecary  12597   6689 (h6/s4/l33) -> 8481  (h8/s2/l33)
+       Mary                  12852   5532 (h5/s3/l28) -> 8472  (h8/s2/l24)
+       Master Thief          12852   5260 (h5/s1/l12) -> 5132  (h5/s0/l12)
+       Jo                    12852   3486 (h3/s3/l30) -> 8613  (h8/s3/l37)
+       Sefton                12853   7331 (h7/s1/l35) -> 39    (h0/s0/l39)
+       Alexander             12853   6932 (h6/s6/l20) -> 7060  (h6/s7/l20)
+       Jofridr               12853   7353 (h7/s1/l57) -> 61    (h0/s0/l61)
+       Silver merchant       12853   5584 (h5/s3/l80) -> 82    (h0/s0/l82)
+       Lily                  12854   5400 (h5/s2/l24) -> 8472  (h8/s2/l24)
+
+     How each replacement was chosen. The move is proportional to how wrong the colour
+     was, because two of the seventeen are not obviously wrong at all. "Master Thief"
+     wore hue 5, saturation 1, lightness 12 — a near-black with a whisker of tan in it,
+     which reads as dyed leather rather than as a leg — so it moved one saturation rung
+     to the grey rung, keeping its hue and its lightness exactly, and the value it moved
+     to is one his own palette already carried. "Alexander" wore hue 6, saturation 6,
+     lightness 20, a dark oxblood, and moved one rung the other way, to the fully
+     saturated rung the derivation calls a costume colour rather than a complexion —
+     again the same hue and the same lightness. Repainting either of those any further
+     would have been a regression in appearance rather than a repair.
+
+     The rest are mid or light tans where the leg genuinely reads as bare, and they move
+     into a family the figure is already wearing: brown and khaki for the farm and
+     monastery records, neutral grey for the pale ones, blue-grey for a fisherman.
+     Nothing became a colour the character would not wear.
+
+     Sixteen of the seventeen replacements are values the dataset already carried
+     somewhere. The seventeenth is 7060, and it is new: it is "Alexander"'s own colour
+     with the saturation moved one rung, and no nearer value in the dataset kept both
+     his hue and his lightness. Colours are not model ids and nothing counts them, so
+     the distinct-model-id figure is still 324.
+
+     Eight further slots moved, and none of them is a legs slot. Item 8's rule is that
+     each of the thirty-three records this project added wears its donor's palette
+     rotated; repainting a donor's legs therefore moves the same value in whichever of
+     ours is a rotation of it, or the record stops being a rotation. Those eight are
+     mirrors of the table above, not decisions:
+
+       Brother Edwy          10290   hair        6689 -> 8481
+       Berta                 11828   torso       5400 -> 8472
+       Nessa                 11828   find 5400   7353 -> 61
+       Wynn                  11317   cuff        5532 -> 8472
+       Maud                  12338   torso       3486 -> 8613
+       Corliss               12338   torso       7331 -> 39
+       Perrin                12338   find 8720   5260 -> 5132
+       Sela                  10804   cuff        5584 -> 82
+
+     Two of those turn a bare forearm into a sleeve ("Wynn" and "Sela"), which is a
+     visible change and is named here rather than buried in the count.
+
+     One thing this modification does not explain. The report named Falador and
+     Lumbridge. Falador holds three of the seventeen ("Berta", "Nessa", "Tobias") and
+     Draynor, next door, holds "Marlow"; no record in any of the four Lumbridge region
+     files paints its legs a flesh-gamut colour, so whatever was seen there is either
+     one of these figures under a different name for the place or a fault nobody has
+     found yet.
+
+     Only recolour values moved. Tiles, names, examine text, remarks, wander boxes,
+     animations and "modelIds" are untouched on every one of the twenty-two records
+     involved.
+
+     Why the legs slot and not the torso, the hair or the boots. The hair base 6798 and
+     the boots base 4626 are themselves inside the gamut, so the same rule applied there
+     would refuse the colour the game paints those parts by default, along with every
+     blond, auburn and tan-leather record in the dataset. The torso base 8741 is outside
+     it, so the rule would at least be coherent — it is not adopted because a
+     flesh-toned tunic is not what a player reads as nakedness, and fourteen shipped
+     torso slots would have had to move for a fault nobody has reported. Those counts
+     are pinned by BodySlotLintTest.theOtherGarmentSlotsStillCarryTansAndTheCountIsPinned
+     so the decision cannot quietly become a growing pile.
+
+     The rule itself is
+     BodySlotLintTest.noLegsSlotIsPaintedAColourFromTheFleshGamut, and it uses the
+     plugin's own gamut predicate rather than a second copy of it.
+
+     None of the seventeen has been verified in game.
+
+BSD-2 permits all eleven modifications, the subsetting at item 1 included — this
 note exists so nobody assumes the vendored data still matches the source it came
 from, or that what ships here is all of what they published.
 

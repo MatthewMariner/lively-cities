@@ -138,11 +138,11 @@
             ],
             "modelRecolorReplace": [
                 7465,
-                5400,
+                8472,
                 8497,
                 12700,
                 4562,
-                5400
+                8472
             ],
             "idleAnimation": "HumanIdle"
         },
@@ -223,12 +223,12 @@
                 5400
             ],
             "modelRecolorReplace": [
-                5421,
+                10539,
                 11187,
                 6817,
                 10308,
                 10279,
-                7353
+                61
             ],
             "idleAnimation": "HumanIdle"
         }

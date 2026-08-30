@@ -67,18 +67,18 @@ import net.runelite.api.coords.WorldPoint;
  *       slot to deal into, so they seed nothing;</li>
  *   <li>1 more carries two or more pairs whose {@code replace} values are all
  *       identical, so every re-deal is the deal it started with;</li>
- *   <li><b>40</b> more have a palette that can be re-dealt but not
+ *   <li><b>36</b> more have a palette that can be re-dealt but not
  *       <i>honestly</i>: every rotation of it would move a skin colour onto a
  *       garment, a garment colour onto a face, or the game's own face colour off
  *       the slot the author put it on. See
  *       {@link #keepsEachColourOnItsOwnSideOfTheSkin};</li>
- *   <li>the remaining <b>24</b> seed {@link #MAX_ECHOES_PER_CITIZEN} echoes each
+ *   <li>the remaining <b>28</b> seed {@link #MAX_ECHOES_PER_CITIZEN} echoes each
  *       where their palette supports two <i>distinct</i> re-deals, and one where it
- *       supports only one — 22 of them ask for two and 2 for one, so <b>46</b> echoes
- *       are asked for and all 46 find somewhere legal to stand (see below).</li>
+ *       supports only one — 23 of them ask for two and 5 for one, so <b>51</b> echoes
+ *       are asked for and all 51 find somewhere legal to stand (see below).</li>
  * </ul>
- * That comes to <b>46 echoes against 142 authored citizens — 188 in total,
- * 1.32×</b>. {@code CitizenEchoTest} recomputes all of those numbers from the
+ * That comes to <b>51 echoes against 142 authored citizens — 193 in total,
+ * 1.36×</b>. {@code CitizenEchoTest} recomputes all of those numbers from the
  * shipped files rather than trusting this paragraph.
  *
  * <p><b>It used to be 96 seeds, 185 asked for, 184 placed and 2.30×</b>, and that
@@ -89,14 +89,21 @@ import net.runelite.api.coords.WorldPoint;
  * gardener holding a watering can whose Examine read "Passer-by". The doubling was
  * being bought with figures that did not stand up, so the doubling is what gave
  * way — first to 1.51× when the flesh rule landed, then to 1.31× when the body rule
- * did. It is 1.32× now, and the extra hundredth is not the rule loosening: the
- * 2026-08-30 pass gave the game's own face colour its own class, which cost one seed,
- * and repaletted six authored citizens who were wearing that colour on a garment,
- * which gave two of them an honest wardrobe and returned them as seeds.
+ * did, and 1.32× when the 2026-08-30 pass gave the game's own face colour its own
+ * class.
  *
- * <p>Whether {@link CrowdDensity#CROWDED} still earns its place at 1.32× is a fair
+ * <p><b>It is 1.36× now, and the rise is a data change rather than a rule change.</b>
+ * Nothing here was loosened: the 2026-08-31 pass repainted the seventeen authored
+ * records that were painting a legs slot a colour out of {@link #isFlesh}'s gamut, on
+ * the owner's report that figures still looked trouserless at {@link CrowdDensity#FULL}
+ * — where no echo exists at all, so the fault was in the records and not in this class.
+ * A wardrobe with one fewer flesh colour in it has more rotations that keep every
+ * colour on its own side of the boundary, so four more citizens became seeds and five
+ * more echoes appeared. The rule that admits them is the one that was already there.
+ *
+ * <p>Whether {@link CrowdDensity#CROWDED} still earns its place at 1.36× is a fair
  * question and a separate one. It is worth asking with the shape of the answer in
- * view rather than only the average: Varrock gets 20 echoes, Falador 8 and Draynor 7,
+ * view rather than only the average: Varrock gets 21 echoes, Draynor 9 and Falador 8,
  * while <b>Lumbridge gets none at all</b>, so for a player standing there the setting
  * does nothing whatever. That is an argument about content — several cities are thin
  * and want authoring — rather than an argument about this class, and it is now made
@@ -133,7 +140,7 @@ import net.runelite.api.coords.WorldPoint;
  * {@link #MIN_SEPARATION_TILES} from all of them, whoever they belong to.
  *
  * <p><b>What that costs.</b> An echo with nowhere legal left to stand is not derived
- * at all. Across the shipped files that now costs nothing — all <b>46</b> asked for
+ * at all. Across the shipped files that now costs nothing — all <b>51</b> asked for
  * find a tile — but it still moves <b>3</b> of them, belonging to 2 wanderers, off a
  * wander-box tile onto a ring offset the collision map then has to vouch for.
  * Skipping is the same answer this class already gives an echo whose tile the
@@ -147,7 +154,7 @@ import net.runelite.api.coords.WorldPoint;
  * them. Everything is now — {@code CitizenEchoTest}'s
  * {@code theRingServesTheCitizensWithNoBoxAndTheWanderersWhoseBoxIsNotEnough}
  * recomputes the 3 and the 2, and {@code theShippedRosterIsHalfAgainAsBigUnderCrowded}
- * the 46. The one echo that used to have nowhere to stand — the "Mysterious Old
+ * the 51. The one echo that used to have nowhere to stand — the "Mysterious Old
  * Man"'s second, in Varrock — is not blocked any more, because the flesh rule took
  * away the neighbours that were crowding it out. Nothing about the placement rule
  * changed; there is simply less to place.)
@@ -251,9 +258,9 @@ final class CitizenEcho
 	 *
 	 * <p>It is <b>not</b> the number that produces a doubling, and this javadoc said it
 	 * was until the 2026-08-30 pass: two per citizen would turn 142 into 326 only if
-	 * every citizen seeded two, and after the flesh and body rules 25 of them seed at
-	 * all. The figure it actually produces is the one in this class's javadoc — 46
-	 * echoes, 188 in total, 1.32× — and this constant is only its ceiling. A cap and a
+	 * every citizen seeded two, and after the flesh and body rules 28 of them seed at
+	 * all. The figure it actually produces is the one in this class's javadoc — 51
+	 * echoes, 193 in total, 1.36× — and this constant is only its ceiling. A cap and a
 	 * total are different claims, and stating the cap as though it were the total is
 	 * how "roughly twice as many" outlived the arithmetic that supported it.
 	 */
@@ -465,12 +472,12 @@ final class CitizenEcho
 		if (deals.length == 0)
 		{
 			// A palette with two or more pairs and no honest re-deal of it. Two
-			// different ways of being in that position, and 41 shipped citizens that
+			// different ways of being in that position, and 37 shipped citizens that
 			// reach this line are:
 			//
 			//  - 1 replaces every slot with the same colour, so every rotation is the
 			//    deal it started with;
-			//  - 40 have a mixed wardrobe whose every rotation would move a colour
+			//  - 36 have a mixed wardrobe whose every rotation would move a colour
 			//    across the flesh boundary — a tunic colour onto the face, a skin tone
 			//    onto the legs. See keepsEachColourOnItsOwnSideOfTheSkin.
 			//
@@ -821,8 +828,10 @@ final class CitizenEcho
 	 *
 	 * <p>Until the 2026-08-30 pass this asked one question — flesh or not flesh — and
 	 * <b>two of the 44 shipped echoes went out with the game's own face colour on a
-	 * garment anyway</b>. The clearest is the echo of "Mary" in Draynor: her palette is
-	 * {@code [322, 5532, 8099, 4550]} against the {@code find} slots
+	 * garment anyway</b>. The clearest is the echo of "Mary", whose record is in region
+	 * 12852 and whose city is therefore Varrock — this javadoc said Draynor until
+	 * 2026-08-31, which is where the region borders rather than where {@link City} files
+	 * it. Her palette was {@code [322, 5532, 8099, 4550]} against the {@code find} slots
 	 * {@code [8741, 25238, 6798, 43072]}, so {@value #PLAYER_SKIN_BASE} — the base
 	 * colour the client substitutes for a player's face — sits on {@code 43072}, the
 	 * base the kit's arm and hand models carry, which is a bare forearm and is right.
@@ -834,16 +843,31 @@ final class CitizenEcho
 	 *
 	 * <p>So there are three classes rather than two, and the third is a single value:
 	 * {@value #PLAYER_SKIN_BASE} is where the author put the face, and a re-deal may
-	 * rearrange a wardrobe but <b>may not move the face</b>. It costs one seed across
-	 * the shipped files — Mary's, whose only surviving deal was that one — and it needs
-	 * no new number, because the value is the game's own and is already named in
-	 * {@link #isFlesh}'s javadoc as the kit base every human model is authored in.
+	 * rearrange a wardrobe but <b>may not move the face</b>. It needs no new number,
+	 * because the value is the game's own and is already named in {@link #isFlesh}'s
+	 * javadoc as the kit base every human model is authored in.
+	 *
+	 * <p><b>The third class costs nothing on the shipped data any more, and saying so is
+	 * the point.</b> Mary's {@code 5532} was repainted {@code 8472} on 2026-08-31, because
+	 * a dark brown trouser inside the flesh gamut is still a trouser inside the flesh
+	 * gamut — see {@code BodySlotLintTest.noLegsSlotIsPaintedAColourFromTheFleshGamut}.
+	 * With it gone she has one flesh colour rather than two, so the two-class rule refuses
+	 * the same rotation the three-class rule does, and she seeds nothing either way.
+	 * Measured over every rotation of every shipped palette, <b>zero</b> are now allowed
+	 * by two classes and refused by three; {@code CitizenEchoTest} asserts that count
+	 * rather than letting this paragraph claim it.
+	 *
+	 * <p>The third class stays regardless. It is not held up by the dataset happening to
+	 * need it — it is the statement that the one colour the client puts on a face may not
+	 * be dealt onto a garment, and the next record somebody authors is exactly the case it
+	 * exists for. Removing a rule because the data no longer exercises it is how the data
+	 * gets to stop exercising it quietly.
 	 *
 	 * <p>What the rule as a whole costs is most of the crowd, and that is the honest
 	 * price of the feature having been wrong rather than a regression in it: over the
-	 * shipped files this rule alone takes the seeds from 96 to 40 and the echoes asked
-	 * for from 185 to 77; the body rule in {@link #isAnOrdinaryStandingBody} then takes
-	 * them to 25 and 46. A citizen whose wardrobe simply has no re-deal that keeps skin
+	 * shipped files this rule alone takes the seeds from 97 to 44 and the echoes asked
+	 * for from 186 to 81; the body rule in {@link #isAnOrdinaryStandingBody} then takes
+	 * them to 28 and 51. A citizen whose wardrobe simply has no re-deal that keeps skin
 	 * on skin now seeds nothing, which is the same answer this class already gives a
 	 * citizen with one recolour pair.
 	 *

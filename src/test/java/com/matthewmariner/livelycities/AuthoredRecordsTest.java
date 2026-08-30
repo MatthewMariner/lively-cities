@@ -256,6 +256,7 @@ public class AuthoredRecordsTest
 		List<String> notReDealt = new ArrayList<>();
 		List<String> donorIsNotACitizen = new ArrayList<>();
 		TreeSet<String> repaletted = new TreeSet<>();
+		TreeSet<String> legsLifted = new TreeSet<>();
 		int checked = 0;
 
 		for (Record ours : all)
@@ -291,25 +292,29 @@ public class AuthoredRecordsTest
 			}
 
 			Record reDealtFrom = null;
-			int lifted = 0;
+			Lift lifted = null;
 			for (Record donor : donors)
 			{
-				int slots = liftedSlotsOfAReDeal(
+				Lift slots = reDealOf(
 					ours.recolorReplace, donor.recolorReplace, ours.recolorFind);
-				if (slots >= 0)
+				if (slots != null)
 				{
 					reDealtFrom = donor;
 					lifted = slots;
-					if (slots == 0)
+					if (slots.total() == 0)
 					{
 						break;
 					}
 				}
 			}
 
-			if (reDealtFrom != null && lifted > 0)
+			if (lifted != null && lifted.face > 0)
 			{
 				repaletted.add(ours.name);
+			}
+			if (lifted != null && lifted.legs > 0)
+			{
+				legsLifted.add(ours.name);
 			}
 
 			if (reDealtFrom == null)
@@ -353,6 +358,16 @@ public class AuthoredRecordsTest
 			new TreeSet<>(Arrays.asList(
 				"Aldous", "Brother Edwy", "Hesper", "Marta", "Sela", "Wynn")),
 			repaletted);
+
+		// The second exception, added 2026-08-31 and bounded the same way: one slot, the
+		// legs slot, moved off a colour BodySlotLintTest now refuses there. See
+		// everyLegsLiftIsOneSlotMovedOffTheFleshGamutAndNothingElse for its shape and for
+		// why a whole-wardrobe re-rotation was not taken instead.
+		assertEquals("authored records whose legs slot had to be lifted off the flesh "
+				+ "gamut the rotation dealt onto it: " + legsLifted,
+			new TreeSet<>(Arrays.asList(
+				"Berta", "Brother Edwy", "Marlow", "Nessa", "Osric", "Tarik", "Tobias")),
+			legsLifted);
 
 		// The sample guard this file's siblings all carry: the three rules above are
 		// inside the loop, so a scan that found no marked records would pass having
@@ -400,9 +415,15 @@ public class AuthoredRecordsTest
 					continue;
 				}
 
-				if (liftedSlotsOfAReDeal(ours.recolorReplace, donor.recolorReplace,
-					ours.recolorFind) <= 0)
+				Lift lift = reDealOf(ours.recolorReplace, donor.recolorReplace,
+					ours.recolorFind);
+				if (lift == null || lift.face == 0)
 				{
+					// A legs lift is a different exception with a different justification
+					// — see everyLegsLiftIsOneSlotMovedOffTheFleshGamutAndNothingElse. It
+					// is deliberately not claimed to be forced, so it must not be counted
+					// here: doing so would make this test assert an impossibility that is
+					// not true and quietly widen what "forced" means.
 					continue;
 				}
 
@@ -425,6 +446,130 @@ public class AuthoredRecordsTest
 		}
 
 		assertEquals("repaletted records the impossibility was proved for", 6, checked);
+	}
+
+	/**
+	 * <b>The seven legs lifts, and the honest reason each one is a lift rather than a
+	 * different rotation.</b>
+	 *
+	 * <p>{@link BodySlotLintTest#noLegsSlotIsPaintedAColourFromTheFleshGamut} refuses any
+	 * legs slot painted a colour inside {@link CitizenEcho#isFlesh}'s gamut. Seven of the
+	 * thirty-three authored records inherited such a colour from their donor's rotation,
+	 * so seven had to move — and the question this test answers is <b>what "move" was
+	 * allowed to mean</b>.
+	 *
+	 * <h2>What a lift is allowed to be</h2>
+	 *
+	 * <p>Exactly one slot, it has to be the {@link BodySlots#LEGS_BASE} slot, the colour
+	 * the rotation would have dealt there has to be inside the gamut, and the colour put
+	 * there has to be outside it. Nothing else about the palette may move. That is
+	 * asserted below record by record, which is what stops "a re-deal with a slot lifted"
+	 * becoming a licence to hand-author a wardrobe.
+	 *
+	 * <h2>Why not simply pick a rotation that needed no lift</h2>
+	 *
+	 * <p>{@link #noRotationOfThoseSixDonorsCouldHaveHeldTheFaceColourInPlace} makes
+	 * exactly that demand of the face-colour exception, and it is a fair demand to make
+	 * of this one too. The answer is that it was available six times out of seven and was
+	 * taken none of them, for two different reasons, both counted below rather than
+	 * asserted away:
+	 *
+	 * <ul>
+	 *   <li><b>"Brother Edwy" had no clean rotation at all.</b> His donor, the "Assistant
+	 *       Apothecary", carries {@link CitizenEcho#PLAYER_SKIN_BASE} on its cuff slot and
+	 *       has no {@code find = 4550} slot to hold it, so every rotation moves the face
+	 *       somewhere it may not go — and four of the five also deal a tan onto the legs.
+	 *       He is forced twice over, which is why he is the one record in both sets.</li>
+	 *   <li><b>"Tobias", "Marlow" and "Tarik" had one clean rotation each and it was
+	 *       already taken.</b> The gardener palette admits exactly one, and Tobias and
+	 *       Marlow are both built from it, so giving it to both would make them
+	 *       pixel-identical. The Ali palette likewise admits exactly one, and "Fahd" is
+	 *       already wearing it — in Al Kharid, the same city as Tarik, which is a twin
+	 *       standing where somebody can see both halves. Trading a bare leg for a
+	 *       duplicate is not a repair.</li>
+	 *   <li><b>"Osric", "Berta" and "Nessa" had a clean rotation and it was not taken.</b>
+	 *       No twin would have resulted. The reason is scope and nothing grander: a
+	 *       rotation repaints every slot in the record — the face, the hair, the tunic —
+	 *       to fix the trousers, and these three ship today with faces and hair somebody
+	 *       looked at. A lift changes the one slot that is wrong. This is the pass's
+	 *       judgement rather than a rule, so it is written down as one.</li>
+	 * </ul>
+	 */
+	@Test
+	public void everyLegsLiftIsOneSlotMovedOffTheFleshGamutAndNothingElse()
+	{
+		List<Record> all = shippedRecords();
+		TreeSet<String> lifted = new TreeSet<>();
+		TreeSet<String> hadACleanRotationAvailable = new TreeSet<>();
+
+		for (Record ours : all)
+		{
+			if (!ours.isOurs())
+			{
+				continue;
+			}
+
+			for (Record donor : all)
+			{
+				if (donor.isOurs()
+					|| !Arrays.equals(donor.modelIds, ours.modelIds)
+					|| !Arrays.equals(donor.recolorFind, ours.recolorFind))
+				{
+					continue;
+				}
+
+				Lift lift = reDealOf(ours.recolorReplace, donor.recolorReplace, ours.recolorFind);
+				if (lift == null || lift.legs == 0)
+				{
+					continue;
+				}
+
+				lifted.add(ours.name);
+				assertEquals(ours.describe() + " lifts more than the one slot the legs rule "
+					+ "forces, which is hand-authoring rather than a re-deal", 1, lift.legs);
+
+				if (cleanRotationsOf(donor.recolorReplace, ours.recolorFind) > 0)
+				{
+					hadACleanRotationAvailable.add(ours.name);
+				}
+
+				// The shape of the lift itself: the slot has to be the legs slot, and the
+				// move has to be out of the gamut rather than merely to a different colour.
+				short[] mine = shorts(ours.recolorReplace);
+				short[] theirs = shorts(donor.recolorReplace);
+				int rotationsThatWouldHaveDealtFleshOntoTheLegs = 0;
+				for (int deal = 1; deal < theirs.length; deal++)
+				{
+					short[] dealt = CitizenEcho.redeal(theirs, deal);
+					for (int i = 0; i < dealt.length; i++)
+					{
+						if (dealt[i] == mine[i]
+							|| (ours.recolorFind[i] & 0xFFFF) != BodySlots.LEGS_BASE
+							|| !CitizenEcho.isFlesh(dealt[i]))
+						{
+							continue;
+						}
+
+						rotationsThatWouldHaveDealtFleshOntoTheLegs++;
+						assertFalse(ours.describe() + " lifts its legs slot onto " + mine[i]
+								+ ", which is inside the gamut it was lifted out of",
+							CitizenEcho.isFlesh(mine[i]));
+					}
+				}
+				assertTrue(ours.describe() + " is marked as a legs lift but no rotation of "
+						+ donor.describe() + " deals a flesh colour onto its legs slot",
+					rotationsThatWouldHaveDealtFleshOntoTheLegs > 0);
+			}
+		}
+
+		assertEquals("authored records carrying a legs lift", new TreeSet<>(Arrays.asList(
+			"Berta", "Brother Edwy", "Marlow", "Nessa", "Osric", "Tarik", "Tobias")), lifted);
+
+		// The count that keeps the javadoc above honest. Six of the seven could have been
+		// re-rotated instead; the one that could not is the one that is also a face lift.
+		assertEquals("legs lifts that had an untouched rotation available instead",
+			new TreeSet<>(Arrays.asList("Berta", "Marlow", "Nessa", "Osric", "Tarik", "Tobias")),
+			hadACleanRotationAvailable);
 	}
 
 	/**
@@ -549,10 +694,24 @@ public class AuthoredRecordsTest
 	 * <p>Six records were worse still and were repaletted on 2026-08-30 — see
 	 * {@link BodySlotLintTest} for the rule that now holds them and
 	 * {@link #noRotationOfThoseSixDonorsCouldHaveHeldTheFaceColourInPlace} for why a
-	 * different rotation was not available. Tobias and Marlow are not among them: they
-	 * wear flesh-<i>class</i> tans rather than the face colour itself, so no categorical
-	 * rule reaches them and repaletting them would be a taste judgement. They are
-	 * recorded here and in {@code NOTICE} rather than quietly absorbed.
+	 * different rotation was not available.
+	 *
+	 * <p><b>Tobias and Marlow were left out of that pass and should not have been.</b>
+	 * The reasoning written here was that they wear flesh-<i>class</i> tans rather than
+	 * the face colour itself, so no categorical rule reached them and repaletting them
+	 * would be a taste judgement. That was defensible in the abstract and was falsified
+	 * by observation on 2026-08-31: the owner, playing at {@code FULL}, reported figures
+	 * that still looked like they had no trousers. Marlow's {@code 5572} decodes to
+	 * hue 5, saturation 3, lightness 68 against the skin base's hue 4, saturation 3,
+	 * lightness 70 — one hue rung and two lightness rungs from the colour the client
+	 * paints a face. It is not a tan near skin; on a pair of legs it is skin.
+	 *
+	 * <p>The categorical rule that does reach them exists and is
+	 * {@link BodySlotLintTest#noLegsSlotIsPaintedAColourFromTheFleshGamut}: a legs slot
+	 * may not be painted a flesh-gamut colour at all. Both are now legs lifts — see
+	 * {@link #everyLegsLiftIsOneSlotMovedOffTheFleshGamutAndNothingElse} — and their
+	 * faces, which this paragraph describes correctly and which nothing in this pass
+	 * touched, are still what they were.
 	 */
 	private static boolean isADistinctReDealOf(int[] candidate, int[] donor)
 	{
@@ -577,26 +736,43 @@ public class AuthoredRecordsTest
 	/**
 	 * How much of {@code candidate} is not simply {@code donor}'s palette dealt round.
 	 *
-	 * @return {@code 0} if it is a distinct rotation and nothing else; a positive count
-	 * if it is a rotation with that many slots repaletted, every one of which is a slot
-	 * where the rotation would have landed {@link CitizenEcho#PLAYER_SKIN_BASE} on a
-	 * {@code find} the donor did not aim at skin; {@code -1} if it is neither
+	 * @return {@code null} if {@code candidate} is not a distinct rotation of
+	 * {@code donor} at all; otherwise the rotation with the fewest lifted slots, counted
+	 * by <i>which</i> of the two permitted exceptions each one is
 	 *
-	 * <p>The exception is deliberately narrow. Any slot may not be changed for any
-	 * reason — only a slot the face colour would otherwise have landed on, and only to
-	 * something that is not the face colour. That keeps "a re-deal" a claim with content
-	 * rather than a description of every possible array.
+	 * <p><b>Two exceptions, both deliberately narrow, and counted apart.</b> A slot may
+	 * not differ from the rotation for any reason a reader has to take on trust — only
+	 * for one of these, and only ever <i>away</i> from the thing that is refused:
+	 *
+	 * <ul>
+	 *   <li><b>A face lift.</b> The rotation would land
+	 *       {@link CitizenEcho#PLAYER_SKIN_BASE} on a {@code find} the donor did not aim
+	 *       at skin, and the candidate paints something that is not the face colour. Six
+	 *       records, 2026-08-30, and
+	 *       {@link #noRotationOfThoseSixDonorsCouldHaveHeldTheFaceColourInPlace} proves
+	 *       each was forced.</li>
+	 *   <li><b>A legs lift.</b> The rotation would land a colour inside
+	 *       {@link CitizenEcho#isFlesh}'s gamut on the {@link BodySlots#LEGS_BASE} slot,
+	 *       and the candidate paints something outside it. Seven records, 2026-08-31, and
+	 *       {@link #everyLegsLiftIsOneSlotMovedOffTheFleshGamutAndNothingElse} pins its
+	 *       shape.</li>
+	 * </ul>
+	 *
+	 * <p>Counted apart because the two claims are not the same strength. A face lift is
+	 * <i>forced</i> — no rotation of those donors could have avoided it. A legs lift is
+	 * forced only once in its seven cases, and saying so is the whole point of keeping
+	 * the two numbers separate rather than adding them up.
 	 */
-	private static int liftedSlotsOfAReDeal(int[] candidate, int[] donor, int[] find)
+	private static Lift reDealOf(int[] candidate, int[] donor, int[] find)
 	{
 		if (candidate.length != donor.length || donor.length < 2 || find.length != donor.length)
 		{
-			return -1;
+			return null;
 		}
 
 		short[] mine = shorts(candidate);
 		short[] theirs = shorts(donor);
-		int best = -1;
+		Lift best = null;
 
 		for (int deal = 1; deal < theirs.length; deal++)
 		{
@@ -607,7 +783,8 @@ public class AuthoredRecordsTest
 				continue;
 			}
 
-			int lifted = 0;
+			int face = 0;
+			int legs = 0;
 			boolean usable = true;
 			for (int i = 0; i < dealt.length; i++)
 			{
@@ -616,23 +793,90 @@ public class AuthoredRecordsTest
 					continue;
 				}
 
-				if ((dealt[i] & 0xFFFF) != CitizenEcho.PLAYER_SKIN_BASE
-					|| (find[i] & 0xFFFF) == CitizenEcho.PLAYER_SKIN_BASE
-					|| (mine[i] & 0xFFFF) == CitizenEcho.PLAYER_SKIN_BASE)
+				if ((dealt[i] & 0xFFFF) == CitizenEcho.PLAYER_SKIN_BASE
+					&& (find[i] & 0xFFFF) != CitizenEcho.PLAYER_SKIN_BASE
+					&& (mine[i] & 0xFFFF) != CitizenEcho.PLAYER_SKIN_BASE)
+				{
+					face++;
+				}
+				else if ((find[i] & 0xFFFF) == BodySlots.LEGS_BASE
+					&& CitizenEcho.isFlesh(dealt[i])
+					&& !CitizenEcho.isFlesh(mine[i]))
+				{
+					legs++;
+				}
+				else
 				{
 					usable = false;
 					break;
 				}
-				lifted++;
 			}
 
-			if (usable && (best < 0 || lifted < best))
+			if (usable && (best == null || face + legs < best.total()))
 			{
-				best = lifted;
+				best = new Lift(face, legs);
 			}
 		}
 
 		return best;
+	}
+
+	/**
+	 * How many distinct rotations of {@code donor} land nothing where it may not go —
+	 * no {@link CitizenEcho#PLAYER_SKIN_BASE} on a {@code find} aimed at anything but
+	 * skin, and nothing inside {@link CitizenEcho#isFlesh}'s gamut on the
+	 * {@link BodySlots#LEGS_BASE} slot.
+	 *
+	 * <p>Used only to record, rather than to require, whether a record that took a legs
+	 * lift had an untouched rotation available to it instead.
+	 */
+	private static int cleanRotationsOf(int[] donor, int[] find)
+	{
+		short[] theirs = shorts(donor);
+		TreeSet<String> seen = new TreeSet<>();
+		int clean = 0;
+
+		for (int deal = 1; deal < theirs.length; deal++)
+		{
+			short[] dealt = CitizenEcho.redeal(theirs, deal);
+			if (Arrays.equals(dealt, theirs) || !seen.add(Arrays.toString(dealt)))
+			{
+				continue;
+			}
+
+			boolean ok = true;
+			for (int i = 0; i < dealt.length && ok; i++)
+			{
+				ok = !((dealt[i] & 0xFFFF) == CitizenEcho.PLAYER_SKIN_BASE
+						&& (find[i] & 0xFFFF) != CitizenEcho.PLAYER_SKIN_BASE)
+					&& !((find[i] & 0xFFFF) == BodySlots.LEGS_BASE && CitizenEcho.isFlesh(dealt[i]));
+			}
+
+			if (ok)
+			{
+				clean++;
+			}
+		}
+
+		return clean;
+	}
+
+	/** The two kinds of lifted slot a re-deal may carry, counted apart. @see #reDealOf */
+	private static final class Lift
+	{
+		private final int face;
+		private final int legs;
+
+		Lift(int face, int legs)
+		{
+			this.face = face;
+			this.legs = legs;
+		}
+
+		int total()
+		{
+			return face + legs;
+		}
 	}
 
 	/**

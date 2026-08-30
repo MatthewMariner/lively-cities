@@ -194,7 +194,7 @@ public class CitizenEchoTest
 
 		assertTrue("echo(es) with a body an anonymous passer-by cannot have: " + violations,
 			violations.isEmpty());
-		assertEquals("the whole shipped echo roster has to have been asked", 46, checked);
+		assertEquals("the whole shipped echo roster has to have been asked", 51, checked);
 	}
 
 	/**
@@ -275,7 +275,7 @@ public class CitizenEchoTest
 	 * colour across the boundary or it does not.
 	 *
 	 * <p>Asserted twice over: once about every deal {@code distinctDeals} would issue
-	 * for every shipped palette, and once about the 46 echoes actually derived, which
+	 * for every shipped palette, and once about the 51 echoes actually derived, which
 	 * is the population that ships. The second is not implied by the first — it also
 	 * covers {@code echoesOfSource} handing {@code redeal} the deal it said it would.
 	 */
@@ -343,7 +343,7 @@ public class CitizenEchoTest
 		assertTrue("the shipped palettes have to offer some deals to check: " + dealsChecked,
 			dealsChecked > 50);
 		assertEquals("and the whole shipped echo roster has to have been asked",
-			46, echoesChecked);
+			51, echoesChecked);
 	}
 
 	/**
@@ -353,8 +353,8 @@ public class CitizenEchoTest
 	 * <p>A rule that refused nothing would satisfy the test above perfectly. So the
 	 * refusals are counted, and one of them is worked through by hand.
 	 *
-	 * <p>"Mary" in Draynor (region 12852) is the worked example, because she is not a
-	 * hypothetical and not even a near miss: <b>until 2026-08-30 her echo shipped, and
+	 * <p>"Mary" (region 12852, a Varrock file) is the worked example, because she is not
+	 * a hypothetical and not even a near miss: <b>until 2026-08-30 her echo shipped, and
 	 * it wore the game's own face colour on its legs.</b> Her {@code find} names the
 	 * torso base ({@code 8741}), the legs base ({@code 25238}), the hair base
 	 * ({@code 6798}) and {@code 43072}, which is the base the kit's arm and hand models
@@ -362,11 +362,21 @@ public class CitizenEchoTest
 	 * a red-brown and {@link CitizenEcho#PLAYER_SKIN_BASE} — and that last one is on the
 	 * <i>arm</i> slot, where it means a bare forearm and is right.
 	 *
-	 * <p>Rotating by two moves it onto {@code 25238}. Two of her four colours are
-	 * flesh-class ({@code 5532} is a dark leather brown), and they are the two that swap
-	 * places, so the flesh-or-not rule saw a class-preserving rotation and allowed it.
-	 * The third class — the face colour as its own kind — is what refuses it now, and
-	 * refusing it is what takes her from one echo to none.
+	 * <p>Rotating by two moves it onto {@code 25238}, and that is still what this test
+	 * pins. What has changed is <b>which rule refuses it</b>, and the change is worth
+	 * writing down rather than quietly absorbing.
+	 *
+	 * <p>Her dark brown used to be {@code 5532} — hue 5, saturation 3, lightness 28 — and
+	 * that is inside {@link CitizenEcho#isFlesh}'s gamut, so two of her four colours were
+	 * flesh-class and they were the two that swapped places. The flesh-or-not rule saw a
+	 * class-preserving rotation and allowed it; only the third class, the face colour as
+	 * its own kind, refused it. On 2026-08-31 {@code 5532} was repainted {@code 8472},
+	 * because a dark brown inside the flesh gamut on a legs slot is exactly what
+	 * {@link BodySlotLintTest#noLegsSlotIsPaintedAColourFromTheFleshGamut} now refuses in
+	 * the data. With one flesh colour left instead of two, <b>both</b> rules refuse the
+	 * rotation, so she no longer separates them — and
+	 * {@link #theThirdClassIsKeptEvenThoughTheDataNoLongerNeedsIt} measures that the
+	 * shipped data has no other record that does either.
 	 *
 	 * <p>("Marta" in Falador used to stand here for the same purpose. She was repaletted
 	 * on 2026-08-30, because unlike Mary she was <i>ours</i>: the top-up authored her by
@@ -411,31 +421,185 @@ public class CitizenEchoTest
 		}
 
 		assertEquals("distinct re-deals the palette rule refuses across the dataset — "
-				+ "216 of the 342 the shipped citizen palettes admit",
-			216, refused);
+				+ "212 of the 343 the shipped citizen palettes admit",
+			212, refused);
 		assertEquals("citizens whose whole wardrobe is refused by it",
-			56, citizensLeftWithNothing);
+			53, citizensLeftWithNothing);
 
 		assertNotNull("the worked example has to still be in the dataset", mary);
 		assertArray("Mary's authored find slots",
 			new short[]{8741, 25238, 6798, (short) 43072}, mary.getRecolorFind());
-		assertArray("and the palette she answers them with",
-			new short[]{322, 5532, 8099, 4550}, mary.getRecolorReplace());
+		assertArray("and the palette she answers them with, her legs repainted 2026-08-31",
+			new short[]{322, 8472, 8099, 4550}, mary.getRecolorReplace());
 		assertTrue("4550 is the game's base skin tone and has to read as flesh",
 			CitizenEcho.isFlesh((short) 4550));
-		assertTrue("and so does the dark leather brown that swaps places with it — which "
-			+ "is why the flesh-or-not rule let this rotation through",
+		assertTrue("the dark brown she used to wear on her legs was flesh-class too, which "
+			+ "is why the flesh-or-not rule let this rotation through before the repaint",
 			CitizenEcho.isFlesh((short) 5532));
+		assertFalse("and the one she wears there now is not, which is the repaint",
+			CitizenEcho.isFlesh((short) 8472));
 
 		// The rotation that shipped: 4550 off the arm slot and onto the legs base.
 		short[] wasShipped = CitizenEcho.redeal(mary.getRecolorReplace(), 2);
 		assertArray("the deal that produced the photograph",
-			new short[]{8099, 4550, 322, 5532}, wasShipped);
+			new short[]{8099, 4550, 322, 8472}, wasShipped);
 		assertEquals("which paints the legs base", 25238, mary.getRecolorFind()[1] & 0xFFFF);
 
 		assertEquals("so no rotation of her palette survives, and she seeds nothing",
 			0, CitizenEcho.distinctDeals(mary.getRecolorReplace()).length);
 		assertTrue("and she seeds nothing", echoesOf(mary).isEmpty());
+	}
+
+	/**
+	 * <b>And the derived half of the trousers rule: no echo wears a complexion on its
+	 * legs either.</b>
+	 *
+	 * <p>{@link BodySlotLintTest#noLegsSlotIsPaintedAColourFromTheFleshGamut} holds the
+	 * authored records. This holds the ones the plugin makes up, and it is a separate
+	 * assertion because the two are held by different machinery: the authored half is a
+	 * fact about the files, and the derived half is a <b>consequence</b> of that fact
+	 * plus {@link CitizenEcho#keepsEachColourOnItsOwnSideOfTheSkin}.
+	 *
+	 * <p>The argument is worth stating, because it is short and because it is the thing
+	 * that would break silently. A surviving deal has {@code isFlesh(dealt[i])} equal to
+	 * {@code isFlesh(replace[i])} at every slot — that is what the rule enforces. So if
+	 * the authored {@code replace} at a legs slot is not flesh, no deal can make it
+	 * flesh. <b>The derivation is safe because the data is clean, not independently of
+	 * it.</b> Repaint one legs slot back inside the gamut and this test goes red along
+	 * with the lint, which is the correct pair of failures rather than one.
+	 *
+	 * <p>Asserted over both populations for the same reason the boundary test above is:
+	 * every deal {@link CitizenEcho#distinctDeals} would issue, and every echo actually
+	 * derived, because the second also covers {@code echoesOfSource} handing
+	 * {@code redeal} the deal it said it would.
+	 */
+	@Test
+	public void noSurvivingDealEverPutsAFleshColourOnALegsSlot()
+	{
+		List<String> violations = new ArrayList<>();
+		int dealsChecked = 0;
+		int legsSlotsChecked = 0;
+
+		for (EntityDefinition citizen : shippedEntities())
+		{
+			short[] find = citizen.getRecolorFind();
+			short[] replace = citizen.getRecolorReplace();
+			if (replace.length < 2)
+			{
+				continue;
+			}
+
+			for (int deal : CitizenEcho.distinctDeals(replace))
+			{
+				short[] dealt = CitizenEcho.redeal(replace, deal);
+				dealsChecked++;
+				for (int slot = 0; slot < dealt.length; slot++)
+				{
+					if ((find[slot] & 0xFFFF) != BodySlots.LEGS_BASE)
+					{
+						continue;
+					}
+
+					legsSlotsChecked++;
+					if (CitizenEcho.isFlesh(dealt[slot]))
+					{
+						violations.add(citizen.label() + " deal " + deal + " paints its legs "
+							+ (dealt[slot] & 0xFFFF));
+					}
+				}
+			}
+		}
+
+		int echoesChecked = 0;
+		for (EntityDefinition echo : shippedEchoes())
+		{
+			short[] find = echo.getRecolorFind();
+			short[] replace = echo.getRecolorReplace();
+			echoesChecked++;
+
+			for (int slot = 0; slot < find.length; slot++)
+			{
+				if ((find[slot] & 0xFFFF) == BodySlots.LEGS_BASE
+					&& CitizenEcho.isFlesh(replace[slot]))
+				{
+					violations.add(describe(echo) + " wears " + (replace[slot] & 0xFFFF)
+						+ " where its trousers go");
+				}
+			}
+		}
+
+		assertTrue("echo(es) whose trousers are painted a complexion: " + violations,
+			violations.isEmpty());
+
+		// The sample guards. Both loops look for a counterexample, so a dataset with no
+		// legs slots left in it would satisfy them having asked nothing.
+		assertTrue("deals to check: " + dealsChecked, dealsChecked > 50);
+		assertEquals("legs slots across every surviving deal", 82, legsSlotsChecked);
+		assertEquals("and the whole shipped echo roster has to have been asked",
+			51, echoesChecked);
+	}
+
+	/**
+	 * The third class in {@link CitizenEcho}'s re-deal rule now costs nothing, and that
+	 * is measured rather than assumed.
+	 *
+	 * <p>{@link CitizenEcho#keepsEachColourOnItsOwnSideOfTheSkin} sorts a colour into
+	 * three kinds — the game's own face colour, some other flesh tone, cloth — where it
+	 * used to sort into two. The third kind was added on 2026-08-30 because "Mary"'s
+	 * echo slipped past the two-kind version. The 2026-08-31 legs repaint took her second
+	 * flesh colour away, and with it the only shipped rotation the two rules disagreed
+	 * about.
+	 *
+	 * <p><b>Zero is the honest number and it is asserted, not written in prose.</b> A rule
+	 * that costs nothing today is not a rule that can be deleted — the next authored
+	 * record is what it is for — but "we kept it because the data needs it" would be false
+	 * now, and a claim nobody checks is how a false one survives. If a future record makes
+	 * the two rules disagree again, this goes red and somebody reads the paragraph.
+	 */
+	@Test
+	public void theThirdClassIsKeptEvenThoughTheDataNoLongerNeedsIt()
+	{
+		int disagreements = 0;
+		int rotationsChecked = 0;
+
+		for (EntityDefinition entity : shippedEntities())
+		{
+			short[] replace = entity.getRecolorReplace();
+			if (replace.length < 2)
+			{
+				continue;
+			}
+
+			for (int deal = 1; deal < replace.length; deal++)
+			{
+				short[] dealt = CitizenEcho.redeal(replace, deal);
+				if (Arrays.equals(dealt, replace))
+				{
+					continue;
+				}
+
+				rotationsChecked++;
+				boolean twoClassesAllowIt = true;
+				boolean threeClassesAllowIt = true;
+				for (int slot = 0; slot < replace.length; slot++)
+				{
+					twoClassesAllowIt &= CitizenEcho.isFlesh(dealt[slot])
+						== CitizenEcho.isFlesh(replace[slot]);
+					threeClassesAllowIt &=
+						((dealt[slot] & 0xFFFF) == CitizenEcho.PLAYER_SKIN_BASE)
+							== ((replace[slot] & 0xFFFF) == CitizenEcho.PLAYER_SKIN_BASE);
+				}
+
+				if (twoClassesAllowIt && !threeClassesAllowIt)
+				{
+					disagreements++;
+				}
+			}
+		}
+
+		assertTrue("rotations to check: " + rotationsChecked, rotationsChecked > 100);
+		assertEquals("shipped rotations the two-class rule allows and the three-class rule "
+			+ "refuses — see this test's javadoc before changing it", 0, disagreements);
 	}
 
 	/**
@@ -1163,11 +1327,11 @@ public class CitizenEchoTest
 		}
 
 		assertEquals("the authored citizen roster", 142, citizens);
-		assertEquals("citizens that seeded at least one echo", 24, seeds.size());
-		assertEquals("echoes derived from them", 46, echoes);
-		assertEquals("of which this many stand inside an authored wander box", 27, fromBoxes);
+		assertEquals("citizens that seeded at least one echo", 28, seeds.size());
+		assertEquals("echoes derived from them", 51, echoes);
+		assertEquals("of which this many stand inside an authored wander box", 29, fromBoxes);
 		assertEquals("the rest stand on a derived offset the collision map has to vouch for",
-			19, echoes - fromBoxes);
+			22, echoes - fromBoxes);
 
 		// The floor, stated as the two rosters rather than as `echoes >= 0`, which is
 		// what this line used to say: `echoes` is a counter that is only ever
@@ -1226,7 +1390,7 @@ public class CitizenEchoTest
 
 		// Pinned as well as bounded, so that a data change which moved it says so
 		// instead of drifting quietly upwards inside the ceiling.
-		assertEquals("the worst city's derived share", 0.4444, worstShare, 0.0001);
+		assertEquals("the worst city's derived share", 0.4737, worstShare, 0.0001);
 
 		// There used to be a `total/authored` assertion here pinning the ratio to four
 		// decimal places. It could not fail: `citizens` and `echoes` are both pinned
@@ -1238,7 +1402,7 @@ public class CitizenEchoTest
 	}
 
 	/**
-	 * Why the other 118 citizens seed nothing, gate by gate, and the fact that the
+	 * Why the other 114 citizens seed nothing, gate by gate, and the fact that the
 	 * gates partition the roster.
 	 *
 	 * <p>{@link #theShippedRosterIsHalfAgainAsBigUnderCrowded()} pins the ones that do
@@ -1258,7 +1422,7 @@ public class CitizenEchoTest
 	 * here.</b> {@code distinctDeals} returns nothing both for a palette that replaces
 	 * every slot with the same colour (1 citizen that reaches it — every rotation is the
 	 * identity) and for one whose every rotation would carry a colour across the flesh
-	 * boundary (40).
+	 * boundary (36).
 	 * Rolled into one number those would hide each other: the flesh rule could stop
 	 * working entirely and the total would still add up as long as the identity cases
 	 * absorbed the difference.
@@ -1339,8 +1503,8 @@ public class CitizenEchoTest
 		assertEquals("and the ones whose every re-deal is the deal it started with",
 			1, everyRedealIsTheSame);
 		assertEquals("and the ones whose every re-deal would move a colour across the "
-				+ "flesh boundary", 40, everyRedealCrossesTheSkin);
-		assertEquals("leaving the seeds", 24, seeds);
+				+ "flesh boundary", 36, everyRedealCrossesTheSkin);
+		assertEquals("leaving the seeds", 28, seeds);
 
 		assertEquals("the palette check sees everything the three gates above it let through",
 			reachThePaletteCheck,
@@ -1349,7 +1513,7 @@ public class CitizenEchoTest
 				+ "exactly once — a set of counts that does not add up is the drift this "
 				+ "test exists to catch",
 			142, cameos + dressedFromAnNpc + bodyIsDoingSomething + reachThePaletteCheck);
-		assertEquals("citizens that seed nothing", 22 + 1 + 40 + 48 + 6 + 1, 142 - seeds);
+		assertEquals("citizens that seed nothing", 22 + 1 + 36 + 48 + 6 + 1, 142 - seeds);
 	}
 
 	/**
@@ -1455,7 +1619,7 @@ public class CitizenEchoTest
 	}
 
 	/**
-	 * Every uuid in play — 142 authored citizens, 42 scenery records and 46 echoes —
+	 * Every uuid in play — 142 authored citizens, 42 scenery records and 51 echoes —
 	 * has to be distinct.
 	 *
 	 * <p>A collision would mean two entities the user cannot tell apart in the
@@ -1486,7 +1650,7 @@ public class CitizenEchoTest
 		}
 
 		assertTrue("uuid collision(s): " + clashes, clashes.isEmpty());
-		assertEquals("184 authored entities plus 46 echoes", 230, seen.size());
+		assertEquals("184 authored entities plus 51 echoes", 235, seen.size());
 	}
 
 	/**
@@ -1657,7 +1821,7 @@ public class CitizenEchoTest
 	 * their echoes cannot reach a border.
 	 *
 	 * <p>What is still asserted over the real files, and is the claim that actually
-	 * matters, is the rule itself: <b>every one of the 46 echoes takes its governing
+	 * matters, is the rule itself: <b>every one of the 51 echoes takes its governing
 	 * region from its source's tile, not from its own.</b> That is checked echo by
 	 * echo below and cannot go green by there being nothing to check. The two
 	 * behavioural halves the strays used to demonstrate are checked directly instead —
@@ -1699,7 +1863,7 @@ public class CitizenEchoTest
 
 		// The sample guard, in the same spirit as the rest of this file: the rule above
 		// is inside the loop, so an empty roster would pass it having asked nothing.
-		assertEquals("the whole shipped echo roster has to have been asked", 46, checked);
+		assertEquals("the whole shipped echo roster has to have been asked", 51, checked);
 
 		assertEquals("echoes standing in a region their source's city does not claim — the "
 				+ "shipped data no longer contains this case at all: " + strayRegions,
@@ -1744,7 +1908,7 @@ public class CitizenEchoTest
 			checked++;
 		}
 
-		assertEquals("the shipped echo roster", 46, checked);
+		assertEquals("the shipped echo roster", 51, checked);
 	}
 
 	private static String describe(EntityDefinition entity)

@@ -142,13 +142,22 @@ public class BodySlotLintTest
 	 * measured facts rather than a heuristic.
 	 *
 	 * <p>The rule therefore reads: <b>a slot aimed at one of the four non-skin kit bases
-	 * may not be painted the skin base.</b> It is categorical in both directions —
-	 * there is no "how close to skin is too close" to argue about — and it is silent
-	 * about every colour that is merely skin-<i>like</i>, which is deliberate. 18 shipped
-	 * records paint the legs base a flesh-class colour and 11 of those use a colour the
-	 * game itself paints faces with somewhere; most are dark leather browns and are
-	 * fine, and a rule that caught them would be a taste judgement wearing a lint's
-	 * clothes. This one is not.
+	 * may not be painted the skin base.</b> It is categorical in both directions — there
+	 * is no "how close to skin is too close" to argue about.
+	 *
+	 * <p><b>It used to be silent about every colour that was merely skin-<i>like</i>, and
+	 * that silence was wrong.</b> This javadoc argued the silence was deliberate: that the
+	 * seventeen shipped records painting the legs base a flesh-gamut colour were mostly
+	 * dark leather browns, and that a rule catching them would be "a taste judgement
+	 * wearing a lint's clothes". The owner, playing the shipped plugin at {@code FULL} on
+	 * 2026-08-31, reported figures that still looked like they had no trousers. The base
+	 * is one value in a gamut, and a colour one hue rung and two lightness rungs from it
+	 * is functionally the same colour on a leg.
+	 *
+	 * <p>So this rule keeps its scope — four slots, one exact value — and a second one
+	 * next to it takes the legs slot to the whole gamut. See
+	 * {@link #noLegsSlotIsPaintedAColourFromTheFleshGamut}, which also says why the legs
+	 * slot and not the other three.
 	 */
 	@Test
 	public void noKitGarmentSlotIsPaintedTheColourTheGamePaintsFaces()
@@ -184,6 +193,179 @@ public class BodySlotLintTest
 		// The sample guard: the rule is inside a loop over slots, so a dataset whose
 		// records had stopped using the kit bases would pass this having asked nothing.
 		assertEquals("kit-base recolour slots the rule was asked about", 195, slotsAsked);
+	}
+
+	/**
+	 * <b>And no pair of trousers is painted any colour out of the flesh gamut, not just
+	 * the one exact value.</b>
+	 *
+	 * <h2>Why the rule above was not enough</h2>
+	 *
+	 * <p>The rule above is about {@link BodySlots#SKIN_BASE}, one value. The owner played
+	 * the shipped plugin at {@code FULL} on 2026-08-31 — no echoes, only authored records
+	 * — and reported figures in Falador and Lumbridge that still looked like they had no
+	 * trousers. He was right about the fault, and Falador holds three of the records that
+	 * caused it. <b>Lumbridge holds none</b>, and neither do its other three region files:
+	 * the nearest is "Marlow" in Draynor. That half of the report is unexplained by this
+	 * rule and is written down here rather than rounded off, because "we fixed what he
+	 * saw" and "we fixed everything of this kind" are different claims and only the
+	 * second one is true. <b>Seventeen records painted the legs base a colour inside
+	 * {@link CitizenEcho#isFlesh}'s gamut</b>, and the nearest of them is not a near miss:
+	 * "Marlow" wore {@code 5572}, which decodes to hue 5, saturation 3, lightness 68,
+	 * against the skin base's hue 4, saturation 3, lightness 70. One hue rung and two
+	 * lightness rungs. On a leg that is not a tan resembling skin, it is skin.
+	 *
+	 * <p>So the rule for this one slot is the gamut rather than the value: <b>a
+	 * {@code find} slot aimed at {@link BodySlots#LEGS_BASE} may not be painted a colour
+	 * {@link CitizenEcho#isFlesh} calls flesh.</b> All seventeen were repainted on
+	 * 2026-08-31 — ten of them upstream's, because an upstream record renders bare legs to
+	 * every user at the default density exactly as one of ours does, and {@code NOTICE}
+	 * discloses the repaint rather than the plugin shipping a defect it could name.
+	 *
+	 * <h2>The predicate is the plugin's own, not a second one</h2>
+	 *
+	 * <p>{@link CitizenEcho#isFlesh} is package-private and this test is in its package,
+	 * so the lint and the {@code Crowded} derivation ask the same question of the same
+	 * bits. That matters more here than it usually would: the derivation's re-deal rule
+	 * ({@link CitizenEcho#keepsEachColourOnItsOwnSideOfTheSkin}) only guarantees that a
+	 * deal keeps each colour on its own side of that boundary, so "no echo wears flesh on
+	 * its legs" is true <i>because</i> no authored record does. A second copy of the gamut
+	 * here could drift from the one the derivation uses and the two guarantees would come
+	 * apart in silence. {@code CitizenEchoTest} asserts the derived half.
+	 *
+	 * <h2>Why the legs slot and not the other three garment slots</h2>
+	 *
+	 * <p>The same widening was considered for hair, torso and footwear and refused, and
+	 * two of the three refusals are not a judgement at all:
+	 *
+	 * <ul>
+	 *   <li><b>Hair and footwear are excluded by the game's own kit.</b> The hair base
+	 *       {@code 6798} and the boots base {@code 4626} are <i>themselves</i> inside the
+	 *       gamut — {@code CitizenEchoTest} asserts both, and {@link CitizenEcho#isFlesh}
+	 *       explains why a dark leather boot really is the hue of a dark complexion. A
+	 *       gamut rule on those slots would refuse the colour the game paints those parts
+	 *       by default, along with every blond, auburn and tan-leather record in the
+	 *       dataset. It would not be a strict rule, it would be an incoherent one.</li>
+	 *   <li><b>The torso is coherent and is still refused.</b> The torso base {@code 8741}
+	 *       is outside the gamut, so the rule would mean something there. It is not
+	 *       adopted because a flesh-toned tunic is not the failure being guarded against:
+	 *       the complaint that got this plugin's predecessor pulled is "why does he not
+	 *       have any trousers", the legs are the part a missing garment reads as
+	 *       nakedness on, and widening to the torso would force fourteen more repaints of
+	 *       tan and leather jerkins nobody has photographed. That is a taste judgement,
+	 *       and this rule is not one. (It was seventeen when this pass began. Three of
+	 *       them moved anyway, as the side effect of keeping an authored record a rotation
+	 *       of its donor — see {@code AuthoredRecordsTest}. That is a consequence of the
+	 *       legs repaint rather than a decision about torsos, and it is the reason the
+	 *       number below is 14.)</li>
+	 * </ul>
+	 *
+	 * <p>The torso, hair and footwear counts are pinned in
+	 * {@link #theOtherGarmentSlotsStillCarryTansAndTheCountIsPinned} so that the decision
+	 * not to widen cannot quietly become a growing pile of them.
+	 */
+	@Test
+	public void noLegsSlotIsPaintedAColourFromTheFleshGamut()
+	{
+		List<String> offenders = new ArrayList<>();
+		int slotsAsked = 0;
+
+		for (EntityDefinition entity : shipped())
+		{
+			short[] find = entity.getRecolorFind();
+			short[] replace = entity.getRecolorReplace();
+
+			for (int i = 0; i < find.length; i++)
+			{
+				if ((find[i] & 0xFFFF) != BodySlots.LEGS_BASE)
+				{
+					continue;
+				}
+
+				slotsAsked++;
+				if (CitizenEcho.isFlesh(replace[i]))
+				{
+					int packed = replace[i] & 0xFFFF;
+					offenders.add(entity.label() + " in " + entity.getRegionId()
+						+ ".json paints its legs " + packed + " — hue " + (packed >>> 10)
+						+ ", saturation " + ((packed >>> 7) & 0x07)
+						+ ", lightness " + (packed & 0x7F));
+				}
+			}
+		}
+
+		assertTrue("citizen(s) whose trousers are painted a complexion: " + offenders,
+			offenders.isEmpty());
+
+		// The sample guard, same as the rule above carries: the check is inside a loop
+		// over slots, so a dataset that had stopped aiming at the legs base would pass
+		// this having asked nothing at all.
+		assertEquals("legs-base recolour slots the rule was asked about", 69, slotsAsked);
+	}
+
+	/**
+	 * The three garment slots the gamut rule is <b>not</b> applied to, counted rather
+	 * than left implicit.
+	 *
+	 * <p>{@link #noLegsSlotIsPaintedAColourFromTheFleshGamut} says why each is excluded.
+	 * This is the guard that stops the exclusion drifting: hair and footwear cannot be
+	 * widened to without refusing the game's own base colours, but the torso could be,
+	 * and the only thing standing between "seventeen tan jerkins nobody has complained
+	 * about" and "the same fault as the trousers, one garment up" is somebody looking. A
+	 * new one fails here and a human decides, which is the same shape as
+	 * {@link #theSkinBaseOnANonGarmentSlotIsUpstreamsAloneAndIsNamed}.
+	 */
+	@Test
+	public void theOtherGarmentSlotsStillCarryTansAndTheCountIsPinned()
+	{
+		int torso = 0;
+		int hair = 0;
+		int footwear = 0;
+
+		for (EntityDefinition entity : shipped())
+		{
+			short[] find = entity.getRecolorFind();
+			short[] replace = entity.getRecolorReplace();
+
+			for (int i = 0; i < find.length; i++)
+			{
+				if (!CitizenEcho.isFlesh(replace[i]))
+				{
+					continue;
+				}
+
+				int base = find[i] & 0xFFFF;
+				if (base == BodySlots.TORSO_BASE)
+				{
+					torso++;
+				}
+				else if (base == BodySlots.HAIR_BASE)
+				{
+					hair++;
+				}
+				else if (base == BodySlots.BOOT_BASE)
+				{
+					footwear++;
+				}
+			}
+		}
+
+		assertEquals("torso slots painted a flesh-gamut colour — tan and leather jerkins, "
+			+ "left alone deliberately", 14, torso);
+		assertEquals("hair slots — blond, auburn and brown, which is what the gamut is "
+			+ "made of and why the rule cannot reach here", 12, hair);
+		assertEquals("footwear slots — the boots base is itself inside the gamut", 1, footwear);
+
+		// And the legs column of the same table, which is the rule.
+		assertTrue("the hair base is inside the gamut, so a gamut rule on the hair slot "
+			+ "would refuse the game's own hair colour", CitizenEcho.isFlesh((short) BodySlots.HAIR_BASE));
+		assertTrue("and so is the boots base", CitizenEcho.isFlesh((short) BodySlots.BOOT_BASE));
+		assertFalse("the torso base is outside it, so the rule would at least be coherent "
+			+ "there — it is refused on evidence rather than on incoherence",
+			CitizenEcho.isFlesh((short) BodySlots.TORSO_BASE));
+		assertFalse("and the legs base is outside it, which is what makes the rule above "
+			+ "a statement about the game's kit rather than about taste",
+			CitizenEcho.isFlesh((short) BodySlots.LEGS_BASE));
 	}
 
 	/**

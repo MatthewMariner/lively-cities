@@ -43,7 +43,7 @@ load, and **nothing another player can see**.
 | **184 entities** | 142 citizens + 42 pieces of scenery |
 | **51 wander**, 91 stand still | 5 of the 91 are `ScriptedCitizen` records whose script nothing runs — [see below](#known-limitations) |
 | **9 places** | Varrock (97), Lumbridge (21), Al Kharid (10), Ardougne (10), Catherby (10), Falador (10), the Grand Exchange (10), Draynor (11), Edgeville (5) |
-| **188 at Crowded** | an optional density that adds 46 derived extras on top |
+| **193 at Crowded** | an optional density that adds 51 derived extras on top |
 
 <!-- SCREENSHOT: a close-up of two or three citizens with distinct appearances, ideally one
      mid-walk. Save as docs/img/citizens.png and replace with:
@@ -230,23 +230,27 @@ Stated plainly, because you will find them anyway.
   being the most muscular human body in the named constants and read on video as a naked
   man standing in the busiest bank in the game. If Brogan's plate turns out to read as
   "that specific quest NPC" rather than "a soldier", that is a costume change, not a bug.
-- **"No trousers" had two causes, and only one of them is fully closed.** A figure with
-  no trouser model is now impossible — `BodySlotLintTest` asks the dataset whether every
+- **"No trousers" had two causes, and both are now closed.** A figure with
+  no trouser model is impossible — `BodySlotLintTest` asks the dataset whether every
   human has geometry at the shin, the hand and the floor. A figure whose trouser model is
-  *painted the colour of a face* is a separate fault, and it shipped: six citizens this
-  project authored on 2026-08-29 were painting a garment slot with `4550`, the base colour
-  the client substitutes for a player's face. They were repaletted on 2026-08-30 and a
-  second lint holds it (`NOTICE` item 10).
+  *painted the colour of a face* is a separate fault, and it shipped twice.
 
-  What is left is a judgement rather than a rule. 18 shipped records paint the legs base
-  a flesh-*class* colour — a tan or a brown inside the gamut the plugin calls skin — and
-  11 of those use a colour the game itself paints a face with somewhere. Most are dark
-  leather browns and read as trousers, and no categorical test separates "a brown trouser"
-  from "a complexion". The two that are least comfortable are
-  named in `NOTICE` item 10: *Tobias* in Falador and *Marlow* in Draynor, who wear mid tan
-  where trousers go and a dark blue and a dark green respectively where a face goes. Six
-  upstream records paint the face colour onto arm, hand and head geometry, which is where
-  skin belongs, and were left alone.
+  The first pass, on 2026-08-30, refused one exact value: `4550`, the base colour the
+  client substitutes for a player's face. It left seventeen records that paint the legs
+  base a flesh-*class* tan, on the reasoning that most were dark leather browns and no
+  categorical test separates "a brown trouser" from "a complexion". Playing at `Full` on
+  2026-08-31 settled it: figures still looked trouserless. *Marlow*'s tan was one hue step
+  and two lightness steps from the face colour.
+
+  So the rule for the legs slot is now the whole gamut rather than the one value, and all
+  seventeen were repainted — ten of them upstream's, disclosed as `NOTICE` item 11. The
+  gamut is the plugin's own `CitizenEcho.isFlesh`, measured off 3,320 face recolours in the
+  game's cache, so the lint and the `Crowded` derivation ask the same question. It is not
+  widened to the other garment slots: the hair and boots bases are themselves inside the
+  gamut, so the rule there would refuse the game's own colours, and a flesh-toned tunic is
+  not what a player reads as nakedness. Fourteen torso slots still carry a tan, pinned by a
+  test so the number cannot grow unnoticed. Six upstream records paint the face colour onto
+  arm, hand and head geometry, which is where skin belongs, and were left alone.
 - **Distant figures pop in** past ~16 tiles. See Render distance above.
 - **Smoothing needs RuneLite's own Animation Smoothing plugin** turned on. With it off,
   nothing in the game interpolates — real NPCs included — so our figures look equally steppy.
@@ -265,8 +269,8 @@ Stated plainly, because you will find them anyway.
   `FrameTimings`' javadoc and in `docs/SUBMISSION.md`.
 - **Crowded adds derived figures, not authored ones.** They are silent, they do not wander,
   and they wear their source's colours rearranged. They are ambience, not characters.
-  It adds 46 of them against 142 authored citizens, and it adds them unevenly: 20 in
-  Varrock, 8 in Falador, 7 in Draynor, **none at all in Lumbridge**. That is a smaller
+  It adds 51 of them against 142 authored citizens, and it adds them unevenly: 21 in
+  Varrock, 9 in Draynor, 8 in Falador, **none at all in Lumbridge**. That is a smaller
   and patchier setting than it was — it used to add 184 — because most of what it used
   to add was wrong. A derived figure only gets made now if its source's own palette can
   be rearranged without moving a skin tone onto a garment or moving the game's own face
@@ -362,8 +366,8 @@ and `RegionDataLoaderTest` already assert, over the shipped JSON alone:
   distinct-`npcAppearanceId` count is pinned (currently 7) — if either test
   fails after you *intentionally* changed the dataset, update the pinned
   number in `ModelIdAuditTest`; if you did not touch the dataset, something
-  else changed it. (The crowd at `Crowded` is 188 — 142 authored citizens
-  plus 46 derived ones. It read 326 until the 2026-08-29 quality pass and
+  else changed it. (The crowd at `Crowded` is 193 — 142 authored citizens
+  plus 51 derived ones. It read 326 until the 2026-08-29 quality pass and
   briefly read 324 before that, which a note here once called a coincidence
   with the model-id count; it is not even that any more. The two are unrelated
   quantities and neither should ever be "corrected" to agree with the other:

@@ -79,7 +79,7 @@
             ],
             "modelRecolorReplace": [
                 21541,
-                7331
+                39
             ],
             "idleAnimation": "HumanIdle"
         },
@@ -118,7 +118,7 @@
             ],
             "modelRecolorReplace": [
                 6447,
-                6932,
+                7060,
                 4541
             ],
             "idleAnimation": "Sitting"
@@ -612,7 +612,7 @@
                 5400
             ],
             "modelRecolorReplace": [
-                7353,
+                61,
                 5421,
                 11187,
                 6817,
@@ -1427,7 +1427,7 @@
                 107,
                 4550,
                 5555,
-                5584
+                82
             ],
             "idleAnimation": "HumanIdle"
         },
