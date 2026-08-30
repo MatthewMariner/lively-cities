@@ -238,6 +238,32 @@ appears verbatim in merged hub PRs — it answers the reviewer's actual question
 > next renumbering is a diffable text file rather than a support thread. There is a runbook in
 > the README.
 >
+> **That paragraph was only ever half the answer, and the missing half shipped.** Both
+> defences are about a figure that *fails to build*. A figure whose record never named a
+> trouser in the first place builds perfectly and still has no legs, and 47 of the 98
+> kit-built human citizens were in exactly that state at launch — the largest single cause
+> being a hood model pasted where legs and boots belong on twenty of them. Repaired on
+> 2026-08-29 (`NOTICE` item 9), and `BodySlotLintTest` is now the third defence: it asks the
+> dataset itself whether every human figure has geometry at the shin, at the hand and on the
+> floor.
+>
+> **The geometry half is closed; the colour half is disclosed rather than closed.** A trouser
+> model painted the colour of a face looks the same in a screenshot as no trouser at all, and
+> six citizens this project authored were doing exactly that — answering a `find` slot aimed
+> at trousers, a tunic, hair, a boot or a collar with `4550`, the value the client
+> substitutes for a player's face. They were repaletted on 2026-08-30 and a second rule in `BodySlotLintTest`
+> now refuses it categorically. Two further records of ours wear a flesh-*class* tan where a
+> garment goes rather than the face colour itself; no categorical rule separates those from a
+> brown trouser, so they are named in `NOTICE` item 10 rather than quietly repainted. Six
+> upstream records paint the face colour onto arm, hand and head geometry, which is where
+> skin belongs; they are counted and named by a test so the figure cannot grow in silence.
+>
+> The same fault existed in the derivation and shipped: two of the 44 echoes at `Crowded`
+> wore the face colour on a garment, one of them on the legs. The re-deal rule compared
+> flesh-*classes*, so a dark leather brown swapping places with the face colour looked
+> class-preserving. The face colour is now its own class and cannot be moved off the slot the
+> author put it on.
+>
 > Fake-vs-real legibility was treated as the licence to exist rather than polish: menu entries
 > are always deprioritised, no clickbox is generated while an item or spell is on the cursor,
 > the menu target uses a colour the game never uses for a real one, and Examine says what the
@@ -293,7 +319,11 @@ first candidates for an update.
 - **Two re-kitted figures nobody has seen.** *Anselm* and *Brother Edwy* in the Ardougne
   monastery were given different bodies late; the ids are verified against the cache but how
   they read is not.
-- **The East bank workman** is missing leggings, and at `Crowded` his derived twin is
-  examined as an anonymous "Passer-by" while dressed in the same uniform. One fix covers
-  both: give him an `npcAppearanceId`, which dresses him properly *and* stops him seeding an
-  echo, since `CitizenEcho` refuses NPC-dressed sources.
+- ~~**The East bank workman** is missing leggings, and at `Crowded` his derived twin is
+  examined as an anonymous "Passer-by" while dressed in the same uniform.~~ Fixed on
+  2026-08-29, and he was not alone: 47 of the 98 kit-built human citizens were shipping
+  without legs, hands or footwear. He is "City workman" (13109), and his leggings had been
+  replaced by an Elder Chaos druid hood — the same paste that had cost twenty citizens a
+  body part. `BodySlotLintTest` holds it now. The `npcAppearanceId` route suggested here was
+  *not* taken: it would have moved the pinned distinct-model-id count and made him
+  ineligible to seed. See `NOTICE` item 9.

@@ -25,7 +25,9 @@
                 8925,
                 4045,
                 28512,
-                26630
+                26630,
+                185,
+                176
             ],
             "baseOrientation": 0,
             "modelRecolorFind": [
@@ -65,9 +67,10 @@
                 246,
                 28515,
                 26632,
-                54275,
-                54275,
-                26630
+                28285,
+                185,
+                26630,
+                176
             ],
             "baseOrientation": 1024,
             "modelRecolorFind": [
@@ -104,7 +107,8 @@
                 26632,
                 54275,
                 28512,
-                185
+                185,
+                176
             ],
             "baseOrientation": 1024,
             "modelRecolorFind": [
@@ -183,7 +187,8 @@
                 14373,
                 180,
                 12138,
-                26630
+                26630,
+                185
             ],
             "baseOrientation": 1024,
             "modelRecolorFind": [
@@ -312,7 +317,7 @@
                 249,
                 28515,
                 26619,
-                54275,
+                28285,
                 185,
                 176
             ],
@@ -348,7 +353,8 @@
                 3848,
                 353,
                 431,
-                14395
+                14395,
+                185
             ],
             "baseOrientation": 1536,
             "modelRecolorFind": [
@@ -413,7 +419,8 @@
                 12752,
                 10301,
                 12138,
-                26630
+                26630,
+                185
             ],
             "baseOrientation": 0,
             "modelRecolorFind": [
@@ -453,9 +460,10 @@
                 246,
                 25676,
                 14373,
-                54275,
+                185,
                 12138,
-                26630
+                26630,
+                176
             ],
             "baseOrientation": 1024,
             "modelRecolorFind": [],
@@ -555,7 +563,8 @@
                 5434,
                 398,
                 5433,
-                317
+                317,
+                185
             ],
             "baseOrientation": 1024,
             "modelRecolorFind": [
@@ -981,7 +990,8 @@
                 176,
                 279,
                 540,
-                201
+                201,
+                185
             ],
             "baseOrientation": 0,
             "modelRecolorFind": [
@@ -1084,7 +1094,8 @@
                 5217,
                 26630,
                 241,
-                5233
+                5233,
+                185
             ],
             "baseOrientation": 0,
             "modelRecolorFind": [

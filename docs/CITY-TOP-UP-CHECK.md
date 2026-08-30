@@ -84,8 +84,9 @@ Turn **Lively Cities** on, set **Crowd density** to `Full` (not `Crowded` — se
 below), and set **Render distance** high enough that a figure is drawn before you
 arrive.
 
-**Do the first pass at `Full`, then repeat at `Crowded`.** These 33 citizens seed
-**63 of the 184** derived "Passer-by" figures the `Crowded` setting adds, and a
+**Do the first pass at `Full`, then repeat at `Crowded`.** Nine of these 33 citizens
+seed **16 of the 44** derived "Passer-by" figures the `Crowded` setting adds (it
+added 184 until the 2026-08-29 quality pass tightened who may seed one), and a
 derived figure stands either inside its source's wander box or on a ring two
 tiles out from it. Those tiles are checked against the live collision map before
 anything spawns, so a `Crowded` extra on bad ground simply never appears — which
@@ -205,6 +206,10 @@ the town-centre ground the predecessor vouched for.
       Examine: "She is looking for someone who was here a moment ago."
       Kit: "Mary" (12852), palette re-dealt · `HumanIdle` / `HumanWalk`
       Placed near: Charlie, 5 tiles — her whole box is inside his
+      **Repaletted 2026-08-30.** Her legs slot was painted `4550`, the colour the
+      client puts on a face, so her trousers rendered as bare skin — the worst
+      instance of that fault in this pass. Now `37394`, a dark blue. **What to look
+      for:** dark trousers under the red-brown top, and no bare leg.
 
 - [ ] **Ilsa** — `2851, 3435, 0`, **wanders** `2849,3433 .. 2853,3437`, facing east
       Examine: "Out for the view, she says."
@@ -225,6 +230,9 @@ the town-centre ground the predecessor vouched for.
       same class of defect `SEATING-CHECK.md` is about. He is three tiles from a
       figure already doing it, so the odds are good, but this is the one to look
       at first in Catherby.
+      **Repaletted 2026-08-30.** His torso slot was painted `4550` (a face colour).
+      Now `12700`, a dark olive. **What to look for:** whether an olive tunic sits
+      well against his near-black legs and hood.
 
 - [ ] **Peri** — `2757, 3443, 0`, **wanders** `2755,3441 .. 2758,3445`, facing south
       Examine: "Well clear of the bees, and staying that way."
@@ -283,6 +291,9 @@ the city thin.
       Examine: "Walks this way whatever the weather."
       Kit: "Nicholson" (12342), palette re-dealt · `HumanIdle` / `HumanWalk`
       Placed near: Squirrel, 3 tiles — her box is inside the squirrel's
+      **Repaletted 2026-08-30.** Her hair slot was painted `4550`, so her hair was
+      the same colour as her face and she read as bald. Now `39`, a dark grey.
+      **What to look for:** hair that is visibly hair.
 
 ---
 
@@ -334,6 +345,10 @@ top-up pass.
       worth rotating rather than for the look, and nothing offline can say what a
       rotated version of it looks like. He and Anselm are the two figures in this
       pass most likely to need a different kit after the walk.
+      **Repaletted 2026-08-30.** The slot that paints his boots (`6587`, the only
+      colour on boot model 4218) was set to `4550`, so he was barefoot in a
+      monastery. Now `7187`, near-black. **What to look for:** dark boots, and
+      whether they read as boots rather than as shadow under the robe.
 
 ### Region 10548 — the farm
 
@@ -343,6 +358,10 @@ top-up pass.
       Placed near: Plopper, 3 tiles — her box **is** Plopper's box, exactly
       **Box note:** if that box is a fenced pen, a farmhand inside it is fine and
       a farmhand *stuck* in it is not. Watch her for a minute.
+      **Repaletted 2026-08-30.** Her torso slot was painted `4550` (a face colour),
+      so her chest rendered as bare skin. Now `43420`, a dark slate blue — the one
+      accent on an otherwise near-black figure. **What to look for:** whether she
+      still reads as a farmhand rather than as a silhouette.
 
 ### Region 10804 — the Legends' Guild path
 
@@ -374,6 +393,10 @@ These four stand along it, which reads as a queue.
       **Note:** 13 tiles is the longest reach in this pass. The guard's box is
       2 tiles wide and 15 long, so the far end of it is much less certain than
       the end he actually starts on. Walk the strip.
+      **Repaletted 2026-08-30.** The slot that paints model 281 — a small piece at
+      collar height — was set to `4550`. Now `107`, a light grey, which is what her
+      donor paints it. **What to look for:** whether that piece reads as part of the
+      costume rather than as a patch of skin.
 
 ---
 

@@ -14,7 +14,7 @@ The files under src/main/resources/RegionData/ are derived from that project's
 region data (format version 0.8). Redistribution of those files retains the
 copyright notice above as the BSD 2-Clause License requires.
 
-They are no longer byte-identical to upstream, in eight ways.
+They are no longer byte-identical to upstream, in ten ways.
 
   1. Only a subset ships. This plugin carried 45 of their region files; as of
      2026-08-24 it carries 27, covering nine places. The other eighteen files —
@@ -202,10 +202,17 @@ They are no longer byte-identical to upstream, in eight ways.
      That sentence is the rule the whole pass rests on, and it is now enforced
      rather than promised: AuthoredRecordsTest.everyAuthoredKitIsAWholeCopyOfA
      ShippedKitWithThePaletteReDealt finds each record's donor in the shipped files
-     and checks that the palette is one of the rotations CitizenEcho.distinctDeals
-     would offer — so a hand-assembled kit, a reordered one, or a copy that forgot
-     to re-deal is a red build. It was worth writing down because a review on
-     2026-08-29 made all three of those edits and the suite stayed green.
+     and checks that the palette is a rotation of the donor's that actually changes
+     it — so a hand-assembled kit, a reordered one, or a copy that forgot to re-deal
+     is a red build. It was worth writing down because a review on 2026-08-29 made
+     all three of those edits and the suite stayed green.
+
+     Sixteen of the thirty-three had a body part added to their "modelIds" later the
+     same day, along with thirty-one vendored records — see item 9. Each still
+     matches its donor exactly, because the donor was repaired in the same way by
+     the same rule, so the "copied whole" claim above still holds; what it now means
+     is that the array is upstream's kit plus the part this project put back into
+     it.
 
      One record was re-authored after that review. As first shipped, "Brother
      Alfric" (10290) copied the "Saradomin priest" (12854) — a donor carrying no
@@ -228,7 +235,105 @@ They are no longer byte-identical to upstream, in eight ways.
      licensee taking this data should know which placements carry a human's word
      and which carry ours.
 
-BSD-2 permits all eight modifications, the subsetting at item 1 included — this
+  9. Forty-seven citizen records had a body part put back into their "modelIds" on
+     2026-08-29 — thirty-one of them theirs and sixteen ours from item 8. Every one
+     was shipping without part of a body: no trousers, no hands, or nothing on its
+     feet. A human playing this plugin photographed two of them, and "who is this
+     man, why does he not have any legs" is the complaint that got the predecessor
+     plugin disabled by the hub, so this is a defect rather than a preference.
+
+     Twenty of the forty-seven are one paste. Model 54275 is the Elder Chaos druid
+     hood — two NPCs in the whole 1.12.36 cache wear it, and its geometry sits at
+     head height — and twenty-six shipped citizens were carrying it, twenty of them
+     at the array index where the kit they were copied from carries a trouser or a
+     boot. "Mike" (12850) is the clearest: his kit is NPC 10758 "Gardener Jay Jr."
+     with exactly one id changed, index 6, 28285 (legs) -> 54275. "Sefton" (12853)
+     and "Corliss" (12338) carry it twice, at the two positions where legs and boots
+     belong. Where the hood was standing in for a body part it was substituted back
+     — 15 to 28285 (legs), 7 to 185 (boot). The remaining six records still carry it
+     and are left alone: on those it is a spare hood rather than a missing leg, and
+     removing it would take 54275 out of the dataset altogether.
+
+     The other twenty-seven were repaired by adding the missing part. Twenty-six of
+     those carried no hood at all; the twenty-seventh, "Alexander" (12853), carries
+     one and still does — his was not standing in for anything, and what he was short
+     of was a hand. Across all forty-seven the additions are 28 of 185 (boot), 9 of
+     176 (hands) and 1 of 28285 (legs), landing in sixteen of the twenty-seven files.
+     The whole repair, hood substitutions included, touched twenty-one files — an
+     earlier version of this paragraph gave that larger figure for the additions.
+
+     Every part used was already among the shipped model ids, which is why the
+     dataset still holds exactly 324 distinct model ids and 72 distinct animation
+     names — the same two figures item 8 records. Nothing else on any of the
+     forty-seven records moved: tiles, orientations, wander boxes, names, examine
+     text, remarks, recolours and animations are all untouched. The "npcAppearanceId"
+     route used for "Rufus" at item 3 was deliberately not taken again; it would have
+     changed both of those figures.
+
+     src/test/java/com/matthewmariner/livelycities/BodySlotLintTest.java is what
+     keeps this true, and src/test/java/com/matthewmariner/livelycities/BodySlots.java
+     is the table it reads — which part of a body each of the 324 model ids is,
+     measured once from the cache and transcribed, in the same way and for the same
+     reason as ModelSkeletons.
+
+     None of the forty-seven has been verified in game. Offline evidence is that each
+     record now carries geometry at the shin, at the hand and on the floor; whether
+     the part chosen looks right on that particular figure is a thing only somebody
+     standing in front of it can say.
+
+     This item is about geometry only. Having legs and having legs that are not
+     painted the colour of a face are two different claims, and the second one is
+     item 10.
+
+ 10. Six of the thirty-three records at item 8 had one recolour value changed on
+     2026-08-30. Every one of them was painting a slot the author aimed at a garment
+     with 4550 — the base colour the client substitutes for a player's face — so the
+     part came out the colour of bare skin. "Wynn" (11317) is the worst of them and
+     the one that names the problem: his "modelRecolorFind" slot 25238 is the colour
+     the game's own leg models are authored in, and he was answering it with 4550.
+     His trousers were painted a face.
+
+     Only the one value moved on each record; tiles, names, examine text, remarks,
+     wander boxes, animations and "modelIds" are all untouched, and every replacement
+     is a colour the dataset already carried, so the distinct-model-id figure is
+     still 324.
+
+       Wynn          11317   legs    4550 -> 37394   dark blue trousers
+       Hesper        10548   torso   4550 -> 43420   dark slate-blue tunic
+       Aldous        11061   torso   4550 -> 12700   dark olive tunic
+       Marta         11829   hair    4550 -> 39      dark grey hair
+       Brother Edwy  10290   boot    4550 -> 7187    near-black boots
+       Sela          10804   collar  4550 -> 107     light grey collar
+
+     Why a repalette and not a different rotation. Item 8's rule is that each of the
+     thirty-three wears its donor's palette rotated. For these six no rotation works:
+     none of their donors has a 4550 slot in its own "modelRecolorFind", so the face
+     colour has nowhere in the array to stay and every rotation moves it onto
+     something that is not a face. That is proved rather than asserted, in
+     AuthoredRecordsTest.noRotationOfThoseSixDonorsCouldHaveHeldTheFaceColourInPlace.
+
+     No upstream record was repaletted, and that is not deference. Twelve shipped
+     records paint 4550 onto a slot aimed at something else; the six that are not
+     ours are "Forester", "Nicholson", "Assistant Apothecary", "Mary" and "Silver
+     merchant", which paint an arm or a hand — models 176, 353, 159 and 27139 are a
+     hand or forearm in 4550 below and a cuff in 43072 above, so painting the cuff
+     4550 is a rolled sleeve — and "Thalindra", who paints a close-fitting head
+     covering (model 405) and so reads as bald. All six are skin on skin. They are
+     counted and named by
+     BodySlotLintTest.theSkinBaseOnANonGarmentSlotIsUpstreamsAloneAndIsNamed, so the
+     figure cannot grow in silence.
+
+     Two of ours were left as they are and are disclosed rather than fixed. "Tobias"
+     (12083) wears a very dark blue where his face goes and a mid tan on both his
+     torso and his legs; "Marlow" (12340) wears a dark yellow-green face and mid-tan
+     legs. Both are rotations of the Varrock "Gardener"'s palette. They are wearing
+     flesh-coloured cloth rather than the face colour itself, so no categorical rule
+     reaches them and repainting them would be a taste judgement rather than a
+     repair.
+
+     None of the six has been verified in game.
+
+BSD-2 permits all ten modifications, the subsetting at item 1 included — this
 note exists so nobody assumes the vendored data still matches the source it came
 from, or that what ships here is all of what they published.
 

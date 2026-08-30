@@ -21,7 +21,8 @@
                 299,
                 26619,
                 176,
-                260
+                260,
+                185
             ],
             "baseOrientation": 1024,
             "modelRecolorFind": [
@@ -115,7 +116,7 @@
                 5400,
                 5301,
                 4329,
-                4550,
+                7187,
                 10349
             ],
             "idleAnimation": "Think"

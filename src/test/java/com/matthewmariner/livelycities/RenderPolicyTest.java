@@ -205,7 +205,7 @@ public class RenderPolicyTest
 	 *
 	 * <p>Everything above checks that 9 is the right answer, and every one of those
 	 * assertions passes against {@code MAX_MODEL_BUILDS_PER_PASS = 9} typed as a
-	 * literal — I checked, by making exactly that change and watching all 460 tests stay
+	 * literal — I checked, by making exactly that change and watching the whole suite stay
 	 * green. No assertion on a value can tell a computed 9 from a typed one, because
 	 * both are 9.
 	 *

@@ -135,11 +135,13 @@ public interface LivelyCitiesConfig extends Config
 		name = "Crowd density",
 		description = "Thins the roster proportionally. The same people are always the ones kept, "
 			+ "so a street looks the same every time you walk down it. "
-			+ "\"Crowded\" goes the other way and roughly doubles the crowd: every hand-placed "
+			+ "\"Crowded\" goes the other way and adds to the crowd: every hand-placed "
 			+ "citizen stays, and extra ones are derived from them — differently dressed, "
 			+ "generically named, silent, and only ever on ground the game's own collision map "
 			+ "says a person could stand on. They are always the same extra people, and hiding "
-			+ "one does not hide the citizen it came from.",
+			+ "one does not hide the citizen it came from. Only a citizen whose own colours can "
+			+ "be rearranged without a skin tone landing on a garment can seed one, so some "
+			+ "streets gain several and some gain none.",
 		position = 2
 	)
 	default CrowdDensity crowdDensity()

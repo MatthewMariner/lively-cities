@@ -1,6 +1,7 @@
 package com.matthewmariner.livelycities;
 
 import com.matthewmariner.livelycities.data.EntityRecord;
+import com.matthewmariner.livelycities.data.MergedObjectRecord;
 import com.matthewmariner.livelycities.data.PointRecord;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -192,19 +193,23 @@ final class FakeRegions extends RegionDataLoader
 	 *
 	 * <p>Needed rather than an extra argument on {@link #citizen}, because "a citizen
 	 * that seeds echoes" and "a citizen that seeds none" are two fixtures the crowd
-	 * tests need side by side: of the 135 shipped citizens that reach
-	 * {@link CitizenEcho}'s palette check, 36 have too little palette to re-deal — 32
-	 * carry no recolour pairs at all and 4 carry a single pair, and the check wants two.
+	 * tests need side by side: of the 87 shipped citizens that reach
+	 * {@link CitizenEcho}'s palette check, 22 have too little palette to re-deal — 20
+	 * carry no recolour pairs at all and 2 carry a single pair, and the check wants two.
 	 * So a fixture where everybody seeds echoes could not tell "the dial added the
 	 * derived citizens" from "the dial doubled everything".
 	 *
-	 * <p><b>135, not the 136 non-cameo citizens.</b> The two figures are one apart and
-	 * they are not the same population: 142 shipped citizens minus the 6 cameos is 136,
-	 * and one of those 136 — "Rufus" — is dressed from an {@code npcAppearanceId} and is
-	 * turned away by {@link CitizenEcho} before the palette check is reached at all. He
-	 * also carries no recolour pairs, so counting him in would make the numerator 37;
-	 * both halves of the ratio have to be the same population or the sentence is
-	 * comparing two different things.
+	 * <p><b>87, not the 136 non-cameo citizens.</b> The two figures are a long way apart
+	 * and they are not the same population: 142 shipped citizens minus the 6 cameos is
+	 * 136, and {@link CitizenEcho} turns away 49 of those 136 before the palette check
+	 * is reached at all — 1 ("Rufus") dressed from an {@code npcAppearanceId}, and 48
+	 * whose body is sitting, miming, welded or scaled. Both halves of the ratio have to
+	 * be the same population or the sentence is comparing two different things.
+	 *
+	 * <p>This paragraph read "135 … 36 … 32 … 4" until 2026-08-30, which was the count
+	 * as it stood before the body rule existed. The figures it names now are the ones
+	 * {@code CitizenEchoTest.everyCitizenTheDerivationRefusesIsRefusedAtExactlyOneGate}
+	 * asserts, so the next time they move something goes red.
 	 *
 	 * <p>{@code pairs} is what decides how many echoes it seeds, and the numbers here
 	 * are chosen so the relationship is visible in the fixture rather than buried:
@@ -498,6 +503,61 @@ final class FakeRegions extends RegionDataLoader
 	List<Integer> loadCalls()
 	{
 		return loadCalls;
+	}
+
+	/**
+	 * A citizen with a richly re-dealable palette whose <b>body is doing something</b>
+	 * — the fixture {@link CitizenEcho#isAnOrdinaryStandingBody} exists for.
+	 *
+	 * <p>The palette is deliberately the same six-pair one {@link #recoloured} would
+	 * give it, so that the only reason such a citizen seeds nothing is the body. A
+	 * fixture that failed the palette check as well would prove nothing about the body
+	 * gate at all.
+	 *
+	 * @param idle          an idle animation, or {@code null} for none
+	 * @param scale         a scale vector, or {@code null}
+	 * @param translate     a translate vector, or {@code null}
+	 * @param mergedObject  an object id to weld into the body, or {@code 0} for none
+	 */
+	EntityDefinition recolouredButBusy(
+		int fileRegionId,
+		int x,
+		int y,
+		@Nullable LivelyAnimation idle,
+		@Nullable float[] scale,
+		@Nullable float[] translate,
+		int mergedObject)
+	{
+		EntityRecord record = new EntityRecord();
+		record.entityType = "StationaryCitizen";
+		record.name = "Busy citizen " + (++uuids);
+		record.uuid = String.format("00000000-0000-4000-8000-%012d", uuids);
+		record.examineText = "A citizen with a wardrobe and something to do.";
+		record.worldLocation = point(x, y, 0);
+		record.modelIds = new int[]{100};
+
+		record.modelRecolorFind = new int[6];
+		record.modelRecolorReplace = new int[6];
+		for (int i = 0; i < 6; i++)
+		{
+			record.modelRecolorFind[i] = i + 1;
+			record.modelRecolorReplace[i] = 101 + i;
+		}
+
+		record.idleAnimation = idle == null ? null : idle.name();
+		record.scale = scale;
+		record.translate = translate;
+		if (mergedObject > 0)
+		{
+			MergedObjectRecord merged = new MergedObjectRecord();
+			merged.objectId = mergedObject;
+			merged.count90CCWRotations = 0;
+			record.mergedObjects = Arrays.asList(merged);
+		}
+
+		EntityDefinition definition = EntityDefinition.fromRecord(record, fileRegionId);
+		assertNotNull("the fake built an unusable busy citizen", definition);
+		return definition;
 	}
 
 	private static PointRecord point(int x, int y, int plane)

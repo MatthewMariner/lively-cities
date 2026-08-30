@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-460-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-477-brightgreen)](#development)
 
 </div>
 
@@ -43,7 +43,7 @@ load, and **nothing another player can see**.
 | **184 entities** | 142 citizens + 42 pieces of scenery |
 | **51 wander**, 91 stand still | 5 of the 91 are `ScriptedCitizen` records whose script nothing runs — [see below](#known-limitations) |
 | **9 places** | Varrock (97), Lumbridge (21), Al Kharid (10), Ardougne (10), Catherby (10), Falador (10), the Grand Exchange (10), Draynor (11), Edgeville (5) |
-| **326 at Crowded** | an optional density that roughly doubles the streets |
+| **188 at Crowded** | an optional density that adds 46 derived extras on top |
 
 <!-- SCREENSHOT: a close-up of two or three citizens with distinct appearances, ideally one
      mid-walk. Save as docs/img/citizens.png and replace with:
@@ -149,7 +149,7 @@ What is new is everything that stops it dying the same way:
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they were renamed
   to anonymous barrow wights, and the Barrows has since left the dataset entirely.
-- **460 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **477 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -230,6 +230,23 @@ Stated plainly, because you will find them anyway.
   being the most muscular human body in the named constants and read on video as a naked
   man standing in the busiest bank in the game. If Brogan's plate turns out to read as
   "that specific quest NPC" rather than "a soldier", that is a costume change, not a bug.
+- **"No trousers" had two causes, and only one of them is fully closed.** A figure with
+  no trouser model is now impossible — `BodySlotLintTest` asks the dataset whether every
+  human has geometry at the shin, the hand and the floor. A figure whose trouser model is
+  *painted the colour of a face* is a separate fault, and it shipped: six citizens this
+  project authored on 2026-08-29 were painting a garment slot with `4550`, the base colour
+  the client substitutes for a player's face. They were repaletted on 2026-08-30 and a
+  second lint holds it (`NOTICE` item 10).
+
+  What is left is a judgement rather than a rule. 18 shipped records paint the legs base
+  a flesh-*class* colour — a tan or a brown inside the gamut the plugin calls skin — and
+  11 of those use a colour the game itself paints a face with somewhere. Most are dark
+  leather browns and read as trousers, and no categorical test separates "a brown trouser"
+  from "a complexion". The two that are least comfortable are
+  named in `NOTICE` item 10: *Tobias* in Falador and *Marlow* in Draynor, who wear mid tan
+  where trousers go and a dark blue and a dark green respectively where a face goes. Six
+  upstream records paint the face colour onto arm, hand and head geometry, which is where
+  skin belongs, and were left alone.
 - **Distant figures pop in** past ~16 tiles. See Render distance above.
 - **Smoothing needs RuneLite's own Animation Smoothing plugin** turned on. With it off,
   nothing in the game interpolates — real NPCs included — so our figures look equally steppy.
@@ -248,6 +265,13 @@ Stated plainly, because you will find them anyway.
   `FrameTimings`' javadoc and in `docs/SUBMISSION.md`.
 - **Crowded adds derived figures, not authored ones.** They are silent, they do not wander,
   and they wear their source's colours rearranged. They are ambience, not characters.
+  It adds 46 of them against 142 authored citizens, and it adds them unevenly: 20 in
+  Varrock, 8 in Falador, 7 in Draynor, **none at all in Lumbridge**. That is a smaller
+  and patchier setting than it was — it used to add 184 — because most of what it used
+  to add was wrong. A derived figure only gets made now if its source's own palette can
+  be rearranged without moving a skin tone onto a garment or moving the game's own face
+  colour off the slot the author put it on, and if its source is not sitting on
+  something, holding something, or lined up against a piece of scenery.
 - **The cameo tiles have not been walked on.** The six were placed off the Grand Exchange's
   wiki map, not by standing there. To stop that becoming a figure inside a bank booth, a cameo
   is the one kind of authored figure whose tile has to pass the game's own collision map before
@@ -271,7 +295,7 @@ Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires 
 the Gradle wrapper handles the rest.
 
 ```bash
-./gradlew build            # compile and run the 460 tests
+./gradlew build            # compile and run the 477 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)
@@ -338,9 +362,10 @@ and `RegionDataLoaderTest` already assert, over the shipped JSON alone:
   distinct-`npcAppearanceId` count is pinned (currently 7) — if either test
   fails after you *intentionally* changed the dataset, update the pinned
   number in `ModelIdAuditTest`; if you did not touch the dataset, something
-  else changed it. (The crowd at `Crowded` is 326 — 142 authored citizens
-  plus 184 derived ones. It briefly read 324 as well, and a note here called
-  that a coincidence; it is not even that any more. The two are unrelated
+  else changed it. (The crowd at `Crowded` is 188 — 142 authored citizens
+  plus 46 derived ones. It read 326 until the 2026-08-29 quality pass and
+  briefly read 324 before that, which a note here once called a coincidence
+  with the model-id count; it is not even that any more. The two are unrelated
   quantities and neither should ever be "corrected" to agree with the other:
   one is a property of the game cache and the other of the echo derivation)
 - every animation name the dataset uses resolves in `LivelyAnimation`

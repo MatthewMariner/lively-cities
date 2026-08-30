@@ -3,6 +3,7 @@ package com.matthewmariner.livelycities;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
@@ -89,6 +91,396 @@ public class CitizenEchoTest
 		// And a palette that repeats in a pattern offers fewer deals than rotations:
 		// [a,b,a,b] has three rotations and one distinct result.
 		assertEquals(1, CitizenEcho.distinctDeals(new short[]{7, 9, 7, 9}).length);
+	}
+
+	// --- The body rule --------------------------------------------------------
+
+	/**
+	 * <b>An echo's name says "nobody in particular". Its body has to agree.</b>
+	 *
+	 * <p>{@link EntityDefinition#echoOf} replaces five things and inherits five
+	 * others, and until this rule only the sixth ({@code npcAppearanceId}) was checked
+	 * at all. So a gardener's watering can, a butler's chair, a smith's anvil pose and
+	 * a citizen with a bench welded into his model all walked into a figure called
+	 * {@link CitizenEcho#ECHO_NAME}. The gardener is a photograph.
+	 *
+	 * <p>Three fixtures for the three ways a body can be doing something, plus the
+	 * control that says a plain standing citizen with the same palette still seeds.
+	 * The control is the assertion that keeps the other three honest: without it a
+	 * gate that refused everything would pass all three.
+	 */
+	@Test
+	public void aCitizenWhoseBodyIsDoingSomethingSeedsNothing()
+	{
+		FakeRegions regions = new FakeRegions();
+
+		assertFalse("the control: an ordinary standing citizen with this palette seeds",
+			echoesOf(regions.recolouredButBusy(
+				VARROCK_SOUTH, 3225, 3355, LivelyAnimation.HumanIdle, null, null, 0)).isEmpty());
+
+		assertTrue("sitting on a chair that will not come with it",
+			echoesOf(regions.recolouredButBusy(
+				VARROCK_SOUTH, 3235, 3355, LivelyAnimation.Sitting, null, null, 0)).isEmpty());
+		assertTrue("miming a tool it was authored holding",
+			echoesOf(regions.recolouredButBusy(
+				VARROCK_SOUTH, 3245, 3355, LivelyAnimation.AnvilBang, null, null, 0)).isEmpty());
+		assertTrue("a pose that is about a prop",
+			echoesOf(regions.recolouredButBusy(
+				VARROCK_SOUTH, 3255, 3355, LivelyAnimation.StandingWithBook, null, null, 0)).isEmpty());
+
+		assertTrue("scenery welded into the body",
+			echoesOf(regions.recolouredButBusy(
+				VARROCK_SOUTH, 3265, 3355, LivelyAnimation.HumanIdle, null, null, 7719)).isEmpty());
+		assertTrue("scaled to fit one piece of the world",
+			echoesOf(regions.recolouredButBusy(VARROCK_SOUTH, 3275, 3355,
+				LivelyAnimation.HumanIdle, new float[]{-0.5f, -0.5f, -0.5f}, null, 0)).isEmpty());
+		assertTrue("nudged off its tile to line up with one piece of the world",
+			echoesOf(regions.recolouredButBusy(VARROCK_SOUTH, 3285, 3355,
+				LivelyAnimation.HumanIdle, null, new float[]{0f, 0f, -1f}, 0)).isEmpty());
+
+		// A translate of {0,0,0} moves nothing, so it is not "doing something" and a
+		// record may carry one. A scale has no such identity — see
+		// isAnOrdinaryStandingBody — so there is deliberately no equivalent case for it.
+		assertFalse("a translate that does not translate is not 'doing something'",
+			echoesOf(regions.recolouredButBusy(VARROCK_SOUTH, 3295, 3355,
+				LivelyAnimation.HumanIdle, null, new float[]{0f, 0f, 0f}, 0)).isEmpty());
+		assertTrue("but any authored scale is, because {0,0,0} would collapse the figure "
+				+ "to a point rather than leave it alone",
+			echoesOf(regions.recolouredButBusy(VARROCK_SOUTH, 3305, 3355,
+				LivelyAnimation.HumanIdle, new float[]{0f, 0f, 0f}, null, 0)).isEmpty());
+	}
+
+	/**
+	 * The same rule over the shipped dataset: <b>no echo that ships inherits a body
+	 * doing anything</b>.
+	 *
+	 * <p>Checked against the source rather than against the echo, because the echo is
+	 * where the inheritance has already happened — asking the echo would be asking the
+	 * code under test to mark its own work. Both are asked anyway, since
+	 * {@code echoOf} is what actually copies the fields and a version of it that
+	 * dropped the idle animation would satisfy the source check and change what
+	 * renders.
+	 */
+	@Test
+	public void noShippedEchoInheritsABodyThatIsDoingSomething()
+	{
+		Map<UUID, EntityDefinition> sources = new HashMap<>();
+		for (EntityDefinition entity : shippedEntities())
+		{
+			sources.put(entity.getUuid(), entity);
+		}
+
+		List<String> violations = new ArrayList<>();
+		int checked = 0;
+
+		for (EntityDefinition echo : shippedEchoes())
+		{
+			EntityDefinition source = sources.get(echo.getEchoSourceUuid());
+			assertNotNull(source);
+			checked++;
+
+			if (!CitizenEcho.isAnOrdinaryStandingBody(source))
+			{
+				violations.add(describe(echo) + " came from " + source.label()
+					+ ", whose body is doing something");
+			}
+
+			if (!CitizenEcho.isAnOrdinaryStandingBody(echo))
+			{
+				violations.add(describe(echo) + " is itself doing something, idle="
+					+ echo.getIdleAnimation());
+			}
+		}
+
+		assertTrue("echo(es) with a body an anonymous passer-by cannot have: " + violations,
+			violations.isEmpty());
+		assertEquals("the whole shipped echo roster has to have been asked", 46, checked);
+	}
+
+	/**
+	 * <b>And the rule bites on the figures that were photographed.</b>
+	 *
+	 * <p>A gate that refused nothing would satisfy the two tests above. Each name below
+	 * is a shipped citizen that seeded echoes before this rule and seeds none now, and
+	 * each is named for the clause that refuses it — a fisherman miming a rod, a smith
+	 * swinging at an anvil, a woodcutter with an axe, a butler sitting on a chair, a
+	 * dwarf nudged off his tile to stand at a workbench, and a chicken carrying a scale
+	 * vector so that it is not rendered at human size.
+	 *
+	 * <p><b>{@code mergedObjects} has no name here, and that is a fact about the
+	 * dataset rather than a gap.</b> The two shipped records that carry one — "Morten"
+	 * and "Jofridr", each with a bench welded in — are also posed {@code Sitting}, so no
+	 * shipped citizen is refused by the merged-object clause <i>alone</i> and this test
+	 * cannot witness it. {@code aCitizenWhoseBodyIsDoingSomethingSeedsNothing} covers it
+	 * on a fixture built for the purpose, which is what a fixture is for.
+	 */
+	@Test
+	public void theBodyRuleRefusesTheFiguresItWasWrittenFor()
+	{
+		Set<String> refused = new TreeSet<>();
+		for (EntityDefinition citizen : shippedEntities())
+		{
+			if (citizen.getType().isCitizen() && !CitizenEcho.isAnOrdinaryStandingBody(citizen))
+			{
+				refused.add(citizen.getName());
+			}
+		}
+
+		for (String who : Arrays.asList(
+			"Fisherman", "Smithing apprentice", "Benny", "Butler Jarvis", "Stonehand", "Chicken"))
+		{
+			assertTrue(who + " has to be refused for its body", refused.contains(who));
+			assertTrue(who + " has to seed nothing", echoesOfShipped(who).isEmpty());
+		}
+
+		// Counted as well as named, so that widening the rule until it refuses
+		// everything is a failure rather than a stronger pass.
+		int citizens = 0;
+		int refusedCount = 0;
+		for (EntityDefinition citizen : shippedEntities())
+		{
+			if (!citizen.getType().isCitizen())
+			{
+				continue;
+			}
+			citizens++;
+			if (!CitizenEcho.isAnOrdinaryStandingBody(citizen))
+			{
+				refusedCount++;
+			}
+		}
+
+		assertEquals("the citizen roster", 142, citizens);
+		assertEquals("citizens whose body is doing something", 48, refusedCount);
+	}
+
+	// --- The flesh rule -------------------------------------------------------
+
+	/**
+	 * <b>The guarantee, stated with no threshold in it: no deal this class issues
+	 * ever moves a colour across the flesh boundary.</b>
+	 *
+	 * <p>This is what {@link CitizenEcho#keepsEachColourOnItsOwnSideOfTheSkin} is
+	 * for and it is the whole of the "passers-by with no trousers" fix. {@code find}
+	 * is handed to an echo verbatim and only {@code replace} is rotated, so slot
+	 * {@code i} of an echo still recolours the body region its author aimed it at —
+	 * and the only thing that can go wrong is the <i>kind</i> of colour that lands
+	 * there. A skin tone dealt onto the legs slot is bare legs. A tunic colour dealt
+	 * onto the skin slot is a blue face.
+	 *
+	 * <p><b>Deliberately not a count of anything.</b> "How many echoes look wrong"
+	 * depends on a threshold for how wrong, on which faces a {@code find} value
+	 * actually paints, and therefore on a model decoder — three things nobody has to
+	 * agree about for this assertion to be checkable. Either a surviving deal moves a
+	 * colour across the boundary or it does not.
+	 *
+	 * <p>Asserted twice over: once about every deal {@code distinctDeals} would issue
+	 * for every shipped palette, and once about the 46 echoes actually derived, which
+	 * is the population that ships. The second is not implied by the first — it also
+	 * covers {@code echoesOfSource} handing {@code redeal} the deal it said it would.
+	 */
+	@Test
+	public void noSurvivingDealEverMovesAColourAcrossTheFleshBoundary()
+	{
+		List<String> violations = new ArrayList<>();
+		int dealsChecked = 0;
+
+		for (EntityDefinition citizen : shippedEntities())
+		{
+			short[] replace = citizen.getRecolorReplace();
+			if (replace.length < 2)
+			{
+				continue;
+			}
+
+			for (int deal : CitizenEcho.distinctDeals(replace))
+			{
+				short[] dealt = CitizenEcho.redeal(replace, deal);
+				dealsChecked++;
+				for (int slot = 0; slot < replace.length; slot++)
+				{
+					if (CitizenEcho.isFlesh(dealt[slot]) != CitizenEcho.isFlesh(replace[slot]))
+					{
+						violations.add(citizen.label() + " deal " + deal + " puts " + dealt[slot]
+							+ " where " + replace[slot] + " was, slot " + slot);
+					}
+				}
+			}
+		}
+
+		Map<UUID, EntityDefinition> sources = new HashMap<>();
+		for (EntityDefinition entity : shippedEntities())
+		{
+			sources.put(entity.getUuid(), entity);
+		}
+
+		int echoesChecked = 0;
+		for (EntityDefinition echo : shippedEchoes())
+		{
+			EntityDefinition source = sources.get(echo.getEchoSourceUuid());
+			assertNotNull(source);
+
+			short[] was = source.getRecolorReplace();
+			short[] now = echo.getRecolorReplace();
+			assertEquals("an echo wears its source's palette, so the arrays are the same length",
+				was.length, now.length);
+
+			echoesChecked++;
+			for (int slot = 0; slot < was.length; slot++)
+			{
+				if (CitizenEcho.isFlesh(now[slot]) != CitizenEcho.isFlesh(was[slot]))
+				{
+					violations.add(describe(echo) + " wears " + now[slot] + " in the slot "
+						+ source.label() + " painted " + was[slot]);
+				}
+			}
+		}
+
+		assertTrue("colour(s) dealt across the flesh boundary: " + violations, violations.isEmpty());
+
+		// The sample guards. Both loops are "look for a counterexample", so an empty
+		// dataset would satisfy them having asked nothing.
+		assertTrue("the shipped palettes have to offer some deals to check: " + dealsChecked,
+			dealsChecked > 50);
+		assertEquals("and the whole shipped echo roster has to have been asked",
+			46, echoesChecked);
+	}
+
+	/**
+	 * <b>And the rule actually bites</b> — on the dataset that was photographed, in
+	 * the way the photograph shows.
+	 *
+	 * <p>A rule that refused nothing would satisfy the test above perfectly. So the
+	 * refusals are counted, and one of them is worked through by hand.
+	 *
+	 * <p>"Mary" in Draynor (region 12852) is the worked example, because she is not a
+	 * hypothetical and not even a near miss: <b>until 2026-08-30 her echo shipped, and
+	 * it wore the game's own face colour on its legs.</b> Her {@code find} names the
+	 * torso base ({@code 8741}), the legs base ({@code 25238}), the hair base
+	 * ({@code 6798}) and {@code 43072}, which is the base the kit's arm and hand models
+	 * carry on their cuffs. Her {@code replace} answers them with a grey, a dark brown,
+	 * a red-brown and {@link CitizenEcho#PLAYER_SKIN_BASE} — and that last one is on the
+	 * <i>arm</i> slot, where it means a bare forearm and is right.
+	 *
+	 * <p>Rotating by two moves it onto {@code 25238}. Two of her four colours are
+	 * flesh-class ({@code 5532} is a dark leather brown), and they are the two that swap
+	 * places, so the flesh-or-not rule saw a class-preserving rotation and allowed it.
+	 * The third class — the face colour as its own kind — is what refuses it now, and
+	 * refusing it is what takes her from one echo to none.
+	 *
+	 * <p>("Marta" in Falador used to stand here for the same purpose. She was repaletted
+	 * on 2026-08-30, because unlike Mary she was <i>ours</i>: the top-up authored her by
+	 * hand-rotating an upstream palette, which put {@code 4550} on her hair base at the
+	 * default density rather than only at {@code CROWDED}. Her wardrobe is now four
+	 * garment colours and she seeds echoes again, which is the right outcome and the
+	 * reason she is no longer an example of this rule.)
+	 */
+	@Test
+	public void theFleshRuleRefusesTheDealsThatProducedThePhotographs()
+	{
+		int refused = 0;
+		int citizensLeftWithNothing = 0;
+		EntityDefinition mary = null;
+
+		for (EntityDefinition citizen : shippedEntities())
+		{
+			if (!citizen.getType().isCitizen())
+			{
+				// Scenery never seeds an echo, so its rotations are not a cost.
+				continue;
+			}
+
+			short[] replace = citizen.getRecolorReplace();
+			if (replace.length < 2)
+			{
+				continue;
+			}
+
+			if ("Mary".equals(citizen.getName()))
+			{
+				mary = citizen;
+			}
+
+			int distinctRotations = distinctRotationCount(replace);
+			int allowed = CitizenEcho.distinctDeals(replace).length;
+			refused += distinctRotations - allowed;
+			if (distinctRotations > 0 && allowed == 0)
+			{
+				citizensLeftWithNothing++;
+			}
+		}
+
+		assertEquals("distinct re-deals the palette rule refuses across the dataset — "
+				+ "216 of the 342 the shipped citizen palettes admit",
+			216, refused);
+		assertEquals("citizens whose whole wardrobe is refused by it",
+			56, citizensLeftWithNothing);
+
+		assertNotNull("the worked example has to still be in the dataset", mary);
+		assertArray("Mary's authored find slots",
+			new short[]{8741, 25238, 6798, (short) 43072}, mary.getRecolorFind());
+		assertArray("and the palette she answers them with",
+			new short[]{322, 5532, 8099, 4550}, mary.getRecolorReplace());
+		assertTrue("4550 is the game's base skin tone and has to read as flesh",
+			CitizenEcho.isFlesh((short) 4550));
+		assertTrue("and so does the dark leather brown that swaps places with it — which "
+			+ "is why the flesh-or-not rule let this rotation through",
+			CitizenEcho.isFlesh((short) 5532));
+
+		// The rotation that shipped: 4550 off the arm slot and onto the legs base.
+		short[] wasShipped = CitizenEcho.redeal(mary.getRecolorReplace(), 2);
+		assertArray("the deal that produced the photograph",
+			new short[]{8099, 4550, 322, 5532}, wasShipped);
+		assertEquals("which paints the legs base", 25238, mary.getRecolorFind()[1] & 0xFFFF);
+
+		assertEquals("so no rotation of her palette survives, and she seeds nothing",
+			0, CitizenEcho.distinctDeals(mary.getRecolorReplace()).length);
+		assertTrue("and she seeds nothing", echoesOf(mary).isEmpty());
+	}
+
+	/**
+	 * The gamut itself, checked against the five colours it was derived from.
+	 *
+	 * <p>{@link CitizenEcho#isFlesh} says how the wedge was measured — 3,319
+	 * {@code find = 4550} recolours decoded out of the 1.12.36 cache. What can be
+	 * asserted inside this repository is the part of that reasoning the dataset
+	 * carries with it: the five base colours of the game's own player kit, which are
+	 * the {@code find} values the shipped records are authored against.
+	 */
+	@Test
+	public void theFleshGamutSeparatesTheGamesOwnSkinBaseFromItsGarmentBases()
+	{
+		assertTrue("4550, the skin base, is the colour the wedge is centred on",
+			CitizenEcho.isFlesh((short) 4550));
+		assertFalse("8741, the torso base, is the hue a tunic is dyed in",
+			CitizenEcho.isFlesh((short) 8741));
+		assertFalse("25238, the legs base, is green and nowhere near",
+			CitizenEcho.isFlesh((short) 25238));
+
+		// Two the palette cannot separate, both of which fall the safe way — see
+		// isFlesh. 4626 is the boots base and a dark leather boot really is the hue of
+		// a dark complexion; 6798 is the hair base and dark brown hair likewise. Both
+		// are therefore held still rather than dealt around. Neither costs anything in
+		// the shipped data — 4626 is a replace value four times and 6798 never — but
+		// the classification is what it is and is written down rather than special-cased.
+		assertTrue("the boots base falls inside the wedge", CitizenEcho.isFlesh((short) 4626));
+		assertTrue("and so does the hair base", CitizenEcho.isFlesh((short) 6798));
+
+		// The two excluded saturation rungs, at the wedge's own hue.
+		assertFalse("saturation 0 at hue 4 is grey, not tan",
+			CitizenEcho.isFlesh((short) ((4 << 10) | (0 << 7) | 70)));
+		assertFalse("saturation 7 at hue 4 is a costume orange",
+			CitizenEcho.isFlesh((short) ((4 << 10) | (7 << 7) | 70)));
+		assertTrue("but everything between them is in, at any lightness",
+			CitizenEcho.isFlesh((short) ((4 << 10) | (1 << 7) | 0))
+				&& CitizenEcho.isFlesh((short) ((4 << 10) | (6 << 7) | 127)));
+
+		// The hue edges.
+		assertFalse("hue 1 is red", CitizenEcho.isFlesh((short) ((1 << 10) | (3 << 7) | 70)));
+		assertTrue(CitizenEcho.isFlesh((short) ((2 << 10) | (3 << 7) | 70)));
+		assertTrue(CitizenEcho.isFlesh((short) ((7 << 10) | (3 << 7) | 70)));
+		assertFalse("hue 8 is where the torso base lives",
+			CitizenEcho.isFlesh((short) ((8 << 10) | (3 << 7) | 70)));
 	}
 
 	@Test
@@ -702,36 +1094,36 @@ public class CitizenEchoTest
 	/**
 	 * The headline claim, recomputed from the shipped files.
 	 *
-	 * <p>142 authored citizens and 184 echoes, i.e. 326 in total. The band is wide
-	 * on purpose — what it is guarding is "roughly twice as many", not an exact
-	 * figure — but the exact figures are asserted too, so a data change that moved
-	 * them says so instead of drifting.
+	 * <p>142 authored citizens and 46 echoes, i.e. 188 in total, 1.32×.
 	 *
-	 * <p><b>Why 184 and not 185.</b> 96 citizens have a palette rich enough to dress
-	 * an echo differently, and between them they ask for 185 echoes; one of those has
-	 * nowhere left in its region to stand that is
-	 * {@link CitizenEcho#MIN_SEPARATION_TILES} from everything else the plugin renders
-	 * there — the "Mysterious Old Man" in Varrock (region 12853) gets one echo instead
-	 * of two — so it is never derived at all. An earlier revision derived every one of
-	 * them by checking separation against one citizen's own lineage only, and 41 pairs
-	 * of rendered entities ended up closer than the minimum, three of them on the same
-	 * tile — see {@link #noTwoShippedRenderedEntitiesStandCloserThanTheMinimum}.
+	 * <p><b>This test used to assert a ratio in the band {@code [1.8, 2.4]}</b>, and
+	 * that band was the wrong shape of claim in two ways at once. It was a floor under
+	 * a number nobody should want a floor under — "at least 1.8× as many people as a
+	 * human placed" is a target the derivation can only hit by relaxing whatever is
+	 * stopping it — and it was global, so a city could be four-fifths made-up people
+	 * as long as the whole dataset averaged out. The flesh rule
+	 * ({@link CitizenEcho#isFlesh}) took the real figure to 1.51× and the band went
+	 * red, which is the band doing the only useful thing it ever did.
 	 *
-	 * <p><b>These figures moved on 2026-08-29</b>, when 33 citizens were authored into
-	 * Al Kharid, Catherby, Falador, Ardougne and Draynor. They read 109 / 63 / 121 / 230
-	 * before that. All 33 carry a re-dealable palette, so the seed count rose by 33 and
-	 * the echoes by 63: the new citizens ask for 63 echoes rather than 66 because three
-	 * of them ("Corliss", "Maud" and "Cuthbert") carry two recolour pairs, which admit
-	 * exactly one distinct re-deal between them. The one blocked echo is still the
-	 * Mysterious Old Man's, in a region this pass did not touch.
+	 * <p>What replaces it is a <b>ceiling, per city</b>: no city's rendered crowd may
+	 * be more than half derived. That is a claim about what a player standing in
+	 * Draynor actually sees, it cannot be satisfied by deriving more, and it is the
+	 * one the photographs were evidence against — "Draynor full of near-identical
+	 * figures doing nothing" is a statement about Draynor's own mix, not about a
+	 * dataset-wide average. Draynor, which is the city that was photographed, is also
+	 * the worst in the shipped data: 7 echoes against 10 authored, i.e. 41%. Two cities
+	 * — Ardougne and Lumbridge — are now 0%, which is worth knowing when the
+	 * keep-or-retire question about {@code CROWDED} is next argued.
 	 *
-	 * <p>The first revision of that pass shipped a thirty-fourth figure that seeded
-	 * nothing — "Brother Alfric", who copied the "Saradomin priest"'s kit and that
-	 * record's empty recolour arrays with it, and so was a pixel-for-pixel twin of a
-	 * citizen already in Varrock. He was re-authored as "Anselm" on the same uuid in
-	 * the review pass, wearing "Morten"'s kit with the palette actually re-dealt; the
-	 * seed count, the echo count and the uuid count each moved by his two echoes, and
-	 * {@link AuthoredRecordsTest} now holds the rule he was the only exception to.
+	 * <p>The floor that is kept is the honest one: {@code CROWDED} has to add
+	 * <i>something</i>, or it is a setting that does nothing.
+	 *
+	 * <p><b>Why 44 and not fewer.</b> Every echo the 24 seeds ask for finds somewhere
+	 * legal to stand. That was not true before the flesh rule — the "Mysterious Old
+	 * Man" in Varrock got one echo instead of two, because every tile near him was
+	 * within {@link CitizenEcho#MIN_SEPARATION_TILES} of somebody — and it is true now
+	 * for the dullest of reasons: there are fewer echoes competing for the same
+	 * ground. The placement rule is untouched.
 	 *
 	 * <p><b>Why the seed count is one short of the citizens that reach the palette
 	 * check with a usable wardrobe.</b> "Rufus" in Varrock square used to seed two
@@ -742,20 +1134,23 @@ public class CitizenEchoTest
 	 * ambient bodies at {@code CROWDED}, against a citizen who is no longer barefoot.
 	 */
 	@Test
-	public void theShippedRosterRoughlyDoublesUnderCrowded()
+	public void theShippedRosterIsHalfAgainAsBigUnderCrowded()
 	{
 		int citizens = 0;
+		Map<City, Integer> authoredPerCity = new EnumMap<>(City.class);
 		for (EntityDefinition entity : shippedEntities())
 		{
 			if (entity.getType().isCitizen())
 			{
 				citizens++;
+				authoredPerCity.merge(City.of(entity.getCityRegionId()), 1, Integer::sum);
 			}
 		}
 
 		int echoes = 0;
 		int fromBoxes = 0;
 		Set<UUID> seeds = new HashSet<>();
+		Map<City, Integer> echoesPerCity = new EnumMap<>(City.class);
 		for (EntityDefinition echo : shippedEchoes())
 		{
 			echoes++;
@@ -764,44 +1159,109 @@ public class CitizenEchoTest
 				fromBoxes++;
 			}
 			seeds.add(echo.getEchoSourceUuid());
+			echoesPerCity.merge(City.of(echo.getCityRegionId()), 1, Integer::sum);
 		}
 
 		assertEquals("the authored citizen roster", 142, citizens);
-		assertEquals("citizens that seeded at least one echo", 96, seeds.size());
-		assertEquals("echoes derived from them", 184, echoes);
-		assertEquals("of which this many stand inside an authored wander box", 61, fromBoxes);
+		assertEquals("citizens that seeded at least one echo", 24, seeds.size());
+		assertEquals("echoes derived from them", 46, echoes);
+		assertEquals("of which this many stand inside an authored wander box", 27, fromBoxes);
 		assertEquals("the rest stand on a derived offset the collision map has to vouch for",
-			123, echoes - fromBoxes);
+			19, echoes - fromBoxes);
 
-		// Stated as the two rosters rather than as `echoes >= 0`, which is what this
-		// line used to say: `echoes` is a counter that is only ever incremented, so the
-		// old form could not go red whatever the derivation did, and the message claimed
-		// a comparison the assertion was not making. Strict, because "the same roster
-		// twice" is a failure of this feature and not a degenerate pass of it.
+		// The floor, stated as the two rosters rather than as `echoes >= 0`, which is
+		// what this line used to say: `echoes` is a counter that is only ever
+		// incremented, so the old form could not go red whatever the derivation did.
 		int atFull = citizens;
 		int atCrowded = citizens + echoes;
 		assertTrue("CROWDED must never yield fewer citizens than FULL: " + atCrowded
 				+ " against " + atFull,
 			atCrowded > atFull);
-		assertTrue("and it must actually roughly double them: " + citizens + " + " + echoes,
-			echoes >= citizens);
 
-		double ratio = (citizens + echoes) / (double) citizens;
-		assertTrue("total/authored was " + String.format("%.3f", ratio) + ", expected roughly 2",
-			ratio >= 1.8 && ratio <= 2.4);
+		// The ceiling, per city, which is the claim that means something at 1.32×.
+		// Grouped by the region whose checkbox governs the entity — an echo answers to
+		// its source's city, not to the tile it stands on — so this is the mix a player
+		// who has that one city ticked would be standing in.
+		// A city for every entity counted, asserted where it can actually fail. This
+		// used to be `echoesPerCity.containsKey(null)`, which is dead twice over: an
+		// EnumMap returns false for a null key unconditionally, and `merge(null, ...)`
+		// thirty lines above would have thrown a NullPointerException before this line
+		// was reached. Counted in the same passes as the maps instead.
+		int cityless = 0;
+		for (EntityDefinition entity : shippedEntities())
+		{
+			if (entity.getType().isCitizen() && City.of(entity.getCityRegionId()) == null)
+			{
+				cityless++;
+			}
+		}
+		for (EntityDefinition echo : shippedEchoes())
+		{
+			if (City.of(echo.getCityRegionId()) == null)
+			{
+				cityless++;
+			}
+		}
+		assertEquals("every entity the mix is measured over has to belong to a city, or "
+			+ "the shares below are measured against nothing", 0, cityless);
+
+		String worst = "";
+		double worstShare = 0;
+		for (Map.Entry<City, Integer> city : echoesPerCity.entrySet())
+		{
+			int authored = authoredPerCity.getOrDefault(city.getKey(), 0);
+			int derived = city.getValue();
+			double share = derived / (double) (authored + derived);
+			if (share > worstShare)
+			{
+				worstShare = share;
+				worst = city.getKey() + ": " + derived + " derived against "
+					+ authored + " authored";
+			}
+		}
+
+		assertTrue("no city may be more than half made-up people; worst was " + worst
+				+ " = " + String.format("%.1f%%", worstShare * 100),
+			worstShare <= 0.5);
+
+		// Pinned as well as bounded, so that a data change which moved it says so
+		// instead of drifting quietly upwards inside the ceiling.
+		assertEquals("the worst city's derived share", 0.4444, worstShare, 0.0001);
+
+		// There used to be a `total/authored` assertion here pinning the ratio to four
+		// decimal places. It could not fail: `citizens` and `echoes` are both pinned
+		// literals a few lines up, so the ratio was arithmetic on two numbers this test
+		// had already asserted, and the only way to move it was to break one of them
+		// first. The ratio is prose — it belongs in CitizenEcho's javadoc, where it is —
+		// and a test that restates a figure it has just pinned is a test that looks like
+		// two guards and is one.
 	}
 
 	/**
-	 * Why the other 46 citizens seed nothing, gate by gate, and the fact that the
+	 * Why the other 118 citizens seed nothing, gate by gate, and the fact that the
 	 * gates partition the roster.
 	 *
-	 * <p>{@link #theShippedRosterRoughlyDoublesUnderCrowded()} pins the 96 that do
-	 * seed. The counts for the ones that do not are written into
-	 * {@link CitizenEcho}'s javadoc and into the comment beside each {@code return
-	 * NONE} — "36 of the 135 shipped citizens that reach this line land here" — and
-	 * nothing was checking them, so they went on saying 49 of 128 after the dataset
-	 * was cut to 109 citizens. Six numbers that have to sum to a seventh is the
-	 * cheapest possible guard, and this is it.
+	 * <p>{@link #theShippedRosterIsHalfAgainAsBigUnderCrowded()} pins the ones that do
+	 * seed; every other citizen in the roster lands at exactly one of the gates below.
+	 * The counts for them are written into {@link CitizenEcho}'s javadoc and into the
+	 * comment beside each {@code return NONE} — "22 of the 87 shipped citizens that
+	 * reach this line land here" and its siblings — and nothing was checking them, so
+	 * they went on saying 49 of 128 after the dataset was cut to 109 citizens. Numbers
+	 * that have to sum to a total is the cheapest possible guard, and this is it.
+	 *
+	 * <p>The number in the first line is the one the last assertion in this method
+	 * makes, and it is written that way because the previous version was not: it said
+	 * "the other 46" while the code below asserted 118, and survived a review because a
+	 * figure in a sentence has nothing holding it.
+	 *
+	 * <p><b>The last {@code return NONE} covers two different facts and they are split
+	 * here.</b> {@code distinctDeals} returns nothing both for a palette that replaces
+	 * every slot with the same colour (1 citizen that reaches it — every rotation is the
+	 * identity) and for one whose every rotation would carry a colour across the flesh
+	 * boundary (40).
+	 * Rolled into one number those would hide each other: the flesh rule could stop
+	 * working entirely and the total would still add up as long as the identity cases
+	 * absorbed the difference.
 	 *
 	 * <p>The order below is {@code echoesOfSource}'s own order, because the counts
 	 * are only meaningful in it: a cameo is refused before its palette is ever
@@ -813,9 +1273,11 @@ public class CitizenEchoTest
 	{
 		int cameos = 0;
 		int dressedFromAnNpc = 0;
+		int bodyIsDoingSomething = 0;
 		int reachThePaletteCheck = 0;
 		int tooFewPairs = 0;
 		int everyRedealIsTheSame = 0;
+		int everyRedealCrossesTheSkin = 0;
 		int seeds = 0;
 
 		for (EntityDefinition citizen : shippedEntities())
@@ -837,6 +1299,12 @@ public class CitizenEchoTest
 				continue;
 			}
 
+			if (!CitizenEcho.isAnOrdinaryStandingBody(citizen))
+			{
+				bodyIsDoingSomething++;
+				continue;
+			}
+
 			reachThePaletteCheck++;
 
 			if (citizen.getRecolorFind().length < 2 || citizen.getRecolorReplace().length < 2)
@@ -847,7 +1315,14 @@ public class CitizenEchoTest
 
 			if (CitizenEcho.distinctDeals(citizen.getRecolorReplace()).length == 0)
 			{
-				everyRedealIsTheSame++;
+				if (everyRotationIsTheIdentity(citizen.getRecolorReplace()))
+				{
+					everyRedealIsTheSame++;
+				}
+				else
+				{
+					everyRedealCrossesTheSkin++;
+				}
 				continue;
 			}
 
@@ -857,19 +1332,24 @@ public class CitizenEchoTest
 		assertEquals("cameos, refused before anything else is asked", 6, cameos);
 		assertEquals("dressed from a composition, so there is no palette to re-deal",
 			1, dressedFromAnNpc);
-		assertEquals("citizens that get as far as the palette check", 135, reachThePaletteCheck);
-		assertEquals("of those, the ones with no second slot to deal into", 36, tooFewPairs);
+		assertEquals("sitting on something, miming a tool, welded to a bench, scaled or "
+				+ "nudged — a body an anonymous passer-by cannot have", 48, bodyIsDoingSomething);
+		assertEquals("citizens that get as far as the palette check", 87, reachThePaletteCheck);
+		assertEquals("of those, the ones with no second slot to deal into", 22, tooFewPairs);
 		assertEquals("and the ones whose every re-deal is the deal it started with",
-			3, everyRedealIsTheSame);
-		assertEquals("leaving the seeds", 96, seeds);
+			1, everyRedealIsTheSame);
+		assertEquals("and the ones whose every re-deal would move a colour across the "
+				+ "flesh boundary", 40, everyRedealCrossesTheSkin);
+		assertEquals("leaving the seeds", 24, seeds);
 
-		assertEquals("the palette check sees everything the two gates above it let through",
-			reachThePaletteCheck, tooFewPairs + everyRedealIsTheSame + seeds);
+		assertEquals("the palette check sees everything the three gates above it let through",
+			reachThePaletteCheck,
+			tooFewPairs + everyRedealIsTheSame + everyRedealCrossesTheSkin + seeds);
 		assertEquals("and the gates between them account for every citizen in the dataset "
 				+ "exactly once — a set of counts that does not add up is the drift this "
 				+ "test exists to catch",
-			142, cameos + dressedFromAnNpc + reachThePaletteCheck);
-		assertEquals("citizens that seed nothing", 36 + 3 + 6 + 1, 142 - seeds);
+			142, cameos + dressedFromAnNpc + bodyIsDoingSomething + reachThePaletteCheck);
+		assertEquals("citizens that seed nothing", 22 + 1 + 40 + 48 + 6 + 1, 142 - seeds);
 	}
 
 	/**
@@ -940,6 +1420,7 @@ public class CitizenEchoTest
 			{
 				if (source.getWanderBox() == null || source.isCameo()
 					|| source.getNpcAppearanceId() != 0
+					|| !CitizenEcho.isAnOrdinaryStandingBody(source)
 					|| source.getRecolorFind().length < 2
 					|| source.getRecolorReplace().length < 2)
 				{
@@ -962,7 +1443,7 @@ public class CitizenEchoTest
 		}
 
 		assertEquals("wanderers whose own box could not supply every echo they asked for: "
-				+ where, 8, toppedUpFromTheRing);
+				+ where, 2, toppedUpFromTheRing);
 
 		// The same fact counted in echoes rather than in sources, because CitizenEcho's
 		// "What that costs" paragraph quotes it in echoes and said "four" for as long as
@@ -970,11 +1451,11 @@ public class CitizenEchoTest
 		// own box contributes two to this and one to the count above.
 		assertEquals("echoes whose source carries a box but which stand on a ring offset "
 				+ "instead, because no box tile was far enough from everything else",
-			13, echoesPushedOffABox);
+			3, echoesPushedOffABox);
 	}
 
 	/**
-	 * Every uuid in play — 142 authored citizens, 42 scenery records and 184 echoes —
+	 * Every uuid in play — 142 authored citizens, 42 scenery records and 46 echoes —
 	 * has to be distinct.
 	 *
 	 * <p>A collision would mean two entities the user cannot tell apart in the
@@ -1005,7 +1486,7 @@ public class CitizenEchoTest
 		}
 
 		assertTrue("uuid collision(s): " + clashes, clashes.isEmpty());
-		assertEquals("184 authored entities plus 184 echoes", 368, seen.size());
+		assertEquals("184 authored entities plus 46 echoes", 230, seen.size());
 	}
 
 	/**
@@ -1096,7 +1577,7 @@ public class CitizenEchoTest
 	/**
 	 * Every shipped echo wears its source's own colours, re-dealt.
 	 *
-	 * <p>The same three claims as the fixture test, over the 184 real echoes. What
+	 * <p>The same three claims as the fixture test, over the 44 real echoes. What
 	 * this adds is coverage of the dataset's awkward palettes — repeated colours,
 	 * eleven-pair wardrobes — where a rotation can quietly come out as the identity.
 	 */
@@ -1168,7 +1649,7 @@ public class CitizenEchoTest
 	 * to the checkbox that governs the citizen they are copies of.
 	 *
 	 * <p><b>Those four are gone, and the shipped data has no replacement for them.</b>
-	 * The nine-city cut on 2026-08-24 removed both Piscatoris and Camelot, and all 184
+	 * The nine-city cut on 2026-08-24 removed both Piscatoris and Camelot, and all 44
 	 * echoes the surviving 27 regions seed now stand in a region their own source's
 	 * city claims. So the stray count below is asserted at zero and is no longer the
 	 * interesting assertion in this method. The 33 citizens added on 2026-08-29 did not
@@ -1176,7 +1657,7 @@ public class CitizenEchoTest
 	 * their echoes cannot reach a border.
 	 *
 	 * <p>What is still asserted over the real files, and is the claim that actually
-	 * matters, is the rule itself: <b>every one of the 184 echoes takes its governing
+	 * matters, is the rule itself: <b>every one of the 46 echoes takes its governing
 	 * region from its source's tile, not from its own.</b> That is checked echo by
 	 * echo below and cannot go green by there being nothing to check. The two
 	 * behavioural halves the strays used to demonstrate are checked directly instead —
@@ -1218,7 +1699,7 @@ public class CitizenEchoTest
 
 		// The sample guard, in the same spirit as the rest of this file: the rule above
 		// is inside the loop, so an empty roster would pass it having asked nothing.
-		assertEquals("the whole shipped echo roster has to have been asked", 184, checked);
+		assertEquals("the whole shipped echo roster has to have been asked", 46, checked);
 
 		assertEquals("echoes standing in a region their source's city does not claim — the "
 				+ "shipped data no longer contains this case at all: " + strayRegions,
@@ -1263,13 +1744,95 @@ public class CitizenEchoTest
 			checked++;
 		}
 
-		assertEquals("the shipped echo roster", 184, checked);
+		assertEquals("the shipped echo roster", 46, checked);
 	}
 
 	private static String describe(EntityDefinition entity)
 	{
 		return (entity.isEcho() ? "echo of " + entity.getEchoSourceUuid() + " " : "authored ")
 			+ entity.label();
+	}
+
+	/**
+	 * Every echo the named shipped citizen seeds, derived with its whole region file
+	 * around it — which is the only way the answer means anything, since placement is
+	 * judged against everybody else in the file.
+	 */
+	private static List<EntityDefinition> echoesOfShipped(String name)
+	{
+		List<EntityDefinition> out = new ArrayList<>();
+		boolean found = false;
+
+		for (List<EntityDefinition> roster : shippedRosters().values())
+		{
+			UUID uuid = null;
+			for (EntityDefinition entity : roster)
+			{
+				if (name.equals(entity.getName()))
+				{
+					uuid = entity.getUuid();
+					found = true;
+				}
+			}
+
+			if (uuid == null)
+			{
+				continue;
+			}
+
+			for (EntityDefinition echo : CitizenEcho.echoesOfRegion(roster))
+			{
+				if (uuid.equals(echo.getEchoSourceUuid()))
+				{
+					out.add(echo);
+				}
+			}
+		}
+
+		assertTrue("'" + name + "' has to still be in the dataset, or this proves nothing",
+			found);
+		return out;
+	}
+
+	/**
+	 * How many <i>distinct</i> non-identity rotations a palette has, ignoring the
+	 * flesh rule entirely.
+	 *
+	 * <p>Written out here rather than asked of {@link CitizenEcho} on purpose: it is
+	 * the "before" figure the flesh rule is measured against, so computing it with the
+	 * code under test would make the difference between the two numbers unfalsifiable.
+	 * The arithmetic is small enough to state twice.
+	 */
+	private static int distinctRotationCount(short[] replace)
+	{
+		Set<List<Short>> seen = new HashSet<>();
+		seen.add(boxed(replace));
+
+		int distinct = 0;
+		for (int k = 1; k < replace.length; k++)
+		{
+			if (seen.add(boxed(CitizenEcho.redeal(replace, k))))
+			{
+				distinct++;
+			}
+		}
+		return distinct;
+	}
+
+	/** @return true if every rotation of this palette comes out as the palette itself */
+	private static boolean everyRotationIsTheIdentity(short[] replace)
+	{
+		return distinctRotationCount(replace) == 0;
+	}
+
+	private static List<Short> boxed(short[] palette)
+	{
+		List<Short> out = new ArrayList<>(palette.length);
+		for (short colour : palette)
+		{
+			out.add(colour);
+		}
+		return out;
 	}
 
 	private static void assertArray(short[] expected, short[] actual)

@@ -255,6 +255,7 @@ public class AuthoredRecordsTest
 		List<String> noDonor = new ArrayList<>();
 		List<String> notReDealt = new ArrayList<>();
 		List<String> donorIsNotACitizen = new ArrayList<>();
+		TreeSet<String> repaletted = new TreeSet<>();
 		int checked = 0;
 
 		for (Record ours : all)
@@ -290,13 +291,25 @@ public class AuthoredRecordsTest
 			}
 
 			Record reDealtFrom = null;
+			int lifted = 0;
 			for (Record donor : donors)
 			{
-				if (isADistinctReDealOf(ours.recolorReplace, donor.recolorReplace))
+				int slots = liftedSlotsOfAReDeal(
+					ours.recolorReplace, donor.recolorReplace, ours.recolorFind);
+				if (slots >= 0)
 				{
 					reDealtFrom = donor;
-					break;
+					lifted = slots;
+					if (slots == 0)
+					{
+						break;
+					}
 				}
+			}
+
+			if (reDealtFrom != null && lifted > 0)
+			{
+				repaletted.add(ours.name);
 			}
 
 			if (reDealtFrom == null)
@@ -331,11 +344,87 @@ public class AuthoredRecordsTest
 		assertTrue("authored kits copied from scenery: " + donorIsNotACitizen,
 			donorIsNotACitizen.isEmpty());
 
+		// The exception is bounded and named, because an unbounded one would let the
+		// rule above be satisfied by any palette at all: "a re-deal with some slots
+		// changed" is not a claim. These are the six the 2026-08-30 repalette lifted the
+		// face colour off; every other authored record is a rotation and nothing else.
+		assertEquals("authored records whose donor's palette had to be repaletted "
+				+ "because no rotation of it could hold the face colour: " + repaletted,
+			new TreeSet<>(Arrays.asList(
+				"Aldous", "Brother Edwy", "Hesper", "Marta", "Sela", "Wynn")),
+			repaletted);
+
 		// The sample guard this file's siblings all carry: the three rules above are
 		// inside the loop, so a scan that found no marked records would pass having
 		// asked nothing at all.
 		assertEquals("every authored record has to have been put through the rule",
 			AUTHORED, checked);
+	}
+
+	/**
+	 * <b>The six records a rotation could not produce, and why no rotation could.</b>
+	 *
+	 * <p>The rule above allows one exception, and this test is the evidence for it: for
+	 * each of the six, <i>every</i> rotation of the donor's palette lands
+	 * {@link CitizenEcho#PLAYER_SKIN_BASE} — the colour the client paints a player's
+	 * face — on a {@code find} slot the donor did not aim at skin. That is not a
+	 * property of which rotation was picked; it is a property of the donor. Each of
+	 * these six donors carries the face colour on a slot aimed at an arm, a hand or a
+	 * head, and <b>none of them has a {@code find = 4550} slot at all</b>, so there is
+	 * nowhere in the array for the face colour to stay. Rotating such a palette moves
+	 * the face somewhere by construction.
+	 *
+	 * <p>Asserting this is what stops the exception being a licence to hand-author a
+	 * palette: if somebody later repalettes a record whose donor <i>could</i> have been
+	 * rotated safely, this goes red.
+	 */
+	@Test
+	public void noRotationOfThoseSixDonorsCouldHaveHeldTheFaceColourInPlace()
+	{
+		List<Record> all = shippedRecords();
+		int checked = 0;
+
+		for (Record ours : all)
+		{
+			if (!ours.isOurs())
+			{
+				continue;
+			}
+
+			for (Record donor : all)
+			{
+				if (donor.isOurs()
+					|| !Arrays.equals(donor.modelIds, ours.modelIds)
+					|| !Arrays.equals(donor.recolorFind, ours.recolorFind))
+				{
+					continue;
+				}
+
+				if (liftedSlotsOfAReDeal(ours.recolorReplace, donor.recolorReplace,
+					ours.recolorFind) <= 0)
+				{
+					continue;
+				}
+
+				checked++;
+				short[] theirs = shorts(donor.recolorReplace);
+				for (int deal = 1; deal < theirs.length; deal++)
+				{
+					short[] dealt = CitizenEcho.redeal(theirs, deal);
+					if (Arrays.equals(dealt, theirs))
+					{
+						continue;
+					}
+
+					assertTrue(ours.describe() + " could have been rotation " + deal
+							+ " of " + donor.describe() + " without touching a colour, so "
+							+ "repaletting it was not forced: " + Arrays.toString(dealt),
+						landsTheFaceColourOnANonSkinSlot(dealt, ours.recolorFind));
+				}
+			}
+		}
+
+		assertEquals("repaletted records the impossibility was proved for", 6, checked);
 	}
 
 	/**
@@ -409,10 +498,61 @@ public class AuthoredRecordsTest
 	}
 
 	/**
-	 * @return whether {@code candidate} is {@code donor}'s palette dealt round by one
-	 * of the rotations {@link CitizenEcho#distinctDeals} would offer — which excludes
-	 * the identity, and excludes a rotation that lands back on the palette it started
-	 * from because every colour in it is the same
+	 * @return whether {@code candidate} is {@code donor}'s palette dealt round by a
+	 * rotation that actually changes it — which excludes the identity, and excludes a
+	 * rotation that lands back on the palette it started from because every colour in
+	 * it is the same
+	 *
+	 * <p><b>This used to ask {@link CitizenEcho#distinctDeals} for the rotations, and
+	 * it deliberately does not any more.</b> Sharing that method made the authoring
+	 * rule and the derivation rule the same rule by construction, which read as a
+	 * strength right up until the derivation acquired a rule the authoring does not
+	 * have: {@code distinctDeals} now refuses any rotation that would move a colour
+	 * across the flesh boundary (see
+	 * {@link CitizenEcho#keepsEachColourOnItsOwnSideOfTheSkin}), and 33 of the
+	 * authored top-up records were hand-rotated by exactly such a rotation, so every
+	 * one of them failed this test the moment the flesh rule landed.
+	 *
+	 * <p>They are not twins of their donors, which is the only thing this test claims,
+	 * so the answer is to state the claim in its own terms rather than to borrow one
+	 * that has grown a second meaning. The rotation is still {@link CitizenEcho#redeal}
+	 * — the same operation, on the same arrays — and "distinct" is still the same
+	 * exclusion. What is dropped is the flesh rule, which is a rule about <b>what this
+	 * plugin may derive</b> and not about what a human may author: a Demon Butler with
+	 * a red face and a shrouded figure with a white one are content decisions, and no
+	 * test gets a vote on them.
+	 *
+	 * <p><b>That said, this is a finding and not a formality.</b> The hand-rotated
+	 * palettes cross the boundary for the same reason a derived one would, and some of
+	 * them therefore land a garment colour on a face, or a skin tone on a garment, on a
+	 * citizen who ships at every density rather than only at {@code CROWDED}.
+	 * <b>24 of the 33</b> are rotations the flesh rule would refuse — not all 33, which
+	 * is what this paragraph claimed until the 2026-08-30 pass. The other nine happen to
+	 * be class-preserving rotations and would have passed the coupled form unchanged,
+	 * which matters because <b>"Wynn" in Catherby was one of the nine</b> and was the
+	 * worst record in the set: he wore {@link CitizenEcho#PLAYER_SKIN_BASE} on
+	 * {@code find = 25238}, the legs base, so his trousers were painted the exact colour
+	 * the game paints faces. Neither form of this assertion could ever have caught him,
+	 * because both ask whether a palette <i>is</i> a rotation and he is one.
+	 *
+	 * <p>The photographs the top-up shipped are worth naming rather than summarising.
+	 * The Varrock "Gardener" is authored {@code [3507, 16026, 37394, 5572]} against the
+	 * {@code find} slots {@code [4550, 8741, 25238, 123]} — a tan face, a dark
+	 * yellow-green tunic, dark blue legs. "Tobias" in Falador is that palette rotated by
+	 * two: a <b>very dark blue face</b>, and mid tan on <i>both</i> the torso and the
+	 * legs. "Marlow" in Draynor is rotated by one: a <b>dark yellow-green face</b>, a
+	 * dark blue torso and mid tan legs. So it is not only that one wears the green on
+	 * his face and the other the blue — each of them also wears a complexion where a
+	 * garment goes, which is the half of the fault the reader is actually looking at in
+	 * the photograph.
+	 *
+	 * <p>Six records were worse still and were repaletted on 2026-08-30 — see
+	 * {@link BodySlotLintTest} for the rule that now holds them and
+	 * {@link #noRotationOfThoseSixDonorsCouldHaveHeldTheFaceColourInPlace} for why a
+	 * different rotation was not available. Tobias and Marlow are not among them: they
+	 * wear flesh-<i>class</i> tans rather than the face colour itself, so no categorical
+	 * rule reaches them and repaletting them would be a taste judgement. They are
+	 * recorded here and in {@code NOTICE} rather than quietly absorbed.
 	 */
 	private static boolean isADistinctReDealOf(int[] candidate, int[] donor)
 	{
@@ -423,9 +563,88 @@ public class AuthoredRecordsTest
 
 		short[] mine = shorts(candidate);
 		short[] theirs = shorts(donor);
-		for (int deal : CitizenEcho.distinctDeals(theirs))
+		for (int deal = 1; deal < theirs.length; deal++)
 		{
-			if (Arrays.equals(CitizenEcho.redeal(theirs, deal), mine))
+			short[] dealt = CitizenEcho.redeal(theirs, deal);
+			if (!Arrays.equals(dealt, theirs) && Arrays.equals(dealt, mine))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * How much of {@code candidate} is not simply {@code donor}'s palette dealt round.
+	 *
+	 * @return {@code 0} if it is a distinct rotation and nothing else; a positive count
+	 * if it is a rotation with that many slots repaletted, every one of which is a slot
+	 * where the rotation would have landed {@link CitizenEcho#PLAYER_SKIN_BASE} on a
+	 * {@code find} the donor did not aim at skin; {@code -1} if it is neither
+	 *
+	 * <p>The exception is deliberately narrow. Any slot may not be changed for any
+	 * reason — only a slot the face colour would otherwise have landed on, and only to
+	 * something that is not the face colour. That keeps "a re-deal" a claim with content
+	 * rather than a description of every possible array.
+	 */
+	private static int liftedSlotsOfAReDeal(int[] candidate, int[] donor, int[] find)
+	{
+		if (candidate.length != donor.length || donor.length < 2 || find.length != donor.length)
+		{
+			return -1;
+		}
+
+		short[] mine = shorts(candidate);
+		short[] theirs = shorts(donor);
+		int best = -1;
+
+		for (int deal = 1; deal < theirs.length; deal++)
+		{
+			short[] dealt = CitizenEcho.redeal(theirs, deal);
+			if (Arrays.equals(dealt, theirs) || Arrays.equals(mine, theirs))
+			{
+				// The identity rotation, or a candidate that is its donor's twin.
+				continue;
+			}
+
+			int lifted = 0;
+			boolean usable = true;
+			for (int i = 0; i < dealt.length; i++)
+			{
+				if (dealt[i] == mine[i])
+				{
+					continue;
+				}
+
+				if ((dealt[i] & 0xFFFF) != CitizenEcho.PLAYER_SKIN_BASE
+					|| (find[i] & 0xFFFF) == CitizenEcho.PLAYER_SKIN_BASE
+					|| (mine[i] & 0xFFFF) == CitizenEcho.PLAYER_SKIN_BASE)
+				{
+					usable = false;
+					break;
+				}
+				lifted++;
+			}
+
+			if (usable && (best < 0 || lifted < best))
+			{
+				best = lifted;
+			}
+		}
+
+		return best;
+	}
+
+	/**
+	 * @return whether this dealt palette puts the game's own face colour on a
+	 * {@code find} slot the author did not aim at skin
+	 */
+	private static boolean landsTheFaceColourOnANonSkinSlot(short[] dealt, int[] find)
+	{
+		for (int i = 0; i < dealt.length; i++)
+		{
+			if ((dealt[i] & 0xFFFF) == CitizenEcho.PLAYER_SKIN_BASE
+				&& (find[i] & 0xFFFF) != CitizenEcho.PLAYER_SKIN_BASE)
 			{
 				return true;
 			}

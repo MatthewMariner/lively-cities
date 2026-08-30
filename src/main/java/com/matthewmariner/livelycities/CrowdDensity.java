@@ -45,9 +45,17 @@ package com.matthewmariner.livelycities;
 public enum CrowdDensity
 {
 	/**
-	 * Everything {@link #FULL} shows, plus the procedurally-derived echoes —
-	 * roughly twice as many citizens. Opt-in, and the only level that shows an
-	 * entity the dataset does not contain.
+	 * Everything {@link #FULL} shows, plus the procedurally-derived echoes. Opt-in, and
+	 * the only level that shows an entity the dataset does not contain.
+	 *
+	 * <p><b>How many more is not a fixed proportion and this javadoc used to say it
+	 * was.</b> It read "roughly twice as many citizens", which was the original request
+	 * and stopped being true when {@link CitizenEcho}'s flesh and body rules landed; the
+	 * user-facing description on {@code LivelyCitiesConfig.crowdDensity} was corrected
+	 * and this was not. Only a citizen whose own colours can be re-dealt honestly seeds
+	 * anything, so the figure is a property of the dataset rather than of this enum —
+	 * {@link CitizenEcho}'s javadoc carries it, and {@code CitizenEchoTest} recomputes
+	 * it from the shipped files.
 	 *
 	 * <p>Listed first so the dropdown reads densest-to-sparsest. It is a strict
 	 * superset of {@link #FULL} for the same reason every other level nests: the
