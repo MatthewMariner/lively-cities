@@ -84,6 +84,88 @@
                 16026
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Rowan",
+            "examineText": "Two hundred and eleven, and she has not finished the row.",
+            "remarks": [
+                "Two hundred and eleven."
+            ],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20103-30b2-475a-b324-aec09ac15147",
+            "regionId": 12083,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3056,
+                "y": 3294,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18554,
+                483,
+                3476,
+                353,
+                14395,
+                14395,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                6798,
+                43072
+            ],
+            "modelRecolorReplace": [
+                107,
+                90,
+                322,
+                8472
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Berengar",
+            "examineText": "He disputes the count and has not offered a better one.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20104-90f8-4b66-8fbc-f619815bd6d3",
+            "regionId": 12083,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3061,
+                "y": 3289,
+                "plane": 0
+            },
+            "modelIds": [
+                27154,
+                176,
+                247,
+                185,
+                265,
+                308,
+                5434,
+                5430,
+                5433,
+                317
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                7952,
+                4550
+            ],
+            "modelRecolorReplace": [
+                107,
+                43818,
+                61347,
+                4564
+            ],
+            "idleAnimation": "HumanSmugIdle"
         }
     ],
     "sceneryRoster": []

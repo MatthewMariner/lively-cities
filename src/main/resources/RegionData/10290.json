@@ -120,6 +120,245 @@
                 10349
             ],
             "idleAnimation": "Think"
+        },
+        {
+            "name": "Aurele",
+            "examineText": "Here about the bell, and has been all week.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20048-2d93-4863-8fa5-8d3eb7486973",
+            "regionId": 10290,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2600,
+                "y": 3215,
+                "plane": 0
+            },
+            "modelIds": [
+                223,
+                26630,
+                246,
+                299,
+                26619,
+                176,
+                260,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741
+            ],
+            "modelRecolorReplace": [
+                1950,
+                1965
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Gisele",
+            "examineText": "She brought the bread and is waiting to be thanked.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20049-f2e2-4199-9111-cdb0331424c6",
+            "regionId": 10290,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2592,
+                "y": 3213,
+                "plane": 0
+            },
+            "modelIds": [
+                393,
+                18914,
+                3848,
+                353,
+                14397,
+                14395,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                5532,
+                4550,
+                8741
+            ],
+            "modelRecolorReplace": [
+                1962,
+                10508,
+                4645,
+                1977
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Rennard",
+            "examineText": "Copying badly, and slowly, and in the wrong ink.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20050-bfc5-4413-af55-7d5a5a89cb13",
+            "regionId": 10290,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2597,
+                "y": 3210,
+                "plane": 0
+            },
+            "modelIds": [
+                9452,
+                9619,
+                246,
+                9622,
+                27154,
+                176,
+                4226,
+                4218
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                6798,
+                43072,
+                8741,
+                25238,
+                6587,
+                7281
+            ],
+            "modelRecolorReplace": [
+                8481,
+                5400,
+                1955,
+                1940,
+                7187,
+                10349
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Blaise",
+            "examineText": "He has been shown the door twice and found his way back.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20051-d6ad-4d45-b8af-4d1195b8b134",
+            "regionId": 10290,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2601,
+                "y": 3212,
+                "plane": 0
+            },
+            "modelIds": [
+                230,
+                246,
+                28515,
+                26619,
+                176,
+                256
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798
+            ],
+            "modelRecolorReplace": [
+                1950,
+                1965,
+                127
+            ],
+            "idleAnimation": "MageReady"
+        },
+        {
+            "name": "Odile",
+            "examineText": "Reading the notice on the gate, which has not changed.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20052-962b-4e08-8b91-8f8e3bce286b",
+            "regionId": 10290,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2593,
+                "y": 3219,
+                "plane": 0
+            },
+            "modelIds": [
+                378,
+                18914,
+                479,
+                3848,
+                433,
+                11357,
+                19950
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798,
+                6032,
+                5276,
+                5400
+            ],
+            "modelRecolorReplace": [
+                99,
+                1965,
+                6817,
+                10308,
+                10279,
+                61
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Thibault",
+            "examineText": "Walking the cloister because he was told to sit still.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2602,
+                "y": 3214,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2606,
+                "y": 3218,
+                "plane": 0
+            },
+            "uuid": "add20053-cc20-48bc-93d7-9e07c5471d58",
+            "regionId": 10290,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2604,
+                "y": 3216,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                247,
+                302,
+                27139,
+                179,
+                28285,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                6798,
+                8741
+            ],
+            "modelRecolorReplace": [
+                1962,
+                7236,
+                1977
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

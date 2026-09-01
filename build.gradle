@@ -13,7 +13,18 @@ repositories {
 	mavenCentral()
 }
 
-def runeLiteVersion = 'latest.release'
+// Pinned rather than 'latest.release' so a local build is reproducible and so the
+// version this project's docs quote (README, docs/SUBMISSION.md) is the version
+// actually compiled and tested against, rather than whatever the hub happened to
+// resolve on the day somebody last ran a build. Bump deliberately after an OSRS
+// update, the same way the README's "After an OSRS update" runbook already asks:
+// run ./gradlew test, then ./run-windows.sh --audit, then update the docs together
+// with this line. The Plugin Hub's own packager substitutes its own build.gradle
+// for `build=standard` submissions and always builds against its own resolved
+// client version regardless of what this file says — see
+// docs/SUBMISSION.md#verifying-the-hub-build — so this pin affects local dev and
+// test builds only, never what actually ships.
+def runeLiteVersion = '1.12.37'
 def pluginMainClass = 'com.matthewmariner.livelycities.LivelyCitiesPluginTest'
 
 dependencies {
@@ -52,6 +63,9 @@ tasks.named('test') {
 	//
 	//   NOTICE                     AuthoredRecordsTest
 	//   docs/CITY-TOP-UP-CHECK.md  CityTopUpCheckTest
+	//   docs/CITY-LIVERY-CHECK.md  CityLiveryCheckTest
+	//   README.md                  RegionDataLoaderTest
+	//   docs/SUBMISSION.md         RegionDataLoaderTest
 	//
 	// A test that reads a file the task does not declare is a test that does not
 	// run when that file changes, which is the one moment it had a job to do.
@@ -60,6 +74,15 @@ tasks.named('test') {
 		.withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.file(rootProject.file('docs/CITY-TOP-UP-CHECK.md'))
 		.withPropertyName('cityTopUpCheck')
+		.withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.file(rootProject.file('docs/CITY-LIVERY-CHECK.md'))
+		.withPropertyName('cityLiveryCheck')
+		.withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.file(rootProject.file('README.md'))
+		.withPropertyName('readme')
+		.withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.file(rootProject.file('docs/SUBMISSION.md'))
+		.withPropertyName('submission')
 		.withPathSensitivity(PathSensitivity.RELATIVE)
 }
 

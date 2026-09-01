@@ -250,7 +250,7 @@ public class CitizenEchoTest
 			}
 		}
 
-		assertEquals("the citizen roster", 142, citizens);
+		assertEquals("the citizen roster", 269, citizens);
 		assertEquals("citizens whose body is doing something", 48, refusedCount);
 	}
 
@@ -421,10 +421,10 @@ public class CitizenEchoTest
 		}
 
 		assertEquals("distinct re-deals the palette rule refuses across the dataset — "
-				+ "212 of the 343 the shipped citizen palettes admit",
-			212, refused);
+				+ "448 of the 847 the shipped citizen palettes admit",
+			448, refused);
 		assertEquals("citizens whose whole wardrobe is refused by it",
-			53, citizensLeftWithNothing);
+			105, citizensLeftWithNothing);
 
 		assertNotNull("the worked example has to still be in the dataset", mary);
 		assertArray("Mary's authored find slots",
@@ -534,7 +534,7 @@ public class CitizenEchoTest
 		// The sample guards. Both loops look for a counterexample, so a dataset with no
 		// legs slots left in it would satisfy them having asked nothing.
 		assertTrue("deals to check: " + dealsChecked, dealsChecked > 50);
-		assertEquals("legs slots across every surviving deal", 82, legsSlotsChecked);
+		assertEquals("legs slots across every surviving deal", 350, legsSlotsChecked);
 		assertEquals("and the whole shipped echo roster has to have been asked",
 			51, echoesChecked);
 	}
@@ -1326,7 +1326,7 @@ public class CitizenEchoTest
 			echoesPerCity.merge(City.of(echo.getCityRegionId()), 1, Integer::sum);
 		}
 
-		assertEquals("the authored citizen roster", 142, citizens);
+		assertEquals("the authored citizen roster", 269, citizens);
 		assertEquals("citizens that seeded at least one echo", 28, seeds.size());
 		assertEquals("echoes derived from them", 51, echoes);
 		assertEquals("of which this many stand inside an authored wander box", 29, fromBoxes);
@@ -1390,7 +1390,7 @@ public class CitizenEchoTest
 
 		// Pinned as well as bounded, so that a data change which moved it says so
 		// instead of drifting quietly upwards inside the ceiling.
-		assertEquals("the worst city's derived share", 0.4737, worstShare, 0.0001);
+		assertEquals("the worst city's derived share", 0.2727, worstShare, 0.0001);
 
 		// There used to be a `total/authored` assertion here pinning the ratio to four
 		// decimal places. It could not fail: `citizens` and `echoes` are both pinned
@@ -1437,6 +1437,7 @@ public class CitizenEchoTest
 	{
 		int cameos = 0;
 		int dressedFromAnNpc = 0;
+		int refusedByTheirOwnRecord = 0;
 		int bodyIsDoingSomething = 0;
 		int reachThePaletteCheck = 0;
 		int tooFewPairs = 0;
@@ -1454,6 +1455,12 @@ public class CitizenEchoTest
 			if (citizen.isCameo())
 			{
 				cameos++;
+				continue;
+			}
+
+			if (citizen.isNoEcho())
+			{
+				refusedByTheirOwnRecord++;
 				continue;
 			}
 
@@ -1496,6 +1503,9 @@ public class CitizenEchoTest
 		assertEquals("cameos, refused before anything else is asked", 6, cameos);
 		assertEquals("dressed from a composition, so there is no palette to re-deal",
 			1, dressedFromAnNpc);
+		assertEquals("records that refuse the derivation outright, which is the 127 "
+				+ "liveried townsfolk of 2026-09-01 and nothing else — see "
+				+ "EntityRecord.noEcho", 127, refusedByTheirOwnRecord);
 		assertEquals("sitting on something, miming a tool, welded to a bench, scaled or "
 				+ "nudged — a body an anonymous passer-by cannot have", 48, bodyIsDoingSomething);
 		assertEquals("citizens that get as far as the palette check", 87, reachThePaletteCheck);
@@ -1512,8 +1522,9 @@ public class CitizenEchoTest
 		assertEquals("and the gates between them account for every citizen in the dataset "
 				+ "exactly once — a set of counts that does not add up is the drift this "
 				+ "test exists to catch",
-			142, cameos + dressedFromAnNpc + bodyIsDoingSomething + reachThePaletteCheck);
-		assertEquals("citizens that seed nothing", 22 + 1 + 36 + 48 + 6 + 1, 142 - seeds);
+			269, cameos + dressedFromAnNpc + refusedByTheirOwnRecord + bodyIsDoingSomething
+				+ reachThePaletteCheck);
+		assertEquals("citizens that seed nothing", 22 + 1 + 36 + 48 + 6 + 1 + 127, 269 - seeds);
 	}
 
 	/**
@@ -1546,10 +1557,10 @@ public class CitizenEchoTest
 			}
 		}
 
-		assertEquals("the authored citizen roster", 142, citizens);
+		assertEquals("the authored citizen roster", 269, citizens);
 		assertEquals("citizens with no authored box, for whom the ring is the only source "
-				+ "of candidate ground", 91, withNoBox);
-		assertEquals("the rest carry one", 51, citizens - withNoBox);
+				+ "of candidate ground", 206, withNoBox);
+		assertEquals("the rest carry one", 63, citizens - withNoBox);
 
 		int toppedUpFromTheRing = 0;
 		int echoesPushedOffABox = 0;
@@ -1583,6 +1594,7 @@ public class CitizenEchoTest
 			for (EntityDefinition source : roster)
 			{
 				if (source.getWanderBox() == null || source.isCameo()
+					|| source.isNoEcho()
 					|| source.getNpcAppearanceId() != 0
 					|| !CitizenEcho.isAnOrdinaryStandingBody(source)
 					|| source.getRecolorFind().length < 2
@@ -1650,7 +1662,7 @@ public class CitizenEchoTest
 		}
 
 		assertTrue("uuid collision(s): " + clashes, clashes.isEmpty());
-		assertEquals("184 authored entities plus 51 echoes", 235, seen.size());
+		assertEquals("311 authored entities plus 51 echoes", 362, seen.size());
 	}
 
 	/**
@@ -1730,7 +1742,7 @@ public class CitizenEchoTest
 			}
 		}
 
-		assertEquals("the fixture has to be the whole authored roster", 184, authoredCount);
+		assertEquals("the fixture has to be the whole authored roster", 311, authoredCount);
 		assertTrue("separation violation(s) involving a derived citizen: " + violations,
 			violations.isEmpty());
 		assertEquals("hand-placed entities closer than the minimum to each other, which is "
@@ -2038,7 +2050,7 @@ public class CitizenEchoTest
 			out.addAll(roster);
 		}
 
-		assertEquals("the whole shipped roster", 184, out.size());
+		assertEquals("the whole shipped roster", 311, out.size());
 		return out;
 	}
 

@@ -35,7 +35,7 @@ public class CitizenRemarksTest
 	/**
 	 * All four spellings of silence, side by side.
 	 *
-	 * <p>All four are in the shipped data — 44 citizens carry remarks, 66 carry
+	 * <p>All four are in the shipped data — 54 citizens carry remarks, 183 carry
 	 * {@code "remarks": []}, 32 carry no field at all, and all 42 scenery records
 	 * omit it — so this is a fixture matching reality rather than an invented edge
 	 * case. Flattening them at the validation gate is what lets every later reader
@@ -278,8 +278,8 @@ public class CitizenRemarksTest
 			sceneryWithARemarksField += sceneryRecordsCarryingRemarks(regionId);
 		}
 
-		assertEquals("citizens carrying at least one remark", 44, carryRemarks);
-		assertEquals("citizens carrying \"remarks\": []", 66, carryAnEmptyArray);
+		assertEquals("citizens carrying at least one remark", 54, carryRemarks);
+		assertEquals("citizens carrying \"remarks\": []", 183, carryAnEmptyArray);
 		assertEquals("citizens carrying no remarks field at all", 32, carryNoField);
 		assertEquals("scenery records, none of which carry the field", 42, scenery);
 		assertEquals("and none of them carry it", 0, sceneryWithARemarksField);
@@ -287,16 +287,16 @@ public class CitizenRemarksTest
 		assertEquals("the three citizen spellings have to be the whole roster and nothing "
 				+ "more — a split that does not add up is the failure this test exists for",
 			citizens, carryRemarks + carryAnEmptyArray + carryNoField);
-		assertEquals("and the roster is the shipped one", 142, citizens);
+		assertEquals("and the roster is the shipped one", 269, citizens);
 
 		assertEquals("every spelling of silence ends up as one empty array, which is what "
 				+ "EntityDefinition.NO_REMARKS is shared across",
 			carryAnEmptyArray + carryNoField + scenery, silent);
 		assertEquals("and that shared array covers this many of the shipped entities — the "
 				+ "figure EntityDefinition.NO_REMARKS and LivelyEntity.remarks both quote",
-			140, silent);
-		assertEquals("184 shipped entities, and the ones with nothing to say",
-			184, silent + carryRemarks);
+			257, silent);
+		assertEquals("311 shipped entities, and the ones with nothing to say",
+			311, silent + carryRemarks);
 	}
 
 	/**

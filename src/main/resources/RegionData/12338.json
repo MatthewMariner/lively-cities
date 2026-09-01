@@ -280,6 +280,468 @@
                 11146
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Nettie",
+            "examineText": "She has willows of her own and opinions about everyone else's.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20076-8f6f-410e-81b8-1e841376f3dd",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3097,
+                "y": 3256,
+                "plane": 0
+            },
+            "modelIds": [
+                11352,
+                391,
+                418,
+                23957,
+                10692,
+                356,
+                433,
+                7366
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                6798,
+                4550,
+                8741,
+                25238,
+                908,
+                5652
+            ],
+            "modelRecolorReplace": [
+                34213,
+                916,
+                23351,
+                23334,
+                4558,
+                13859
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Corbin",
+            "examineText": "He is the third person today to ask where the bank is.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20077-8f18-40b2-99ca-d855abf0ce77",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3095,
+                "y": 3253,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                23346,
+                23363,
+                35908,
+                11146,
+                8481,
+                8472
+            ],
+            "idleAnimation": "NervousIdle"
+        },
+        {
+            "name": "Wilda",
+            "examineText": "Out where she can see who is coming up the road.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20078-93ae-45e1-af0e-a0e03b86fff9",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3091,
+                "y": 3255,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                28515,
+                26632,
+                176,
+                28285,
+                26630,
+                194,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                43072,
+                6798
+            ],
+            "modelRecolorReplace": [
+                23324,
+                23341,
+                40485,
+                39
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Bertram",
+            "examineText": "He came for the market and is a day early.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20079-61b2-473d-bebc-b4ceb951a88b",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3089,
+                "y": 3259,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                246,
+                28515,
+                26632,
+                28285,
+                185,
+                26630,
+                176
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                25238
+            ],
+            "modelRecolorReplace": [
+                23351,
+                23334
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Hessa",
+            "examineText": "She has been told about the manor and went anyway.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20080-11ec-469a-8b2d-8f2ecacc4921",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3101,
+                "y": 3253,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18554,
+                483,
+                3476,
+                353,
+                14395,
+                14395,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                6798,
+                43072
+            ],
+            "modelRecolorReplace": [
+                23351,
+                54049,
+                322,
+                8472
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Orrick",
+            "examineText": "Waiting on a cart that is coming from Lumbridge, apparently.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20081-60eb-421d-9174-0c1ff24f7e52",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3106,
+                "y": 3254,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                249,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                23346,
+                23363,
+                8481,
+                8472,
+                35908,
+                11146
+            ],
+            "idleAnimation": "HumanLeanReady"
+        },
+        {
+            "name": "Lark",
+            "examineText": "He has the road east to himself and prefers it that way.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20082-e03f-45bf-a66d-396a3587b0e3",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3108,
+                "y": 3258,
+                "plane": 0
+            },
+            "modelIds": [
+                12137,
+                246,
+                28515,
+                10723,
+                10980,
+                179,
+                28285,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                8860,
+                10004,
+                25238,
+                6798,
+                933
+            ],
+            "modelRecolorReplace": [
+                23341,
+                14226,
+                5904,
+                23324,
+                8757,
+                5532
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Mabb",
+            "examineText": "Minding a barrow with nothing in it.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20083-16d8-4ce0-b6a3-0d064cb09bd9",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3094,
+                "y": 3260,
+                "plane": 0
+            },
+            "modelIds": [
+                378,
+                18914,
+                479,
+                3848,
+                433,
+                11357,
+                19950
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798,
+                6032,
+                5276,
+                5400
+            ],
+            "modelRecolorReplace": [
+                23334,
+                23351,
+                6817,
+                10308,
+                10279,
+                61
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Rushen",
+            "examineText": "Down from the north end, and glad of it.",
+            "remarks": [
+                "It is quieter down here."
+            ],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20084-275e-4627-8476-5431ebc3d298",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3099,
+                "y": 3251,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                4123,
+                11115,
+                34283,
+                11732,
+                5218
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                8741,
+                8078,
+                21776,
+                25238,
+                5231,
+                6798
+            ],
+            "modelRecolorReplace": [
+                23363,
+                127,
+                1451,
+                23346,
+                10378,
+                18
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Gorse",
+            "examineText": "She has walked the whole village and found nobody in.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20085-140c-4ff7-9eed-3b9a50c5a427",
+            "regionId": 12338,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3086,
+                "y": 3256,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18914,
+                3848,
+                353,
+                14421,
+                14395,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                43072,
+                8741,
+                4550,
+                6798
+            ],
+            "modelRecolorReplace": [
+                23324,
+                8472,
+                23341,
+                2524,
+                7613
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Thistle",
+            "examineText": "Doing the rounds, slowly, and stopping for everyone.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 3101,
+                "y": 3247,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 3105,
+                "y": 3251,
+                "plane": 0
+            },
+            "uuid": "add20086-3d29-4eaf-aaae-9a5a3220c36c",
+            "regionId": 12338,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3103,
+                "y": 3249,
+                "plane": 0
+            },
+            "modelIds": [
+                405,
+                15939,
+                3848,
+                353,
+                14421,
+                14395,
+                377,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                38814,
+                27548,
+                8741
+            ],
+            "modelRecolorReplace": [
+                54049,
+                23351,
+                10508,
+                10508,
+                23351
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": [

@@ -83,7 +83,7 @@ final class CitizenLabel
 	/**
 	 * The Examine line, printed into the local chat buffer and nowhere else.
 	 *
-	 * <p>It uses the dataset's own {@code examineText} — all 142 shipped citizens
+	 * <p>It uses the dataset's own {@code examineText} — all 269 shipped citizens
 	 * have one — and then says, in as many words, that the thing is this plugin's
 	 * and is not a real NPC. That sentence is the direct answer to the thread that
 	 * got the predecessor disabled, and it is why this is not simply the authored

@@ -14,7 +14,7 @@ The files under src/main/resources/RegionData/ are derived from that project's
 region data (format version 0.8). Redistribution of those files retains the
 copyright notice above as the BSD 2-Clause License requires.
 
-They are no longer byte-identical to upstream, in eleven ways.
+They are no longer byte-identical to upstream, in twelve ways.
 
   1. Only a subset ships. This plugin carried 45 of their region files; as of
      2026-08-24 it carries 27, covering nine places. The other eighteen files —
@@ -207,8 +207,8 @@ They are no longer byte-identical to upstream, in eleven ways.
      is a red build. It was worth writing down because a review on 2026-08-29 made
      all three of those edits and the suite stayed green.
 
-     Sixteen of the thirty-three had a body part added to their "modelIds" later the
-     same day, along with thirty-one vendored records — see item 9. Each still
+     Sixteen of the thirty-three had a body part added to their "modelIds" the next
+     day, along with thirty-one vendored records — see item 9. Each still
      matches its donor exactly, because the donor was repaired in the same way by
      the same rule, so the "copied whole" claim above still holds; what it now means
      is that the array is upstream's kit plus the part this project put back into
@@ -236,7 +236,7 @@ They are no longer byte-identical to upstream, in eleven ways.
      and which carry ours.
 
   9. Forty-seven citizen records had a body part put back into their "modelIds" on
-     2026-08-29 — thirty-one of them theirs and sixteen ours from item 8. Every one
+     2026-08-30 — thirty-one of them theirs and sixteen ours from item 8. Every one
      was shipping without part of a body: no trousers, no hands, or nothing on its
      feet. A human playing this plugin photographed two of them, and "who is this
      man, why does he not have any legs" is the complaint that got the predecessor
@@ -332,12 +332,12 @@ They are no longer byte-identical to upstream, in eleven ways.
      judgement rather than a repair.
 
      That was wrong, and item 11 is the correction. Their legs were repainted on
-     2026-08-31. Their faces were not, so the first two sentences of the paragraph
+     2026-08-30. Their faces were not, so the first two sentences of the paragraph
      above still describe what ships.
 
      None of the six has been verified in game.
 
- 11. Ten vendored citizen records had one recolour value changed on 2026-08-31,
+ 11. Ten vendored citizen records had one recolour value changed on 2026-08-30,
      because the slot they aimed at the legs was painted a colour out of the flesh
      gamut and the figure read as bare legs. Seven records of ours had the same fault
      and are listed with them.
@@ -348,7 +348,7 @@ They are no longer byte-identical to upstream, in eleven ways.
      cache — 3,320 of them, i.e. every recolour the game itself applies to the base
      colour it paints a face with — puts 83% of them inside hue 2..7, saturation 1..6.
      That box is the gamut. Item 10 only refused the single value 4550; the owner
-     played the shipped plugin at the "Full" crowd density on 2026-08-31, where no
+     played the shipped plugin at the "Full" crowd density on 2026-08-30, where no
      derived citizen exists at all, and reported figures that still looked as though
      they had no trousers. He was right: "Marlow" wore hue 5, saturation 3, lightness
      68 against 4550's hue 4, saturation 3, lightness 70. One hue step and two
@@ -397,6 +397,23 @@ They are no longer byte-identical to upstream, in eleven ways.
      monastery records, neutral grey for the pale ones, blue-grey for a fisherman.
      Nothing became a colour the character would not wear.
 
+     Where they moved TO is worth one paragraph, because six of the seventeen landed on
+     hue 8 — 8472 three times, 8481 twice, 8613 once — and hue 8 is the rung immediately
+     outside the gamut being escaped. CitizenEcho.isFlesh's own javadoc names that rung
+     as the one place the rule knowingly cuts skin: 30 of the game's 3,320 face recolours
+     target hue 8, and one of them, 8646, is the skin base's own saturation and lightness
+     one rung along.
+
+     None of the six is that colour or near it. 8472 is hue 8, saturation 2, lightness
+     24 and renders #3F3821 — a very dark olive-brown, forty-six lightness rungs below
+     the complexion the javadoc worries about, and nobody would read it as a leg. So the
+     objection is narrower than "these are still skin-coloured", and it is not nothing:
+     there was no reason to step one rung over the line when hue-0 greys were available
+     and were used for six other records in the same table. The rung was chosen to keep
+     each figure in a colour family it was already wearing, which is the sentence above,
+     and the six are named here so that a reader deciding how much slack the gamut has
+     is not told the repaints landed further from it than they did.
+
      Sixteen of the seventeen replacements are values the dataset already carried
      somewhere. The seventeenth is 7060, and it is new: it is "Alexander"'s own colour
      with the saturation moved one rung, and no nearer value in the dataset kept both
@@ -421,12 +438,51 @@ They are no longer byte-identical to upstream, in eleven ways.
      Two of those turn a bare forearm into a sleeve ("Wynn" and "Sela"), which is a
      visible change and is named here rather than buried in the count.
 
-     One thing this modification does not explain. The report named Falador and
-     Lumbridge. Falador holds three of the seventeen ("Berta", "Nessa", "Tobias") and
-     Draynor, next door, holds "Marlow"; no record in any of the four Lumbridge region
-     files paints its legs a flesh-gamut colour, so whatever was seen there is either
-     one of these figures under a different name for the place or a fault nobody has
-     found yet.
+     One thing this modification does not explain, and what the answer turned out to
+     be. The report named Falador and Lumbridge. Falador holds three of the seventeen
+     ("Berta", "Nessa", "Tobias") and Draynor, next door, holds "Marlow"; no record in
+     any of the four Lumbridge region files paints its legs a flesh-gamut colour.
+
+     The gap in the rule is real and was found on 2026-08-30. Every rule above is
+     about a RECOLOUR PAIR — a slot whose "find" is 25238 — and a record that carries
+     a leg model and never aims a slot at it renders that model in whatever colours it
+     was authored in, with no pair for any lint to inspect. 52 of the 269 citizens are
+     in that position: Varrock 25, Lumbridge 8, Ardougne 4, Catherby 4, Al Kharid 4,
+     Falador 3, Draynor 2, Edgeville 1, Grand Exchange 1.
+
+     So the eight Lumbridge ones were decoded, by the same read-only decode of the
+     1.12.36 cache that produced the gamut above: for each leg model the record
+     carries, every face colour that spans mid-shin, after applying whatever pairs the
+     record does carry. What renders is
+
+       Sue             greys #574D4C, #817372, #796B6A, near-black #260301, and the
+                       kit legs base 25238 itself, unrepainted, which is dark green
+       Prisoner        greys #706363, #332D2D
+       Grimefang       #8C7A5F, #5D3103, #747C17   (a goblin, on the goblin rig)
+       Sludgenose      the same three               (a goblin, on the goblin rig)
+       Rick            #3A2A06, #260301, and 25238 again
+       Scruffy         greys #463E3D, #685C5B
+       Drunken dwarf   #7E120D                      (a dwarf, on the dwarf rig)
+       Limping Locke   #171600, #C9D0DA
+
+     None of it is flesh-toned, and that is the answer rather than a hedge. Three of
+     the colours are inside the gamut the predicate defines — the goblins' #8C7A5F at
+     hue 6, saturation 1, lightness 59, and Rick's #3A2A06 at hue 7, saturation 6,
+     lightness 16 — but the first two are on goblins, whose legs are green in the game
+     and whose rig the human slot rules do not apply to, and lightness 16 is
+     effectively black against the skin base's lightness 70. Nobody would photograph
+     any of the eight and call it a bare leg.
+
+     The Lumbridge half of the report is therefore closed as not reproduced from the
+     data. Two earlier narrowings of it were wrong and are corrected here: SIX
+     pre-existing Lumbridge records recolour a legs slot, not four — "Ava" (8472),
+     "Mike" (37394), "Fisherman" (8472), "Thalindra" (10508), "Dark wizard" (10508)
+     and "Grace" (34213, hue 33, saturation 3, lightness 37, which is a mid teal and
+     was described as near-black) — and none of the six is inside the gamut.
+
+     The 52 are pinned by
+     BodySlotLintTest.theRecordsWithLegsAndNoLegsSlotAreCountedAndNoneOfThemIsBare
+     so the blind spot cannot widen without somebody seeing it.
 
      Only recolour values moved. Tiles, names, examine text, remarks, wander boxes,
      animations and "modelIds" are untouched on every one of the twenty-two records
@@ -448,7 +504,243 @@ They are no longer byte-identical to upstream, in eleven ways.
 
      None of the seventeen has been verified in game.
 
-BSD-2 permits all eleven modifications, the subsetting at item 1 included — this
+ 12. One hundred and twenty-seven citizen records were added on 2026-09-01, spread
+     across twenty-one of the twenty-seven files. They are ours, not theirs. The
+     citizen roster goes from 142 to 269 and the whole dataset from 184 records to
+     311; the 42 scenery records are untouched, and no record of theirs was edited.
+
+     What they are for. The owner asked for "way more people", and for the extra
+     people to be generic and reusable rather than hand-authored one at a time:
+     "each city gets an official colour — check the Color of the city crest — and
+     then all the citizens of that area have coloured armour/outfits that match
+     that colour." So these are ordinary townsfolk who are told apart from each
+     other by kit, pose, palette rotation, name and facing, and told apart from
+     the next city over by a livery.
+
+     How a reader tells ours from theirs, and from item 8's. The marker is in the
+     uuid, as it is at item 8, but it is a different one: every record added in this
+     pass has a "uuid" beginning "add2", every record added on 2026-08-29 begins
+     "add1", and no record from upstream does either.
+
+         grep '"uuid": "add2' src/main/resources/RegionData/*.json
+
+     returns exactly these one hundred and twenty-seven and nothing else.
+     src/test/java/com/matthewmariner/livelycities/AuthoredRecordsTest.java reads
+     the table below out of this NOTICE and checks it against the shipped data, so a
+     hundred and twenty-eighth record, or a moved one, fails the build.
+
+     Where they went:
+
+       10290   6   Ardougne monastery            Aurele, Gisele, Rennard, Blaise, Odile, Thibault
+       10548   3   Ardougne farm                 Cerise, Alard, Perrine
+       10804   5   Legends' Guild path           Gaultier, Sancie, Ferrand, Amaury, Isabeau
+       11061   4   Catherby woods                Selby, Ingrid, Halvor, Netta
+       11317   10   Catherby town and shore       Corwin, Brenna, Tarrant, Maren, Rowena, Alric, Sigrun, Edrick, Thomasin, Gorden
+       11571   1   The Crafting Guild            Constance
+       11828   11   Falador park and church       Aymer, Godric, Isolde, Ranulf, Editha, Osbert, Amice, Thurstan, Sybilla, Gervase, Adela
+       11829   2   North of Falador              Hamon, Eudo
+       12083   2   The cabbage field             Rowan, Berengar
+       12338   11   Draynor village               Nettie, Corbin, Wilda, Bertram, Hessa, Orrick, Lark, Mabb, Rushen, Gorse, Thistle
+       12340   3   Draynor Manor grounds         Pell, Sowerby, Bryn
+       12342   18   Edgeville                     Gorm, Sable, Hesk, Rand, Vorn, Dagg, Mirek, Ysolde, Brack, Krell, Torvig, Sefa, Ulf, Rask, Nimm, Bregg, Halla, Sten
+       12594   3   West of the Lumbridge road    Symon, Alys, Peveril
+       12595   2   The Lumbridge swamp road      Hulda, Doggett
+       12598   15   The Grand Exchange            Havelock, Prudence, Merribold, Quill, Tallow, Winnifred, Bosley, Crispin, Deverell, Marchant, Ottoline, Fitch, Thackeray, Rowe, Pettigrew
+       12850   9   Lumbridge town and castle     Tam, Nell, Roderick, Bramwell, Lisbeth, Ordric, Fenna, Wat, Gilda
+       12854   7   North Varrock and the church  Aldric, Bettany, Cordell, Rosalind, Halvard, Wenna, Garrick
+       13105   6   Al Kharid goat pen            Farid, Layla, Zaid, Amina, Karim, Nour
+       13106   5   North of the toll gate        Hakim, Samira, Rashid, Basma, Tahir
+       13109   1   East of Varrock's east gate   Tobin
+       13361   3   The eastern desert            Jamila, Salim, Rania
+
+     What they are made of is entirely theirs, exactly as at item 8: every one of
+     the one hundred and twenty-seven wears a "modelIds" array copied whole out of a
+     record already in this dataset, with that record's own "modelRecolorFind" kept
+     as-is. Twenty-six distinct donor kits are used and no city reuses one more than
+     twice. No new cache id enters the data: the dataset still holds exactly 324
+     distinct model ids and 72 distinct animation names, the same two figures items
+     8 and 9 record.
+
+     Where this pass differs from item 8, and it is the whole of the difference:
+     item 8's records wear the donor's "modelRecolorReplace" rotated, and these wear
+     one that was authored. A rotation is a way of making a copy look different from
+     its donor; it cannot make a copy look like it comes from somewhere. So each of
+     these records keeps the donor's colour on every slot the donor aimed at
+     something personal — skin, hair, and any slot whose "find" is not one of the
+     game's kit bases — and replaces the colour on the torso slot (find 8741) and
+     the legs slot (find 25238) with its city's.
+
+     A boot slot (find 4626) is repainted too, but only where the donor kit already
+     had one, and 24 of the 26 donor kits do not aim at the boots base at all. So
+     the boots are 8 records of the 127, not 127, and they come from two donor kits:
+     "Butler Jarvis" (5) and "Mysterious Old Man" (3). This notice said the pass
+     painted "the torso slot, the legs slot and the boot slot" until 2026-08-30,
+     which reads as all three on every record and was true of none of them; the
+     companion document made the same mistake in the other direction by describing
+     four cuts that vary "which accent lands on the boots", when what varies is the
+     legs. Everybody else's footwear is whatever their donor kit's boot model is
+     authored in, untouched.
+
+     The livery, as the game packs a colour: six bits of hue, three of saturation,
+     seven of lightness. Each city's three values are below, with the decode.
+
+       city             torso                legs                 trim
+       Varrock          10034 (h9/s6/l50)    39    (h0/s0/l39)    10050 (h9/s6/l66) *
+       Falador          107   (h0/s0/l107)   90    (h0/s0/l90)    43818 (h42/s6/l42)
+       Lumbridge        40500 (h39/s4/l52)   40484 (h39/s4/l36)   99    (h0/s0/l99)
+       Ardougne         1965  (h1/s7/l45)    1950  (h1/s7/l30)    99    (h0/s0/l99)
+       Al Kharid        55085 (h53/s6/l45)   55072 (h53/s6/l32)   99    (h0/s0/l99)
+       Draynor          23351 (h22/s6/l55)   23334 (h22/s6/l38)   54049 (h52/s6/l33)
+       Catherby         34490 (h33/s5/l58)   34472 (h33/s5/l40)   12845 (h12/s4/l45)
+       Grand Exchange   48695 (h47/s4/l55)   48678 (h47/s4/l38)   1945  (h1/s7/l25)
+
+     * Varrock's trim is measured and is worn by nobody. A city's trim only ever
+     lands on its fourth cut, and Varrock's eight figures use three, so 10050 is a
+     colour published in two documents and carried by no record. It is kept here
+     because it is the measurement; deleting it would lose the fact rather than
+     correct the claim. Every other value in the table is worn, and
+     CityLiveryCheckTest.everyPublishedLiveryColourIsWornExceptTheOneNamedHere is
+     what stops a second unworn colour joining it in silence.
+
+     Each is a measurement rather than a taste: Varrock's gold and near-black are
+     the Banner (Varrock) and the Varrock guard's own kiteshield, which sample to
+     the same byte; Falador's white and royal blue are the White Knights and the
+     Banner (Asgarnia); Lumbridge's blue is its castle's wall banners; Ardougne's
+     red is its castle banners and the Banner (Kandarin). Al Kharid, Draynor,
+     Catherby and the Grand Exchange have no heraldry of their own and are given,
+     respectively, the Al Kharid warrior's magenta shirt, their kingdom's
+     (Misthalin's) green, the Sailing settlement crest for Catherby, and the Grand
+     Exchange Clerk's uniform. Those four are choices and are named as choices.
+
+     Falador wears white on the torso and Lumbridge blue, in all four of their cuts,
+     which is what the game shows. What this notice used to add — that the
+     white-first/blue-first split is enforced by construction — is not true, and the
+     counterexample is four records. Cut 3 promotes a city's trim to the whole legs
+     slot, so Falador's cut 3 is a white torso over royal-blue legs (Berengar,
+     Editha) and Lumbridge's is a blue torso over white legs (Lisbeth, Peveril):
+     mirror images, 50/50 rather than dominant-plus-accent. They are kept, because
+     cut 3 does the same thing in all eight liveried cities and each of the four
+     still carries its own city's colour on the torso — but the argument for them
+     being distinguishable is now a measurement rather than a construction, and the
+     measurement is that the two blues are three hue rungs of sixty-four apart, which
+     is 16.9 degrees. This notice said nineteen degrees; nothing had measured it.
+     CityLiveryCheckTest pins the torso rule, the four records and the separation.
+
+     Edgeville has no livery, and that is a decision rather than an omission. It has
+     no crest, no banner and no guard of its own — its guards use Falador's model —
+     so a colour for it could only have been invented. Its eighteen figures keep
+     their donor's own colours, pushed towards the dark utilitarian end by a
+     per-figure amount, so that the one city in the set with nothing to wear visibly
+     has nothing to wear.
+
+     "Darkened" is relative to the donor, and two figures make that visible: "Torvig"
+     copies a monk in white and comes out at lightness 91 on the legs, one rung off
+     Falador's own leg white, and "Dagg" comes out at 64 on the torso. Both are the
+     rule working on a pale donor rather than an escape from it. Two slots could not
+     move at all — "Bregg"'s legs and "Sten"'s torso and legs copy donors already at
+     lightness 6 — and one slot is four rungs lighter than its donor, "Sten"'s boot,
+     black at both values. 17 of the 18 torsos are strictly darker than their
+     donor's. All of it is asserted rather than described, in
+     CityLiveryCheckTest.everyEdgevilleFigureIsItsDonorsColoursDarkened.
+
+     No colour in the table above is inside the flesh gamut that item 11 defines, and
+     none of the lightness variants derived from them is either, because lightness is
+     not one of the gamut's two axes. Four of the twenty-four are outside it on hue by
+     twenty-six rungs or more — Lumbridge's torso and legs at 27, Catherby's torso and
+     legs at 26, measured the shorter way round the 64-rung wheel to whichever edge of
+     hue 2..7 is nearer, which is the same measure the degrees elsewhere in this item
+     use. This notice said nine; nothing had recounted it. The closest on hue are
+     three values rather than the two this notice named — Ardougne's torso 1965 and
+     its legs 1950, and the Grand Exchange's trim 1945, all three sitting on hue 1 —
+     and all three are also outside the gamut on saturation, at the fully saturated
+     rung it excludes. Every one of the 127 was checked against the plugin's own
+     predicate rather than against a second copy of it.
+
+     Which two of the twenty-four are closest to each other is a different question,
+     and this notice used to answer it with the wrong two. The family is right — it
+     is the purples — but the answer was measured over the colour each city wears on
+     its chest, and the collision is on the legs. Setting aside the white 99 that
+     Ardougne, Al Kharid and Lumbridge publish as their trim by deliberate design,
+     which makes the twenty-four twenty-two distinct colours, the closest pair in the
+     set is:
+
+       Al Kharid legs  55072  h53/s6/l32  #740C72
+       Draynor trim    54049  h52/s6/l33  #6F0C77
+
+     One rung apart on hue AND one on lightness, at an RGB distance of 7.1. That is
+     not "close", it is the same colour. The runner-up is on the other side of the
+     wheel and is also a pair of leg values: Ardougne's legs 1950 (#741303) against
+     the Grand Exchange's trim 1945 (#601003), the same hue rung and five apart on
+     lightness, at an RGB distance of 20.2.
+
+     The torsos this notice used to name are a distant third and fourth. Al Kharid's
+     55085 (h53, #A310A0) against Draynor's trim is an RGB distance of 66.3 — this
+     notice named that pair as the closest in the set, and it is nearly ten times the
+     gap of the pair above it. Al Kharid's torso against the Grand Exchange's 48695
+     (h47, #6830AB) is six hue rungs, 33.75 degrees, at an RGB distance of 68, which
+     was correct as stated. Al Kharid and Draynor's trim being ONE hue rung apart was
+     also correct; what was wrong was reading that rung off the torso, where the
+     lightnesses are 12 apart, instead of off the legs, where they are 1 apart.
+
+     Where a colour lands on a body is part of this. Draynor's trim is a cut-3 leg
+     colour, worn by two records ("Hessa" and "Thistle"); Al Kharid's 55072 is its
+     cut-0 leg colour, worn by five. So the tightest pair in the set is the same body
+     part in two different cities rather than a torso against a hem — which makes it
+     a correction to what this notice discloses rather than a defect a walk would
+     find, for the geographic reason below.
+
+     None of these collisions was separated, and the reason is geography rather
+     than colour. Al Kharid, Draynor, the Grand Exchange and Ardougne are four
+     different cities behind four different checkboxes, hundreds of tiles apart; no
+     player stands where two of these liveries are on screen at once. That is a
+     weaker argument than the one made for Falador and Lumbridge — those two are 30
+     tiles apart at the closest and a colour has to carry the distinction on its own
+     — and it is stated as the weaker argument it is rather than left out. The pair
+     to watch is Al Kharid against the Grand Exchange, because the Grand Exchange is
+     where every player passes through.
+
+     Draynor's green, 23351, renders #14C728, and its lightest cut 23363 renders
+     #22E938. Measured as chroma — the gap between the strongest and weakest RGB
+     channel — those are 179 and 199 of 255, above every other city's torso
+     (Ardougne's red 169, Varrock's gold 163, Catherby's teal 159). It is the
+     loudest colour in the pass and it is on a farming village. It is kept because it
+     is the value this item names as its source and because none of the 127 tiles has
+     been seen in daylight yet: choosing a second colour before anybody has looked at
+     the first would be a taste judgement made with less evidence than the one it
+     replaced. docs/CITY-LIVERY-CHECK.md asks the walk about it by name.
+
+     One field of this project's is new, and it is the second such after item 3's
+     "npcAppearanceId": "noEcho": true, which every one of these 127 records carries
+     and no other record does. It tells CitizenEcho not to derive an anonymous
+     "Passer-by" from the record. It exists because a derived figure's only
+     difference from its source is the source's palette dealt round onto different
+     slots, and these records' colours are on the slots they are on for a reason —
+     dealing Varrock's gold off the torso and onto the boots takes away the one thing
+     the record was authored to say. CitizenEcho's own javadoc proposed this field,
+     declined to add it until a record needed it, and named the condition; these are
+     that record. Because they seed nothing, the "Crowded" density still adds exactly
+     the 51 derived figures it added before this pass.
+
+     What is ours on these records is the writing and the placement: names, examine
+     text, remarks, tiles, orientations, wander boxes, the palette values above and
+     the "noEcho" flag.
+
+     None of the 127 tiles has been verified in game, and this notice used to
+     overstate how close they are to ones that have been. Each stands a stated
+     distance from a placement already in the dataset — but 55 of those 127 stated
+     distances are to one of the 33 records added on 2026-08-29, which have not been
+     walked either, so they are a second guess resting on the first rather than
+     "within a few tiles of a placement upstream made". Measured against upstream
+     citizen tiles only, 21 of the 127 stand nine tiles or more from anything proven,
+     not the seven docs/CITY-LIVERY-CHECK.md used to name. That document now carries
+     the full list in walk order, and CityLiveryCheckTest measures both halves.
+
+     This item does not touch the open question at item 11, which item 11 has since
+     closed: no record added here paints a legs slot a flesh-gamut colour, and the
+     Lumbridge half of the owner's report is now accounted for by the 52 records that
+     carry a leg model and aim no slot at it.
+
+BSD-2 permits all twelve modifications, the subsetting at item 1 included — this
 note exists so nobody assumes the vendored data still matches the source it came
 from, or that what ships here is all of what they published.
 

@@ -92,6 +92,92 @@
                 39
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Hamon",
+            "examineText": "Outside the wall because inside it is full of knights.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20101-64bc-4e08-9523-2e566bb2e761",
+            "regionId": 11829,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2957,
+                "y": 3434,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                102,
+                119,
+                35908,
+                11146,
+                8481,
+                8472
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Eudo",
+            "examineText": "He has followed the squirrel this far and is committed now.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20102-6fd3-4943-aa64-dccec104cb12",
+            "regionId": 11829,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2964,
+                "y": 3438,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                249,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                80,
+                97,
+                8481,
+                8472,
+                35908,
+                11146
+            ],
+            "idleAnimation": "NervousIdle"
         }
     ],
     "sceneryRoster": []

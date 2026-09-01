@@ -520,9 +520,10 @@ Both stand inside the Ghost's authored box or one tile off it.
   square, Falador's streets and Draynor's market are still unpopulated because
   this plugin ships no data for the regions they are in — see the Ardougne note
   above.
-- **Nothing sits down.** Not one of the 33 is posed `Sitting`, `DwarfSit`,
-  `CatSit` or `ChurchSitting`, because `SEATING-CHECK.md` is a list of 31 figures
-  whose seats nobody has verified and there was no reason to lengthen it. The one
+- **Nothing sits down, or leans.** Not one of the 33 is posed `Sitting`, `DwarfSit`,
+  `CatSit`, `ChurchSitting` or `HumanLeanReady` — `SEATING-CHECK.md` is a list of 46
+  figures (after the livery pass added fifteen leaning ones of its own) whose seats
+  and leans nobody has verified, and there was no reason to lengthen it further. The one
   pose here that needs scenery under it is Aldous' `Woodcutting`, and it is
   flagged on his entry.
 

@@ -5,10 +5,12 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -109,7 +111,7 @@ public class BodySlotLintTest
 
 		// The sample guard: the rule is inside the loop, so a predicate that had
 		// stopped matching anything would pass this test having asked nothing at all.
-		assertEquals("kit-built human citizens the rule was asked about", 98, checked);
+		assertEquals("kit-built human citizens the rule was asked about", 225, checked);
 	}
 
 	/**
@@ -192,7 +194,7 @@ public class BodySlotLintTest
 
 		// The sample guard: the rule is inside a loop over slots, so a dataset whose
 		// records had stopped using the kit bases would pass this having asked nothing.
-		assertEquals("kit-base recolour slots the rule was asked about", 195, slotsAsked);
+		assertEquals("kit-base recolour slots the rule was asked about", 533, slotsAsked);
 	}
 
 	/**
@@ -209,7 +211,21 @@ public class BodySlotLintTest
 	 * the nearest is "Marlow" in Draynor. That half of the report is unexplained by this
 	 * rule and is written down here rather than rounded off, because "we fixed what he
 	 * saw" and "we fixed everything of this kind" are different claims and only the
-	 * second one is true. <b>Seventeen records painted the legs base a colour inside
+	 * second one is true.
+	 *
+	 * <p><b>It stopped being unexplained on 2026-08-30, and the answer is a blind spot in
+	 * the shape of this rule rather than a record it missed.</b> Every rule in this class
+	 * reads a recolour <i>pair</i>. A record that carries a leg model and aims no slot at
+	 * it has no pair, renders that model in whatever colours it was authored in, and this
+	 * rule has no opinion about it at all. <b>52 of the 269 citizens are in that
+	 * position, eight of them in Lumbridge.</b> All eight were decoded and none renders a
+	 * leg in anything a player would read as skin —
+	 * {@link #theRecordsWithLegsAndNoLegsSlotAreCountedAndNoneOfThemIsBare} carries the
+	 * decode and the count. Two earlier narrowings of the Lumbridge half were also wrong
+	 * and are corrected there: <b>six</b> pre-existing Lumbridge records recolour a legs
+	 * slot rather than four.
+	 *
+	 * <p><b>Seventeen records painted the legs base a colour inside
 	 * {@link CitizenEcho#isFlesh}'s gamut</b>, and the nearest of them is not a near miss:
 	 * "Marlow" wore {@code 5572}, which decodes to hue 5, saturation 3, lightness 68,
 	 * against the skin base's hue 4, saturation 3, lightness 70. One hue rung and two
@@ -300,7 +316,149 @@ public class BodySlotLintTest
 		// The sample guard, same as the rule above carries: the check is inside a loop
 		// over slots, so a dataset that had stopped aiming at the legs base would pass
 		// this having asked nothing at all.
-		assertEquals("legs-base recolour slots the rule was asked about", 69, slotsAsked);
+		assertEquals("legs-base recolour slots the rule was asked about", 196, slotsAsked);
+	}
+
+	/**
+	 * <b>The records the two rules above cannot see, counted — and the answer to the
+	 * Lumbridge half of the owner's report.</b>
+	 *
+	 * <h2>The blind spot</h2>
+	 *
+	 * <p>{@link #noKitGarmentSlotIsPaintedTheColourTheGamePaintsFaces} and
+	 * {@link #noLegsSlotIsPaintedAColourFromTheFleshGamut} both read a recolour
+	 * <b>pair</b>. A record that carries a model in {@link BodySlots#LEGS} and aims no
+	 * {@code find} slot at {@link BodySlots#LEGS_BASE} has no pair for either to inspect:
+	 * those legs render in whatever colours the model file itself is authored in, and
+	 * both rules pass it in silence having asked nothing. <b>52 of the 269 citizens are
+	 * in that position.</b>
+	 *
+	 * <p>That is the most plausible remaining explanation for the half of the 2026-08-31
+	 * report that the gamut rule could not account for — the owner named Falador and
+	 * Lumbridge, Falador held three offenders and Lumbridge held none — because eight of
+	 * the 52 are in Lumbridge.
+	 *
+	 * <h2>What those eight actually render, and why the question is closed</h2>
+	 *
+	 * <p>Measured the same way {@link BodySlots} was: a read-only decode of {@code idx7}
+	 * in the 1.12.36 cache, taking every face colour on every {@link BodySlots#LEGS}
+	 * model each record carries whose vertices span mid-shin ({@code y = -55}), after
+	 * applying whatever pairs the record does carry.
+	 *
+	 * <ul>
+	 *   <li><b>"Sue"</b> — greys {@code #574D4C}, {@code #817372}, {@code #796B6A}, a
+	 *       near-black {@code #260301}, and {@link BodySlots#LEGS_BASE} itself
+	 *       unrepainted, which renders dark green.</li>
+	 *   <li><b>"Prisoner"</b> — greys {@code #706363}, {@code #332D2D}.</li>
+	 *   <li><b>"Grimefang"</b> and <b>"Sludgenose"</b> — {@code #8C7A5F},
+	 *       {@code #5D3103}, {@code #747C17}. Both are goblins, on the goblin rig, which
+	 *       is why {@link #everyRecordTheRuleSkipsIsSkippedForAStatedReason} already
+	 *       excludes them from the slot rules.</li>
+	 *   <li><b>"Rick"</b> — {@code #3A2A06}, {@code #260301} and the legs base again.</li>
+	 *   <li><b>"Scruffy"</b> — greys {@code #463E3D}, {@code #685C5B}.</li>
+	 *   <li><b>"Drunken dwarf"</b> — {@code #7E120D}. A dwarf, on the dwarf rig.</li>
+	 *   <li><b>"Limping Locke"</b> — {@code #171600}, {@code #C9D0DA}.</li>
+	 * </ul>
+	 *
+	 * <p><b>None of it is flesh-toned, and that is a finding rather than a hedge.</b>
+	 * Three of the colours are inside {@link CitizenEcho#isFlesh}'s gamut — the goblins'
+	 * {@code #8C7A5F} at hue 6, saturation 1, lightness 59, and Rick's {@code #3A2A06} at
+	 * hue 7, saturation 6, lightness 16 — but the first two are on goblin legs, and
+	 * lightness 16 against the skin base's lightness 70 is black. There is no bare leg
+	 * among the eight, so the Lumbridge half of the report is closed as not reproducible
+	 * from the data rather than left open.
+	 *
+	 * <p>Two earlier narrowings of it were wrong and are corrected here. <b>Six</b>
+	 * pre-existing Lumbridge records recolour a legs slot, not four: "Ava" ({@code 8472}),
+	 * "Mike" ({@code 37394}), "Fisherman" ({@code 8472}), "Thalindra" ({@code 10508}),
+	 * "Dark wizard" ({@code 10508}) and "Grace" ({@code 34213} — hue 33, saturation 3,
+	 * lightness 37, a mid teal, which had been described as near-black). None is inside
+	 * the gamut.
+	 *
+	 * <h2>What this test can and cannot assert</h2>
+	 *
+	 * <p>It cannot re-derive the decode: a test that read a cache would pass or fail
+	 * depending on whose machine it ran on, which is the argument {@link BodySlots}'s own
+	 * javadoc makes. So it pins the <b>population</b> the decode was performed over — the
+	 * count, the per-city split and the eight Lumbridge names. A 53rd record, or a
+	 * different eight in Lumbridge, fails here and is a decode somebody has to do rather
+	 * than a number to bump.
+	 */
+	@Test
+	public void theRecordsWithLegsAndNoLegsSlotAreCountedAndNoneOfThemIsBare()
+	{
+		TreeSet<String> inLumbridge = new TreeSet<>();
+		TreeMap<String, Integer> byCity = new TreeMap<>();
+		int blind = 0;
+
+		for (EntityDefinition entity : shipped())
+		{
+			if (!entity.getType().isCitizen()
+				|| !fills(entity, BodySlots.LEGS)
+				|| paints(entity, BodySlots.LEGS_BASE))
+			{
+				continue;
+			}
+
+			blind++;
+			City city = City.of(entity.getCityRegionId());
+			assertNotNull(entity.label() + " stands in a region no city claims, so this "
+				+ "count cannot be read city by city", city);
+			byCity.merge(city.getLabel(), 1, Integer::sum);
+			if (city == City.LUMBRIDGE)
+			{
+				inLumbridge.add(entity.getName());
+			}
+		}
+
+		TreeMap<String, Integer> expected = new TreeMap<>();
+		expected.put("Al Kharid", 4);
+		expected.put("Ardougne", 4);
+		expected.put("Catherby", 4);
+		expected.put("Draynor", 2);
+		expected.put("Edgeville", 1);
+		expected.put("Falador", 3);
+		expected.put("Grand Exchange", 1);
+		expected.put("Lumbridge", 8);
+		expected.put("Varrock", 25);
+
+		assertEquals("citizens carrying a leg model that no recolour pair aims at, so "
+			+ "neither rule above has an opinion about their colour", 52, blind);
+		assertEquals("and the city they are in, because Lumbridge's eight are the ones "
+			+ "the 2026-08-31 report was about", expected, byCity);
+		assertEquals("the Lumbridge eight, each of them decoded in this test's javadoc",
+			new TreeSet<>(Arrays.asList("Drunken dwarf", "Grimefang", "Limping Locke",
+				"Prisoner", "Rick", "Scruffy", "Sludgenose", "Sue")), inLumbridge);
+
+		// The other half of the correction: six pre-existing Lumbridge records DO aim a
+		// slot at the legs base, and the figure had been given as four.
+		TreeSet<String> withALegsSlot = new TreeSet<>();
+		for (EntityDefinition entity : shipped())
+		{
+			if (entity.getType().isCitizen()
+				&& City.of(entity.getCityRegionId()) == City.LUMBRIDGE
+				&& !entity.getUuid().toString().startsWith("add2")
+				&& paints(entity, BodySlots.LEGS_BASE))
+			{
+				withALegsSlot.add(entity.getName());
+			}
+		}
+		assertEquals("pre-existing Lumbridge records that recolour a legs slot",
+			new TreeSet<>(Arrays.asList("Ava", "Dark wizard", "Fisherman", "Grace",
+				"Mike", "Thalindra")), withALegsSlot);
+	}
+
+	/** @return whether this record aims a {@code find} slot at {@code base} */
+	private static boolean paints(EntityDefinition entity, int base)
+	{
+		for (short find : entity.getRecolorFind())
+		{
+			if ((find & 0xFFFF) == base)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -353,7 +511,7 @@ public class BodySlotLintTest
 		assertEquals("torso slots painted a flesh-gamut colour — tan and leather jerkins, "
 			+ "left alone deliberately", 14, torso);
 		assertEquals("hair slots — blond, auburn and brown, which is what the gamut is "
-			+ "made of and why the rule cannot reach here", 12, hair);
+			+ "made of and why the rule cannot reach here", 27, hair);
 		assertEquals("footwear slots — the boots base is itself inside the gamut", 1, footwear);
 
 		// And the legs column of the same table, which is the rule.
@@ -415,7 +573,12 @@ public class BodySlotLintTest
 					continue;
 				}
 
-				if (entity.getUuid().toString().startsWith("add1"))
+				// Both markers, or the livery pass's 127 records would be filed as
+				// upstream's and an offender among them would fail this test by growing
+				// a list of *their* names — which is the one report that could not be
+				// acted on. See AuthoredRecordsTest for what each prefix means.
+				String uuid = entity.getUuid().toString();
+				if (uuid.startsWith("add1") || uuid.startsWith("add2"))
 				{
 					ours.add(entity.label() + " slot " + i + " find=" + (find[i] & 0xFFFF));
 				}
@@ -593,9 +756,9 @@ public class BodySlotLintTest
 		assertEquals("citizens dressed from an NPC composition", 7, dressedFromAnNpc);
 		assertEquals("citizens that are not on the human skeleton", 32, notOnTheHumanRig);
 		assertEquals("citizens that are one whole-body mesh rather than a kit", 5, wholeFigure);
-		assertEquals("leaving the citizens the rule is asked about", 98, checked);
+		assertEquals("leaving the citizens the rule is asked about", 225, checked);
 		assertEquals("and the five have to be the whole shipped dataset",
-			184, scenery + dressedFromAnNpc + notOnTheHumanRig + wholeFigure + checked);
+			311, scenery + dressedFromAnNpc + notOnTheHumanRig + wholeFigure + checked);
 	}
 
 	/**
@@ -811,7 +974,7 @@ public class BodySlotLintTest
 			out.addAll(loader.loadRegion(regionId).getEntities());
 		}
 
-		assertEquals("the whole shipped roster", 184, out.size());
+		assertEquals("the whole shipped roster", 311, out.size());
 		return out;
 	}
 }

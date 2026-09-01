@@ -47,6 +47,49 @@
                 43173
             ],
             "idleAnimation": "Mining"
+        },
+        {
+            "name": "Tobin",
+            "examineText": "Working hard, or standing near somebody who is.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20127-4c1f-4247-b394-d6d920cc9250",
+            "regionId": 13109,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3270,
+                "y": 3428,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                51,
+                10046,
+                35908,
+                11146,
+                8481,
+                8472
+            ],
+            "idleAnimation": "HumanSmugIdle"
         }
     ],
     "sceneryRoster": []

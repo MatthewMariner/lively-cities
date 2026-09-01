@@ -114,6 +114,131 @@
                 38156
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Pell",
+            "examineText": "He keeps the hedge and will tell you about it.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20087-bfda-4057-b74f-5f2cd526f17e",
+            "regionId": 12340,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3117,
+                "y": 3379,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                5215,
+                5221,
+                26619,
+                176,
+                5217,
+                26630,
+                241,
+                5233,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                7281,
+                4550,
+                6798,
+                25238
+            ],
+            "modelRecolorReplace": [
+                23351,
+                5565,
+                43030,
+                65313,
+                23334
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Sowerby",
+            "examineText": "Here to value something, and putting it off.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20088-1a3a-4041-8a37-d59d05b2c5ab",
+            "regionId": 12340,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3122,
+                "y": 3375,
+                "plane": 0
+            },
+            "modelIds": [
+                208,
+                4123,
+                28515,
+                324,
+                317,
+                26619,
+                176,
+                27639,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                7952,
+                6798,
+                4626,
+                9104
+            ],
+            "modelRecolorReplace": [
+                23363,
+                23346,
+                38788,
+                43096,
+                54049,
+                37776
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Bryn",
+            "examineText": "She will go up to the door and no further.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20089-0e8c-4ed1-9507-dc2bdce6f3f3",
+            "regionId": 12340,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3114,
+                "y": 3374,
+                "plane": 0
+            },
+            "modelIds": [
+                393,
+                18914,
+                3848,
+                353,
+                14397,
+                14395,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                5532,
+                4550,
+                8741
+            ],
+            "modelRecolorReplace": [
+                23324,
+                10508,
+                4645,
+                23341
+            ],
+            "idleAnimation": "NervousIdle"
         }
     ],
     "sceneryRoster": []

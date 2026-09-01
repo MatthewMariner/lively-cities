@@ -716,7 +716,7 @@ public class RenderPolicyTest
 		}
 
 		assertEquals("the shipped dataset has exactly one misfiled entity", 1, misfiled);
-		assertEquals("the shipped dataset has 51 wandering citizens", 51, boxes.size());
+		assertEquals("the shipped dataset has 63 wandering citizens", 63, boxes.size());
 
 		assertTrue("worst misfiling " + worstMisfiling + " (" + misfiledWhere
 				+ ") exceeds the " + allowance + "-tile overhang allowance",

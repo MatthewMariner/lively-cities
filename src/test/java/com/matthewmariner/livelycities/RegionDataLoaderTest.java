@@ -1,9 +1,19 @@
 package com.matthewmariner.livelycities;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Before;
 import org.junit.Test;
@@ -225,9 +235,9 @@ public class RegionDataLoaderTest
 
 	/**
 	 * The shipped dataset, loaded through the real resource prefix. Audited by
-	 * hand: 27 files, 142 citizens (103 vendored, plus the six cameos and the 33
-	 * townsfolk authored for the five thin cities on 2026-08-29), 42 scenery, every
-	 * record valid.
+	 * hand: 27 files, 269 citizens (103 vendored, plus the six cameos, the 33
+	 * townsfolk authored for the five thin cities on 2026-08-29 and the 127 liveried
+	 * townsfolk authored on 2026-09-01), 42 scenery, every record valid.
 	 */
 	@Test
 	public void loadsTheWholeShippedDatasetWithoutSkippingAnything()
@@ -252,7 +262,7 @@ public class RegionDataLoaderTest
 		}
 
 		assertEquals("region file count", 27, files);
-		assertEquals("citizen count", 142, citizens);
+		assertEquals("citizen count", 269, citizens);
 		assertEquals("scenery count", 42, scenery);
 		assertEquals("nothing in the shipped data should be skipped", 0, skipped);
 	}
@@ -263,11 +273,11 @@ public class RegionDataLoaderTest
 	 * <p>That row said "51 wander, 86 stand still, 5 follow a script" until 2026-08-29,
 	 * and the last third of it was false: {@code startScript} is parsed and executed
 	 * nowhere (see {@code ShippedSourceTest.noShippedClassReadsTheStartScriptField}), so
-	 * the five {@code ScriptedCitizen}s stand as still as the 86. The row now reads "51
-	 * wander, 91 stand still" with the five named as a limitation, and this is what stops
-	 * the numbers behind it drifting again. It is also the count that would notice a
-	 * {@code ScriptedCitizen} quietly becoming something else, which the 142 total would
-	 * not.
+	 * the five {@code ScriptedCitizen}s stand as still as the stationary ones. The row
+	 * now reads "63 wander, 206 stand still" with the five named as a limitation, and
+	 * this is what stops the numbers behind it drifting again. It is also the count that
+	 * would notice a {@code ScriptedCitizen} quietly becoming something else, which the
+	 * 269 total would not.
 	 */
 	@Test
 	public void theShippedRosterSplitsIntoTheThreeCitizenFlavoursTheReadmeQuotes()
@@ -290,36 +300,183 @@ public class RegionDataLoaderTest
 			}
 		}
 
-		assertEquals("wandering citizens", 51, (int) byType.get(EntityType.WanderingCitizen));
-		assertEquals("stationary citizens", 86, (int) byType.get(EntityType.StationaryCitizen));
+		assertEquals("wandering citizens", 63, (int) byType.get(EntityType.WanderingCitizen));
+		assertEquals("stationary citizens", 201, (int) byType.get(EntityType.StationaryCitizen));
 		assertEquals("scripted citizens, which behave exactly like stationary ones because "
 			+ "nothing runs their script", 5, (int) byType.get(EntityType.ScriptedCitizen));
 		assertEquals("scenery", 42, (int) byType.get(EntityType.Scenery));
 
-		assertEquals("the four flavours have to be the whole dataset", 184,
+		assertEquals("the four flavours have to be the whole dataset", 311,
 			byType.values().stream().mapToInt(Integer::intValue).sum());
-		assertEquals("and the README's \"91 stand still\" is the two motionless flavours "
-				+ "added together", 91,
+		assertEquals("and the README's \"206 stand still\" is the two motionless flavours "
+				+ "added together", 206,
 			byType.get(EntityType.StationaryCitizen) + byType.get(EntityType.ScriptedCitizen));
+	}
+
+	/**
+	 * <b>The test count the README and the submission checklist quote is the number of
+	 * tests there are.</b>
+	 *
+	 * <p>It sits here, in a class about the dataset, for one reason: the README is
+	 * already read two methods down and splitting one file's claims across two test
+	 * classes is how half of them stop being checked. The pass that added the place-table
+	 * guard below added it for the row about places and not for the row about tests, two
+	 * lines above it in the same list — and by 2026-08-30 the README said <b>477</b> in
+	 * its badge, <b>485</b> in its own "every guard has been broken on purpose" bullet
+	 * and <b>477</b> again in the build command, while {@code docs/SUBMISSION.md} said
+	 * <b>485</b> and the suite ran <b>492</b>. Three different wrong numbers in one file.
+	 *
+	 * <p>The count is the number of {@code @Test} methods in {@code src/test/java},
+	 * which is exactly what Gradle reports because nothing here is parameterised or
+	 * repeated. That equivalence is itself worth stating: if somebody adds a
+	 * {@code @RunWith(Parameterized.class)} class, this test will start disagreeing with
+	 * the runner and should be fixed by counting properly rather than by loosening.
+	 *
+	 * <p>Both files are declared inputs of the {@code test} task in {@code build.gradle},
+	 * or an edit to either would leave the task up to date and this method would not run.
+	 */
+	@Test
+	public void theTestCountTheDocumentsQuoteIsTheNumberOfTestsThereAre() throws IOException
+	{
+		int tests = 0;
+		List<File> sources = new ArrayList<>();
+		collectJavaSources(new File("src/test/java"), sources);
+		assertTrue("no test sources found, so this method counted nothing at all",
+			sources.size() > 20);
+
+		for (File source : sources)
+		{
+			for (String line : new String(Files.readAllBytes(source.toPath()),
+				StandardCharsets.UTF_8).split("\n"))
+			{
+				String trimmed = line.trim();
+				if (trimmed.equals("@Test") || trimmed.startsWith("@Test("))
+				{
+					tests++;
+				}
+			}
+		}
+
+		String readme = new String(
+			Files.readAllBytes(new File("README.md").toPath()), StandardCharsets.UTF_8);
+		String submission = new String(
+			Files.readAllBytes(new File("docs/SUBMISSION.md").toPath()), StandardCharsets.UTF_8);
+
+		assertEquals("the README's badge", 1, count(readme,
+			"[![Tests](https://img.shields.io/badge/tests-" + tests + "-brightgreen)]"));
+		assertEquals("the README's \"every guard has been broken on purpose\" bullet",
+			1, count(readme, "- **" + tests + " tests**, and every guard"));
+		assertEquals("the README's build command comment",
+			1, count(readme, "# compile and run the " + tests + " tests"));
+		assertEquals("the submission checklist's Tests row",
+			1, count(submission, "| all green (" + tests + ") |"));
+	}
+
+	private static void collectJavaSources(File dir, List<File> into)
+	{
+		File[] children = dir.listFiles();
+		if (children == null)
+		{
+			return;
+		}
+		for (File child : children)
+		{
+			if (child.isDirectory())
+			{
+				collectJavaSources(child, into);
+			}
+			else if (child.getName().endsWith(".java"))
+			{
+				into.add(child);
+			}
+		}
+	}
+
+	private static int count(String haystack, String needle)
+	{
+		int found = 0;
+		for (int at = haystack.indexOf(needle); at >= 0; at = haystack.indexOf(needle, at + 1))
+		{
+			found++;
+		}
+		return found;
+	}
+
+	/**
+	 * The README's own place table, checked against the dataset it describes.
+	 *
+	 * <p><b>These are not the numbers the test below pins.</b> That one counts
+	 * <i>citizens</i> per city; this row counts <i>entities</i>, scenery included, which
+	 * is what a reader of the table is being told. They are nine different numbers about
+	 * the same nine cities, and the two sets have disagreed before: the Grand Exchange
+	 * has nine citizens and ten entities, and the README said ten while the test said
+	 * nine, both correctly.
+	 *
+	 * <p>It is checked here because nothing checked it, and because it is the first
+	 * thing anybody reads. A README that overstates a city is the plugin's own version of
+	 * the defect this suite spends most of its time on.
+	 */
+	@Test
+	public void theReadmesPlaceTableIsTheDatasetItDescribes() throws IOException
+	{
+		String readme = new String(
+			Files.readAllBytes(new File("README.md").toPath()), StandardCharsets.UTF_8);
+
+		Matcher row = Pattern.compile("\\| \\*\\*9 places\\*\\* \\| ([^|]+) \\|").matcher(readme);
+		assertTrue("the README has no nine-places row, and it is the headline table",
+			row.find());
+
+		Map<String, Integer> declared = new TreeMap<>();
+		Matcher place = Pattern.compile("(?:the )?([A-Za-z' ]+?) \\((\\d+)\\)").matcher(row.group(1));
+		while (place.find())
+		{
+			// "the Grand Exchange" in prose is "Grand Exchange" in City.getLabel(); the
+			// article is the README's grammar and not part of the name.
+			String label = place.group(1).trim().replaceFirst("^the ", "");
+			assertEquals("the README lists " + label + " twice", null,
+				declared.put(label, Integer.parseInt(place.group(2))));
+		}
+
+		RegionDataLoader shipped = new RegionDataLoader(TestGson.injected());
+		Map<String, Integer> actual = new TreeMap<>();
+		int total = 0;
+		for (City city : City.values())
+		{
+			int entities = 0;
+			for (int regionId : city.getRegionIds())
+			{
+				entities += shipped.loadRegion(regionId).getEntities().size();
+			}
+			actual.put(city.getLabel(), entities);
+			total += entities;
+		}
+
+		assertEquals("the README has to name every city, or one could grow unnoticed",
+			actual.keySet(), declared.keySet());
+		assertEquals("the README's per-city entity counts", actual, declared);
+		assertEquals("and they have to be the whole dataset", 311, total);
 	}
 
 	/**
 	 * How many citizens each city holds, city by city.
 	 *
-	 * <p><b>The total is not this claim.</b> The test above pins 142 citizens across
-	 * 27 files, and 142 is a sum: deleting a figure from Draynor and adding one to
-	 * Varrock leaves it at 142 and leaves every other count in the suite — the echo
+	 * <p><b>The total is not this claim.</b>
+	 * {@link #theShippedRosterSplitsIntoTheThreeCitizenFlavoursTheReadmeQuotes} pins 269
+	 * citizens across 27 files, and 269 is a sum: deleting a figure from Draynor and adding one to
+	 * Varrock leaves it at 269 and leaves every other count in the suite — the echo
 	 * figures, the remarks partition, the wander-box count — reachable by luck. What
 	 * the 2026-08-29 top-up actually claims is that five thin cities were brought to
 	 * <b>ten citizens each</b>, and that is a per-city claim which nothing was
 	 * checking. {@code docs/CITY-TOP-UP-CHECK.md} told a reader this class held it,
 	 * and it did not; this is the assertion that makes the sentence true.
 	 *
-	 * <p>All nine cities are pinned rather than the five that moved, because "ten
-	 * each" only means anything alongside the ones that are deliberately not ten:
-	 * Varrock is 63 and the Grand Exchange is 9 (its tenth entity is scenery, and
-	 * six of the nine are cameos that are off by default). A row that changes says
-	 * which city changed, which the total never could.
+	 * <p>All nine cities are pinned rather than the ones that moved, because a target
+	 * only means anything alongside the ones that are deliberately not it: after the
+	 * 2026-09-01 livery pass Varrock is 71 and Edgeville is 22, and the two numbers are
+	 * arrived at from opposite directions — Varrock is capped by
+	 * {@link RenderPolicy#MAX_ACTIVE_OBJECTS} rather than by taste, and Edgeville was
+	 * the thinnest city in the dataset. A row that changes says which city changed,
+	 * which the total never could.
 	 *
 	 * <p>Counted by the <b>file</b> a record ships in, which is how {@link City}
 	 * resolves a checkbox — not by the {@code regionId} written inside the record.
@@ -333,15 +490,15 @@ public class RegionDataLoaderTest
 		RegionDataLoader shipped = new RegionDataLoader(TestGson.injected());
 
 		Map<City, Integer> expected = new EnumMap<>(City.class);
-		expected.put(City.AL_KHARID, 10);
-		expected.put(City.ARDOUGNE, 10);
-		expected.put(City.CATHERBY, 10);
-		expected.put(City.DRAYNOR, 10);
-		expected.put(City.EDGEVILLE, 4);
-		expected.put(City.FALADOR, 10);
-		expected.put(City.GRAND_EXCHANGE, 9);
-		expected.put(City.LUMBRIDGE, 16);
-		expected.put(City.VARROCK, 63);
+		expected.put(City.AL_KHARID, 24);
+		expected.put(City.ARDOUGNE, 24);
+		expected.put(City.CATHERBY, 24);
+		expected.put(City.DRAYNOR, 24);
+		expected.put(City.EDGEVILLE, 22);
+		expected.put(City.FALADOR, 26);
+		expected.put(City.GRAND_EXCHANGE, 24);
+		expected.put(City.LUMBRIDGE, 30);
+		expected.put(City.VARROCK, 71);
 
 		assertEquals("every city has to be listed, or one could empty out unnoticed",
 			City.values().length, expected.size());
@@ -369,7 +526,7 @@ public class RegionDataLoaderTest
 		// city, and the totals would still pass if a figure moved between two cities.
 		assertEquals("the nine cities between them claim every shipped region file",
 			27, regions);
-		assertEquals("and hold every shipped citizen", 142, total);
+		assertEquals("and hold every shipped citizen", 269, total);
 	}
 
 	private static void assertArrayEqualsInt(int[] expected, int[] actual)
@@ -379,5 +536,168 @@ public class RegionDataLoaderTest
 		{
 			assertEquals("element " + i, expected[i], actual[i]);
 		}
+	}
+
+	/**
+	 * The "86 {@code StationaryCitizen}s" aside in the README's Known limitations
+	 * section, about the five {@code ScriptedCitizen}s that behave no differently
+	 * from an ordinary stationary one. It drifted 115 away from the real count
+	 * (201) — the same 201 {@link #theShippedRosterSplitsIntoTheThreeCitizenFlavoursTheReadmeQuotes}
+	 * pins two methods up — because that guard checks the headline table's row and
+	 * this is a second, independent sentence about the same number, three sections
+	 * later, that nothing was reading.
+	 */
+	@Test
+	public void theReadmesScriptedCitizenAsideNamesTheActualStationaryCount() throws IOException
+	{
+		RegionDataLoader shipped = new RegionDataLoader(TestGson.injected());
+		int stationary = 0;
+		for (int regionId : ShippedRegions.ids())
+		{
+			RegionDefinition region = shipped.loadRegion(regionId);
+			assertNotNull("region " + regionId + " failed to load", region);
+			for (EntityDefinition entity : region.getEntities())
+			{
+				if (entity.getType() == EntityType.StationaryCitizen)
+				{
+					stationary++;
+				}
+			}
+		}
+
+		String readme = new String(
+			Files.readAllBytes(new File("README.md").toPath()), StandardCharsets.UTF_8);
+		assertEquals("the Known limitations aside about the five ScriptedCitizens", 1,
+			count(readme, "indistinguishable in behaviour from the " + stationary
+				+ " `StationaryCitizen`s"));
+	}
+
+	/**
+	 * How many ways {@code NOTICE} says the vendored dataset has stopped being
+	 * byte-identical to upstream — stated three times, in {@code NOTICE} itself
+	 * twice and in the README's Credits section once — checked against the number
+	 * of numbered items {@code NOTICE} actually lists. README said "eight" after a
+	 * ninth, tenth, eleventh and twelfth modification had landed and nothing had
+	 * recounted either side.
+	 */
+	@Test
+	public void theModificationCountIsHowManyNumberedItemsNoticeLists() throws IOException
+	{
+		String notice = new String(
+			Files.readAllBytes(new File("NOTICE").toPath()), StandardCharsets.UTF_8);
+		Matcher item = Pattern.compile("(?m)^ {1,2}\\d{1,2}\\. \\S").matcher(notice);
+		int items = 0;
+		while (item.find())
+		{
+			items++;
+		}
+		assertTrue("no numbered modification found, so this counted nothing at all",
+			items > 5);
+
+		String word = spellOut(items);
+		assertEquals("NOTICE's own \"no longer byte-identical ... in N ways\" sentence",
+			1, count(notice, "no longer byte-identical to upstream, in " + word + " ways"));
+		assertEquals("NOTICE's closing \"BSD-2 permits all N modifications\" sentence",
+			1, count(notice, "BSD-2 permits all " + word + " modifications"));
+
+		String readme = new String(
+			Files.readAllBytes(new File("README.md").toPath()), StandardCharsets.UTF_8);
+		assertEquals("the README's own count, in its Credits section",
+			1, count(readme, word + " modifications we have made to their data"));
+	}
+
+	/**
+	 * The seating and leaning walk's own totals — {@code docs/SEATING-CHECK.md} and
+	 * the README both said "thirty-one" (twenty-nine seated, two leaning) after the
+	 * 2026-09-01 livery pass added fifteen more {@code HumanLeanReady} figures
+	 * without either document being recounted. A lean is a standing pose, so
+	 * nothing about the livery pass being "all standing poses" implies the seating
+	 * walk is unchanged.
+	 */
+	@Test
+	public void theSeatingWalksTotalsAreTheDatasetsSeatedAndLeaningCounts() throws IOException
+	{
+		RegionDataLoader shipped = new RegionDataLoader(TestGson.injected());
+		Set<LivelyAnimation> seatedPoses = EnumSet.of(LivelyAnimation.Sitting,
+			LivelyAnimation.DwarfSit, LivelyAnimation.CatSit, LivelyAnimation.ChurchSitting,
+			LivelyAnimation.GoblinPull);
+		Set<LivelyAnimation> leaningPoses = EnumSet.of(LivelyAnimation.HumanLeanReady,
+			LivelyAnimation.DwarfLean);
+
+		int seated = 0;
+		int leaning = 0;
+		for (int regionId : ShippedRegions.ids())
+		{
+			RegionDefinition region = shipped.loadRegion(regionId);
+			assertNotNull("region " + regionId + " failed to load", region);
+			for (EntityDefinition entity : region.getEntities())
+			{
+				if (!entity.getType().isCitizen())
+				{
+					// Three scenery records also play `Sitting` — a sitting prop, not
+					// a citizen whose seat wants verifying — and this walk is about
+					// citizens. `theShippedRosterSplitsIntoTheThreeCitizenFlavoursThe
+					// ReadmeQuotes` already covers scenery as its own flavour.
+					continue;
+				}
+				LivelyAnimation anim = entity.getIdleAnimation();
+				if (anim == null)
+				{
+					continue;
+				}
+				if (seatedPoses.contains(anim))
+				{
+					seated++;
+				}
+				if (leaningPoses.contains(anim))
+				{
+					leaning++;
+				}
+			}
+		}
+
+		assertEquals("seated citizens (Sitting, DwarfSit, CatSit, ChurchSitting, GoblinPull)",
+			29, seated);
+		assertEquals("leaning citizens (HumanLeanReady, DwarfLean)", 17, leaning);
+
+		String seated_word = spellOut(seated);
+		String leaning_word = spellOut(leaning);
+		String total_word = spellOut(seated + leaning);
+
+		String seatingCheck = new String(
+			Files.readAllBytes(new File("docs/SEATING-CHECK.md").toPath()), StandardCharsets.UTF_8);
+		assertEquals("the seating walk's Leaning section header",
+			1, count(seatingCheck, "## Leaning — " + leaning));
+		assertEquals("the seating walk's Ground Markers paragraph",
+			1, count(seatingCheck, total_word + " entries and not " + seated_word));
+
+		String readme = new String(
+			Files.readAllBytes(new File("README.md").toPath()), StandardCharsets.UTF_8);
+		assertEquals("the README's own leaning-figure count in Known limitations",
+			1, count(readme, leaning_word + " more who *lean*"));
+		assertEquals("the README's own combined seating-walk total",
+			1, count(readme, total_word + " figures on"));
+	}
+
+	private static final String[] ONES = {
+		"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+		"ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+		"seventeen", "eighteen", "nineteen"
+	};
+	private static final String[] TENS = {
+		"", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"
+	};
+
+	/** Spells out a number 0-99 the way this project's prose does. */
+	private static String spellOut(int n)
+	{
+		assertTrue("this helper only spells numbers 0-99", n >= 0 && n < 100);
+		if (n < 20)
+		{
+			return ONES[n];
+		}
+		int tens = n / 10;
+		int ones = n % 10;
+		return ones == 0 ? TENS[tens] : TENS[tens] + "-" + ONES[ones];
 	}
 }

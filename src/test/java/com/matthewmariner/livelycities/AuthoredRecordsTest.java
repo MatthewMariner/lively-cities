@@ -83,6 +83,22 @@ public class AuthoredRecordsTest
 	private static final int AUTHORED = 33;
 
 	/**
+	 * The uuid prefix every record this project authored in the <b>livery</b> pass
+	 * carries, and what {@code NOTICE} item 12 claims about them.
+	 *
+	 * <p>A second marker rather than more of the first, because the two passes make
+	 * different claims about the same kind of record. Item 8's thirty-three wear their
+	 * donor's palette <i>rotated</i>; item 12's hundred and twenty-seven wear one that
+	 * was <i>authored</i>, so that the colours land on the slots that make them read as
+	 * a city's. A single marker would put both under whichever rule this class checked,
+	 * and the rule that survived would be the one nothing contradicted.
+	 */
+	private static final String LIVERY_MARKER = "add2";
+
+	/** @see #LIVERY_MARKER */
+	private static final int LIVERIED = 127;
+
+	/**
 	 * The disclosure's own table, parsed back out of {@code NOTICE}.
 	 *
 	 * <p>Lines look like {@code 10290   2   Ardougne monastery      Anselm, Brother
@@ -111,21 +127,33 @@ public class AuthoredRecordsTest
 		assertEquals("region files they were added to", 13, ours.size());
 
 		int upstream = 0;
+		int liveried = 0;
 		for (ShippedCitizens.Entry citizen : ShippedCitizens.all())
 		{
-			if (!citizen.uuid.startsWith(MARKER))
+			if (citizen.uuid.startsWith(MARKER))
+			{
+				continue;
+			}
+			if (citizen.uuid.startsWith(LIVERY_MARKER))
+			{
+				liveried++;
+			}
+			else
 			{
 				upstream++;
 			}
 		}
 
-		// The other half of the claim, and the half that would rot silently: the
-		// marker is only a marker if nothing else wears it. 109 is the roster as it
-		// stood before the top-up, cameos included.
-		assertEquals("citizens that predate the top-up and must not carry the marker",
+		// The other half of the claim, and the half that would rot silently: a marker
+		// is only a marker if nothing else wears it. 109 is the roster as it stood
+		// before either pass, cameos included, and it must not move again — a third
+		// pass that reached for "add1" or "add2" would show up here as this number
+		// falling rather than as a marker quietly meaning two things.
+		assertEquals("citizens that predate both passes and must carry neither marker",
 			109, upstream);
-		assertEquals("and the two halves are the whole roster",
-			142, authored + upstream);
+		assertEquals("citizens carrying the '" + LIVERY_MARKER + "' marker", LIVERIED, liveried);
+		assertEquals("and the three parts are the whole roster",
+			269, authored + liveried + upstream);
 	}
 
 	/**
@@ -271,9 +299,13 @@ public class AuthoredRecordsTest
 			List<Record> donors = new ArrayList<>();
 			for (Record candidate : all)
 			{
-				if (candidate.isOurs())
+				if (candidate.isOurs() || candidate.isLiveried())
 				{
-					// A record from this pass is not evidence that a kit predates it.
+					// A record this project authored is not evidence that a kit predates
+					// it — and that is true of the later pass as well as this one. The
+					// livery pass copies the same donor kits these records copy, so every
+					// one of its 127 records would otherwise turn up here as a candidate
+					// donor for a record that predates it by three days.
 					continue;
 				}
 
@@ -600,7 +632,7 @@ public class AuthoredRecordsTest
 
 		TreeMap<Integer, List<String>> declared = new TreeMap<>();
 		int declaredTotal = 0;
-		Matcher matcher = ROW.matcher(notice);
+		Matcher matcher = ROW.matcher(noticeItem(notice, "\n  8. ", "\n  9. "));
 		while (matcher.find())
 		{
 			int region = Integer.parseInt(matcher.group(1));
@@ -640,6 +672,205 @@ public class AuthoredRecordsTest
 			assertEquals("citizens NOTICE lists for " + region,
 				new TreeSet<>(declared.get(region)), new TreeSet<>(actual.get(region)));
 		}
+	}
+
+	/**
+	 * {@code NOTICE} item 12's table, checked the same way item 8's is.
+	 *
+	 * <p>Parsed out of the item's own slice of the file rather than out of the whole
+	 * file, because {@link #ROW} matches both tables and a whole-file parse would put
+	 * 34 rows in one map and check neither disclosure against anything.
+	 */
+	@Test
+	public void theLiveryNoticeTableMatchesWhatWasActuallyAdded() throws IOException
+	{
+		String notice = new String(
+			Files.readAllBytes(new File("NOTICE").toPath()), StandardCharsets.UTF_8);
+
+		assertTrue("NOTICE has to state the livery marker, or a reader cannot find "
+			+ "these records", notice.contains("beginning \"" + LIVERY_MARKER + "\""));
+
+		TreeMap<Integer, List<String>> declared = new TreeMap<>();
+		int declaredTotal = 0;
+		Matcher matcher = ROW.matcher(noticeItem(notice, "\n 12. ", "\nBSD-2 permits"));
+		while (matcher.find())
+		{
+			int region = Integer.parseInt(matcher.group(1));
+			int count = Integer.parseInt(matcher.group(2));
+			List<String> names = new ArrayList<>();
+			for (String name : matcher.group(3).split(","))
+			{
+				String trimmed = name.trim().replaceAll("\\s+", " ");
+				if (!trimmed.isEmpty())
+				{
+					names.add(trimmed);
+				}
+			}
+
+			assertEquals("NOTICE row for region " + region + " names " + names.size()
+				+ " citizen(s) but claims " + count, count, names.size());
+			assertEquals("NOTICE row for region " + region + " lists a name twice",
+				names.size(), new TreeSet<>(names).size());
+			assertFalse("region " + region + " is listed twice in NOTICE item 12",
+				declared.containsKey(region));
+			declared.put(region, names);
+			declaredTotal += count;
+		}
+
+		assertEquals("the parser has to find the whole table — a regex that matched "
+			+ "nothing would pass while checking nothing", 21, declared.size());
+		assertEquals("the row counts have to sum to the total NOTICE claims in prose",
+			LIVERIED, declaredTotal);
+
+		TreeMap<Integer, List<String>> actual = liveriedRecordsByRegion();
+		assertEquals("the regions NOTICE lists have to be the regions that changed",
+			actual.keySet(), declared.keySet());
+
+		for (Integer region : actual.keySet())
+		{
+			assertEquals("citizens NOTICE lists for " + region,
+				new TreeSet<>(declared.get(region)), new TreeSet<>(actual.get(region)));
+		}
+	}
+
+	/**
+	 * <b>The rule the livery pass rests on</b>, and it is not item 8's rule.
+	 *
+	 * <p>Each of the 127 wears a {@code modelIds} array and a {@code modelRecolorFind}
+	 * array copied whole out of a record that predates it — that is what keeps the
+	 * distinct-model-id figure at 324, and it is shared with item 8. What is different
+	 * is the third array: item 8 rotates the donor's, and these author one. So the
+	 * check that {@code everyAuthoredKitIsAWholeCopyOfAShippedKitWithThePaletteReDealt}
+	 * makes about the palette cannot be made here, and the two claims that can be are
+	 * made instead:
+	 *
+	 * <ul>
+	 *   <li>the kit is somebody else's, whole — no hand-assembled arrays, no new ids;
+	 *   <li>the palette is <i>not</i> the donor's, so the figure is not its donor
+	 *       standing somewhere else.
+	 * </ul>
+	 */
+	@Test
+	public void everyLiveriedRecordWearsAShippedKitAndAPaletteOfItsOwn()
+	{
+		List<Record> all = shippedRecords();
+		List<String> noDonor = new ArrayList<>();
+		List<String> notRepainted = new ArrayList<>();
+		int checked = 0;
+
+		for (Record ours : all)
+		{
+			if (!ours.isLiveried())
+			{
+				continue;
+			}
+
+			checked++;
+			boolean donorFound = false;
+			boolean repainted = true;
+
+			for (Record candidate : all)
+			{
+				if (candidate.isLiveried()
+					|| !Arrays.equals(candidate.modelIds, ours.modelIds)
+					|| !Arrays.equals(candidate.recolorFind, ours.recolorFind))
+				{
+					continue;
+				}
+
+				donorFound = true;
+				if (Arrays.equals(candidate.recolorReplace, ours.recolorReplace))
+				{
+					repainted = false;
+				}
+			}
+
+			if (!donorFound)
+			{
+				noDonor.add(ours.describe() + " wears modelIds/modelRecolorFind that "
+					+ "appear in no record predating the livery pass");
+			}
+			else if (!repainted)
+			{
+				notRepainted.add(ours.describe() + " wears its donor's palette unchanged, "
+					+ "so it is its donor standing somewhere else");
+			}
+		}
+
+		assertTrue("liveried record(s) with no donor: " + noDonor, noDonor.isEmpty());
+		assertTrue("liveried record(s) that were never repainted: " + notRepainted,
+			notRepainted.isEmpty());
+		assertEquals("liveried records the rule was asked about", LIVERIED, checked);
+	}
+
+	/**
+	 * Every liveried record refuses the derivation, and nothing else does.
+	 *
+	 * <p>The flag is the reason the {@code Crowded} density did not move when the
+	 * roster nearly doubled — see {@code EntityRecord.noEcho}. It is asserted from both
+	 * ends because either alone is satisfiable by accident: a record that forgot the
+	 * flag would seed "Passer-by" figures wearing a city's colours dealt onto the wrong
+	 * slots, and a record that acquired it by a stray paste would silently stop seeding
+	 * ones a reviewer had already looked at.
+	 */
+	@Test
+	public void theLiveriedRecordsAreExactlyTheOnesThatRefuseToSeedAnEcho()
+	{
+		TreeSet<String> refuse = new TreeSet<>();
+		TreeSet<String> liveried = new TreeSet<>();
+
+		RegionDataLoader loader = new RegionDataLoader(TestGson.injected());
+		List<EntityDefinition> entities = new ArrayList<>();
+		for (int regionId : ShippedRegions.ids())
+		{
+			entities.addAll(loader.loadRegion(regionId).getEntities());
+		}
+		assertEquals("the whole shipped roster", 311, entities.size());
+
+		for (EntityDefinition entity : entities)
+		{
+			String label = entity.label() + " in " + entity.getRegionId() + ".json";
+			if (entity.isNoEcho())
+			{
+				refuse.add(label);
+			}
+			if (entity.getUuid().toString().startsWith(LIVERY_MARKER))
+			{
+				liveried.add(label);
+			}
+		}
+
+		assertEquals("records carrying \"noEcho\": true", LIVERIED, refuse.size());
+		assertEquals("and they are exactly the liveried ones", liveried, refuse);
+	}
+
+	/**
+	 * @param startsWith the first characters of the NOTICE item wanted
+	 * @param endsWith   the first characters of whatever follows it
+	 * @return that item's own text, so a table parse cannot wander into a neighbour's
+	 */
+	private static String noticeItem(String notice, String startsWith, String endsWith)
+	{
+		int from = notice.indexOf(startsWith);
+		assertTrue("NOTICE has no item starting " + startsWith.trim(), from >= 0);
+		int to = notice.indexOf(endsWith, from + startsWith.length());
+		assertTrue("NOTICE item starting " + startsWith.trim() + " is not followed by "
+			+ endsWith.trim(), to > from);
+		return notice.substring(from, to);
+	}
+
+	private static TreeMap<Integer, List<String>> liveriedRecordsByRegion()
+	{
+		TreeMap<Integer, List<String>> ours = new TreeMap<>();
+		for (Record record : shippedRecords())
+		{
+			if (record.isLiveried())
+			{
+				ours.computeIfAbsent(record.fileRegionId, k -> new ArrayList<>())
+					.add(record.name);
+			}
+		}
+		return ours;
 	}
 
 	/**
@@ -1060,6 +1291,11 @@ public class AuthoredRecordsTest
 		boolean isOurs()
 		{
 			return uuid != null && uuid.startsWith(MARKER);
+		}
+
+		boolean isLiveried()
+		{
+			return uuid != null && uuid.startsWith(LIVERY_MARKER);
 		}
 
 		String describe()

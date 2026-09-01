@@ -153,6 +153,274 @@
             "modelRecolorFind": [],
             "modelRecolorReplace": [],
             "idleAnimation": "Sitting"
+        },
+        {
+            "name": "Aldric",
+            "examineText": "Early for the service, and early on purpose.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20120-7b5e-4bf6-8e97-a64e821c90b8",
+            "regionId": 12854,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3253,
+                "y": 3477,
+                "plane": 0
+            },
+            "modelIds": [
+                223,
+                26630,
+                246,
+                299,
+                26619,
+                176,
+                260,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                8741
+            ],
+            "modelRecolorReplace": [
+                39,
+                10034
+            ],
+            "idleAnimation": "MageReady"
+        },
+        {
+            "name": "Bettany",
+            "examineText": "She has swept this floor and would like it noticed.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20121-88e2-4269-97fc-c957c63738ac",
+            "regionId": 12854,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3257,
+                "y": 3477,
+                "plane": 0
+            },
+            "modelIds": [
+                378,
+                18914,
+                479,
+                3848,
+                433,
+                11357,
+                19950
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798,
+                6032,
+                5276,
+                5400
+            ],
+            "modelRecolorReplace": [
+                51,
+                10046,
+                6817,
+                10308,
+                10279,
+                61
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Cordell",
+            "examineText": "He has been given a candle and no further instructions.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20122-d603-4478-a14e-165342a5fca3",
+            "regionId": 12854,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3254,
+                "y": 3486,
+                "plane": 0
+            },
+            "modelIds": [
+                230,
+                246,
+                28515,
+                26619,
+                176,
+                256
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798
+            ],
+            "modelRecolorReplace": [
+                29,
+                10024,
+                127
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Rosalind",
+            "examineText": "Sitting would be easier. She is not going to.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20123-6184-4fda-bd0f-201ae02df01c",
+            "regionId": 12854,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3252,
+                "y": 3480,
+                "plane": 0
+            },
+            "modelIds": [
+                393,
+                18914,
+                3848,
+                353,
+                14397,
+                14395,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                5532,
+                4550,
+                8741
+            ],
+            "modelRecolorReplace": [
+                39,
+                10508,
+                4645,
+                10034
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Halvard",
+            "examineText": "In from the north field, and still in his boots.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20124-fe8c-456c-81ca-c4cd9efa955d",
+            "regionId": 12854,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3229,
+                "y": 3462,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                249,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                51,
+                10046,
+                8481,
+                8472,
+                35908,
+                11146
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Wenna",
+            "examineText": "She has the north gate in view and likes it that way.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20125-47e5-4a9a-9a55-24d9ba39f35e",
+            "regionId": 12854,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3224,
+                "y": 3458,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                28515,
+                26632,
+                176,
+                28285,
+                26630,
+                194,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                43072,
+                6798
+            ],
+            "modelRecolorReplace": [
+                29,
+                10024,
+                40485,
+                39
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Garrick",
+            "examineText": "Here on business, like everybody on this street.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20126-d5e5-4884-a12b-8de9d1774696",
+            "regionId": 12854,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3216,
+                "y": 3501,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                246,
+                28515,
+                26632,
+                28285,
+                185,
+                26630,
+                176
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                25238
+            ],
+            "modelRecolorReplace": [
+                10034,
+                39
+            ],
+            "idleAnimation": "HumanLeanReady"
         }
     ],
     "sceneryRoster": []

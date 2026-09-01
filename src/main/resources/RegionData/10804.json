@@ -229,6 +229,214 @@
                 107
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Gaultier",
+            "examineText": "The other other guard. He has the afternoon.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20057-5bde-4b7c-9dfa-48a35e14ee96",
+            "regionId": 10804,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2726,
+                "y": 3360,
+                "plane": 0
+            },
+            "modelIds": [
+                229,
+                9762,
+                6755,
+                26634,
+                176,
+                9761,
+                182,
+                9763
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4550,
+                918,
+                43072
+            ],
+            "modelRecolorReplace": [
+                1965,
+                1950,
+                918,
+                4005,
+                7073
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Sancie",
+            "examineText": "Third in the queue and the calmest of the three.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20058-8bc0-4c9a-a8bd-ef4b9dd85655",
+            "regionId": 10804,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2731,
+                "y": 3356,
+                "plane": 0
+            },
+            "modelIds": [
+                11352,
+                391,
+                418,
+                23957,
+                10692,
+                356,
+                433,
+                7366
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                6798,
+                4550,
+                8741,
+                25238,
+                908,
+                5652
+            ],
+            "modelRecolorReplace": [
+                34213,
+                916,
+                1977,
+                1962,
+                4558,
+                13859
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Ferrand",
+            "examineText": "He has the letter. He is less sure about the seal.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20059-15d9-41dd-bc47-efdaf492aa2f",
+            "regionId": 10804,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2727,
+                "y": 3350,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                1940,
+                1955,
+                35908,
+                11146,
+                8481,
+                8472
+            ],
+            "idleAnimation": "NervousIdle"
+        },
+        {
+            "name": "Amaury",
+            "examineText": "Sent up with a message and no instructions about waiting.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20060-c52f-402d-83e2-620fc14ab1da",
+            "regionId": 10804,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2731,
+                "y": 3364,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                4123,
+                11115,
+                34283,
+                11732,
+                5218
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                8078,
+                21776,
+                25238,
+                5231,
+                6798
+            ],
+            "modelRecolorReplace": [
+                1965,
+                127,
+                1451,
+                99,
+                10378,
+                18
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Isabeau",
+            "examineText": "She has been up this hill before and paced herself.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20061-25d2-4185-94a5-9ca0db4e5328",
+            "regionId": 10804,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2726,
+                "y": 3355,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18914,
+                3848,
+                353,
+                14421,
+                14395,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                43072,
+                8741,
+                4550,
+                6798
+            ],
+            "modelRecolorReplace": [
+                1950,
+                8472,
+                1965,
+                2524,
+                7613
+            ],
+            "idleAnimation": "HumanLeanReady"
         }
     ],
     "sceneryRoster": []

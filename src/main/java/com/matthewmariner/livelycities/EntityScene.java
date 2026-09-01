@@ -100,7 +100,7 @@ import net.runelite.api.coords.WorldPoint;
  *
  * <p><b>Where a border-crossing wanderer lives.</b> Scope membership is decided
  * once, from the entity's authored tile, and a citizen walking across a region
- * border does not change it. Three of the 51 wanderers have boxes that straddle
+ * border does not change it. Three of the 63 wanderers have boxes that straddle
  * one. That choice is what makes both failure modes impossible rather than
  * unlikely:
  * <ul>
@@ -523,9 +523,10 @@ class EntityScene
 				// allowedByConfig: it reads the live collision map, so it is the one
 				// check that costs a scene lookup, and this is the first point at
 				// which we know the entity is close enough for the answer to matter.
-				// It is a no-op for the 178 authored non-cameo entities. For the 145
+				// It is a no-op for the 305 authored non-cameo entities. For the 145
 				// vendored ones that is because a human stood on those tiles in game;
-				// for the 33 added on 2026-08-29 it is because each stands beside a
+				// for the 33 added on 2026-08-29 and the 127 added on 2026-09-01 it is
+				// because each stands beside a
 				// tile that was, or inside a wander box a human drew — which is a
 				// weaker claim, and docs/CITY-TOP-UP-CHECK.md is the walk that settles
 				// it.

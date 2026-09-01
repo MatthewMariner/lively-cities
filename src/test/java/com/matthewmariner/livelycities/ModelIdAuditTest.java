@@ -107,7 +107,7 @@ public class ModelIdAuditTest
 			violations.isEmpty());
 
 		// Both halves have to be non-empty or this test is only checking one rule.
-		assertEquals("entities dressed from raw model ids", 177, fromModelIds);
+		assertEquals("entities dressed from raw model ids", 304, fromModelIds);
 		assertEquals("entities dressed from an NPC appearance", 7, fromNpcAppearance);
 	}
 

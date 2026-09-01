@@ -16,7 +16,7 @@ public final class RenderPolicy
 	 * Hard ceiling on simultaneously active {@code RuneLiteObject}s.
 	 *
 	 * <p>The densest neighbourhood in the shipped dataset is in Varrock (regions
-	 * 12852/12853, which hold 81 of the 184 entities between them): 59 entities
+	 * 12852/12853, which hold 81 of the 311 entities between them): 59 entities
 	 * inside a 25-tile square, 76 inside a {@link #MAX_CULL_RADIUS}-tile one. So
 	 * this is headroom rather than a routine constraint — it exists so a future
 	 * region file cannot make the client build hundreds of models in one tick.
@@ -91,8 +91,10 @@ public final class RenderPolicy
 	 * {@code EntityScene.ensureBuilt}'s whole path is a pure function of the shipped
 	 * JSON, so it was timed directly against {@code src/main/resources/RegionData} over
 	 * every 3x3 block of regions a 104x104 scene can bring in at once. The worst block
-	 * came to 2997µs, of which region 12853 alone — 57 authored entities seeding 53
-	 * echoes, the densest file that ships — is 1913µs.
+	 * came to 2997µs, of which region 12853 alone — 57 authored entities seeding 13
+	 * echoes, the densest file that ships — is 1913µs. (That read "53 echoes" until
+	 * 2026-09-01, which was more than the whole dataset derives; nothing was checking
+	 * it, and the timing it decorates was measured rather than derived from it.)
 	 *
 	 * <p>{@link FrameTimings} now meters this in the field too, under {@code region
 	 * load}, so the next report can replace this figure with one measured in the client

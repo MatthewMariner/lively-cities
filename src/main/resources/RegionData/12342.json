@@ -170,6 +170,808 @@
             ],
             "idleAnimation": "HumanIdle",
             "startScript": "edgevilleSmith"
+        },
+        {
+            "name": "Gorm",
+            "examineText": "Waiting on somebody who is late, and getting later.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20001-b294-4aae-9774-2d1a1f67e758",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3092,
+                "y": 3494,
+                "plane": 0
+            },
+            "modelIds": [
+                229,
+                9762,
+                6755,
+                26634,
+                176,
+                9761,
+                182,
+                9763
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4550,
+                918,
+                43072
+            ],
+            "modelRecolorReplace": [
+                13849,
+                22406,
+                918,
+                4005,
+                7073
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Sable",
+            "examineText": "She has counted her supplies twice and is starting again.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20002-1540-4e49-afbb-d3085070afd6",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3094,
+                "y": 3497,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                28515,
+                26632,
+                176,
+                28285,
+                26630,
+                194,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                43072,
+                6798
+            ],
+            "modelRecolorReplace": [
+                10502,
+                43398,
+                40485,
+                39
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Hesk",
+            "examineText": "Fully equipped, entirely unhurried.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20003-8494-45ba-b4f0-de9f88725f29",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3093,
+                "y": 3500,
+                "plane": 0
+            },
+            "modelIds": [
+                207,
+                296,
+                18958,
+                27139,
+                4924,
+                25669,
+                246,
+                25651
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                43072,
+                25238,
+                10138,
+                13196,
+                6798,
+                127,
+                8741,
+                8720,
+                8472,
+                38160,
+                38036
+            ],
+            "modelRecolorReplace": [
+                7187,
+                7175,
+                7187,
+                7196,
+                7187,
+                37888,
+                134,
+                5132,
+                5132,
+                5384,
+                7634
+            ],
+            "idleAnimation": "HumanLeanReady"
+        },
+        {
+            "name": "Rand",
+            "examineText": "He says he is only going as far as the ditch.",
+            "remarks": [
+                "Only as far as the ditch."
+            ],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20004-03b2-41cf-8d30-a3131ce81ebb",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3088,
+                "y": 3493,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                5215,
+                5221,
+                26619,
+                176,
+                5217,
+                26630,
+                241,
+                5233,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                8741,
+                7281,
+                4550,
+                6798,
+                25238
+            ],
+            "modelRecolorReplace": [
+                65286,
+                5565,
+                43030,
+                65313,
+                65043
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Vorn",
+            "examineText": "Reading the same notice board he read on the way out.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20005-e3f4-4fa9-9e75-8ff647bb8e73",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3087,
+                "y": 3500,
+                "plane": 0
+            },
+            "modelIds": [
+                3848,
+                353,
+                14395,
+                14421,
+                18554,
+                5434,
+                398,
+                5433,
+                317,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                7952,
+                4550
+            ],
+            "modelRecolorReplace": [
+                61325,
+                61325,
+                61347,
+                4564
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Dagg",
+            "examineText": "Somebody told him the north was quiet today.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20006-c17a-47f7-a5a8-21c470904f4e",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3095,
+                "y": 3492,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                4123,
+                11115,
+                34283,
+                11732,
+                5218
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                8078,
+                21776,
+                25238,
+                5231,
+                6798
+            ],
+            "modelRecolorReplace": [
+                7232,
+                127,
+                1451,
+                64148,
+                10378,
+                18
+            ],
+            "idleAnimation": "HumanSmugIdle"
+        },
+        {
+            "name": "Mirek",
+            "examineText": "He has not decided, and the deciding is the whole afternoon.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20007-9237-48e3-b5c4-8e3d5b0ff049",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3091,
+                "y": 3503,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                246,
+                28515,
+                26632,
+                28285,
+                185,
+                26630,
+                176
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                25238
+            ],
+            "modelRecolorReplace": [
+                11,
+                21513
+            ],
+            "idleAnimation": "NervousIdle"
+        },
+        {
+            "name": "Ysolde",
+            "examineText": "Back already, and not saying why.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 3094,
+                "y": 3500,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 3098,
+                "y": 3503,
+                "plane": 0
+            },
+            "uuid": "add20008-a940-4de5-8136-6b8ba1139836",
+            "regionId": 12342,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3096,
+                "y": 3501,
+                "plane": 0
+            },
+            "modelIds": [
+                11352,
+                391,
+                418,
+                23957,
+                10692,
+                356,
+                433,
+                7366
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                6798,
+                4550,
+                8741,
+                25238,
+                908,
+                5652
+            ],
+            "modelRecolorReplace": [
+                34213,
+                916,
+                5132,
+                23,
+                4558,
+                13859
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Brack",
+            "examineText": "Between the bank and the gate, as usual.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20009-a9de-4c29-9f62-65c3f5e3cd93",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3103,
+                "y": 3495,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                8463,
+                8454,
+                35908,
+                11146,
+                8481,
+                8472
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Krell",
+            "examineText": "Warming his hands and putting off the walk.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20010-33d0-42f9-a82f-bc7dbcc12286",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3108,
+                "y": 3499,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                249,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                8455,
+                8454,
+                8481,
+                8472,
+                35908,
+                11146
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Torvig",
+            "examineText": "He came south with less than he went north with.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20011-18eb-487d-bfbd-dcdcc7ff3d30",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3110,
+                "y": 3495,
+                "plane": 0
+            },
+            "modelIds": [
+                9452,
+                9619,
+                246,
+                9622,
+                27154,
+                176,
+                4226,
+                4218
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                6798,
+                43072,
+                8741,
+                25238,
+                6587,
+                7281
+            ],
+            "modelRecolorReplace": [
+                8481,
+                5400,
+                5161,
+                91,
+                7187,
+                10349
+            ],
+            "idleAnimation": "HumanLeanReady"
+        },
+        {
+            "name": "Sefa",
+            "examineText": "Doing a slow circuit and watching the road.",
+            "remarks": [
+                "Nothing on the road."
+            ],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 3102,
+                "y": 3499,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 3107,
+                "y": 3503,
+                "plane": 0
+            },
+            "uuid": "add20012-237a-449f-8f08-0ebe69e6e8c4",
+            "regionId": 12342,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3104,
+                "y": 3501,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18554,
+                483,
+                3476,
+                353,
+                14395,
+                14395,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                6798,
+                43072
+            ],
+            "modelRecolorReplace": [
+                8070,
+                37382,
+                322,
+                8472
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Ulf",
+            "examineText": "He has been talked out of it once already.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20013-ba22-41e4-9a69-18805a84f94e",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3112,
+                "y": 3500,
+                "plane": 0
+            },
+            "modelIds": [
+                12137,
+                246,
+                28515,
+                10723,
+                10980,
+                179,
+                28285,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                8860,
+                10004,
+                25238,
+                6798,
+                933
+            ],
+            "modelRecolorReplace": [
+                13958,
+                14226,
+                5904,
+                39558,
+                8757,
+                5532
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Rask",
+            "examineText": "Checking a strap that does not need checking.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20014-0484-470c-a0db-6859a7995df4",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3100,
+                "y": 3494,
+                "plane": 0
+            },
+            "modelIds": [
+                207,
+                296,
+                18958,
+                27139,
+                4924,
+                25669,
+                246,
+                25651
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                43072,
+                25238,
+                10138,
+                13196,
+                6798,
+                127,
+                8741,
+                8720,
+                8472,
+                38160,
+                38036
+            ],
+            "modelRecolorReplace": [
+                7187,
+                7179,
+                7187,
+                7196,
+                7187,
+                37888,
+                134,
+                5132,
+                5132,
+                5384,
+                7634
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Nimm",
+            "examineText": "She is here for the walk back, not the walk out.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20015-1d2a-47ad-bbda-f6818a72a1bf",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3127,
+                "y": 3515,
+                "plane": 0
+            },
+            "modelIds": [
+                405,
+                15939,
+                3848,
+                353,
+                14421,
+                14395,
+                377,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                38814,
+                27548,
+                8741
+            ],
+            "modelRecolorReplace": [
+                10502,
+                43398,
+                10508,
+                10508,
+                10502
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Bregg",
+            "examineText": "Standing where he can see both ways at once.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20016-14ac-4cbd-8f2e-2df7d48429bd",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3132,
+                "y": 3513,
+                "plane": 0
+            },
+            "modelIds": [
+                6848,
+                9620,
+                12752,
+                10301,
+                12138,
+                26630,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4626,
+                6798,
+                10330
+            ],
+            "modelRecolorReplace": [
+                904,
+                33030,
+                33030,
+                8070,
+                94
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Halla",
+            "examineText": "Pacing the last dry ground before the ditch.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 3122,
+                "y": 3510,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 3127,
+                "y": 3514,
+                "plane": 0
+            },
+            "uuid": "add20017-6cee-4bd8-90a9-fcdb4266b585",
+            "regionId": 12342,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3124,
+                "y": 3512,
+                "plane": 0
+            },
+            "modelIds": [
+                378,
+                18914,
+                479,
+                3848,
+                433,
+                11357,
+                19950
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798,
+                6032,
+                5276,
+                5400
+            ],
+            "modelRecolorReplace": [
+                10521,
+                11169,
+                6817,
+                10308,
+                10279,
+                61
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Sten",
+            "examineText": "He has done this often enough not to hurry.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20018-96e8-4a5b-abca-9b561d49349c",
+            "regionId": 12342,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3133,
+                "y": 3515,
+                "plane": 0
+            },
+            "modelIds": [
+                208,
+                4123,
+                28515,
+                324,
+                317,
+                26619,
+                176,
+                27639,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                7952,
+                6798,
+                4626,
+                9104
+            ],
+            "modelRecolorReplace": [
+                36742,
+                36742,
+                38788,
+                43096,
+                43910,
+                37776
+            ],
+            "idleAnimation": "HumanLeanReady"
         }
     ],
     "sceneryRoster": [

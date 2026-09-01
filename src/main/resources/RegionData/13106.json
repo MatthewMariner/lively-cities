@@ -141,6 +141,201 @@
                 9661
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Hakim",
+            "examineText": "Toll paid, patience nearly spent.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20040-aad4-408d-8cbf-f0d706f13d44",
+            "regionId": 13106,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3285,
+                "y": 3248,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                5215,
+                5221,
+                26619,
+                176,
+                5217,
+                26630,
+                241,
+                5233,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                7281,
+                4550,
+                6798,
+                25238
+            ],
+            "modelRecolorReplace": [
+                55085,
+                5565,
+                43030,
+                65313,
+                55072
+            ],
+            "idleAnimation": "NervousIdle"
+        },
+        {
+            "name": "Samira",
+            "examineText": "She has done this road often enough to know the shade.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20041-6030-489e-9745-94ba26d465bf",
+            "regionId": 13106,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3289,
+                "y": 3245,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                364,
+                18554,
+                3848,
+                353,
+                431,
+                14395,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                4550,
+                8741,
+                25238,
+                59515
+            ],
+            "modelRecolorReplace": [
+                6705,
+                55075,
+                55062,
+                127
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Rashid",
+            "examineText": "Second in the queue, and certain the first is stalling.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20042-9117-4728-a7f9-15c814f1d1df",
+            "regionId": 13106,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3282,
+                "y": 3244,
+                "plane": 0
+            },
+            "modelIds": [
+                6086,
+                249,
+                28515,
+                26619,
+                28285,
+                185,
+                176
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4550
+            ],
+            "modelRecolorReplace": [
+                55097,
+                55084,
+                5555
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Basma",
+            "examineText": "Carrying somebody else's news north.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20043-d1e6-40ed-b9bb-4f48d60eb478",
+            "regionId": 13106,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3288,
+                "y": 3238,
+                "plane": 0
+            },
+            "modelIds": [
+                378,
+                18914,
+                479,
+                3848,
+                433,
+                11357,
+                19950
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798,
+                6032,
+                5276,
+                5400
+            ],
+            "modelRecolorReplace": [
+                55072,
+                55085,
+                6817,
+                10308,
+                10279,
+                61
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Tahir",
+            "examineText": "He would rather pay the toll than walk around.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20044-5f70-497b-8e3a-0acb0e9d1731",
+            "regionId": 13106,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3291,
+                "y": 3243,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                246,
+                28515,
+                26632,
+                28285,
+                185,
+                26630,
+                176
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                25238
+            ],
+            "modelRecolorReplace": [
+                55085,
+                99
+            ],
+            "idleAnimation": "HumanSmugIdle"
         }
     ],
     "sceneryRoster": []

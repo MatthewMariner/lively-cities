@@ -88,6 +88,86 @@
                 7613
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Hulda",
+            "examineText": "She has come down from the swamp and would rather not discuss it.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20118-a313-48ce-a99c-4ec98b55577d",
+            "regionId": 12595,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3171,
+                "y": 3267,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18914,
+                3848,
+                353,
+                14421,
+                14395,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                43072,
+                8741,
+                4550,
+                6798
+            ],
+            "modelRecolorReplace": [
+                40496,
+                8472,
+                40512,
+                2524,
+                7613
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Doggett",
+            "examineText": "He is going as far as the fence and no further.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20119-f59a-439a-b53c-c407d6034e0c",
+            "regionId": 12595,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3174,
+                "y": 3266,
+                "plane": 0
+            },
+            "modelIds": [
+                6848,
+                9620,
+                12752,
+                10301,
+                12138,
+                26630,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4626,
+                6798,
+                10330
+            ],
+            "modelRecolorReplace": [
+                40500,
+                40484,
+                99,
+                8070,
+                94
+            ],
+            "idleAnimation": "HumanLeanReady"
         }
     ],
     "sceneryRoster": [

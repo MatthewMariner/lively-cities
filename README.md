@@ -7,10 +7,10 @@
 Cosmetic townsfolk who stand, sit, work and wander through the streets of Old School
 RuneScape — client-side, purely visual, and gone the moment you switch it off.
 
-[![RuneLite](https://img.shields.io/badge/RuneLite-1.12.36-blue)](https://runelite.net)
+[![RuneLite](https://img.shields.io/badge/RuneLite-1.12.37-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-477-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-506-brightgreen)](#development)
 
 </div>
 
@@ -32,7 +32,7 @@ Varrock square has a handful of guards and a general store. Falador's streets ar
 Lumbridge is a castle with nobody in it. The world is beautifully built and almost entirely
 unpopulated, and once you notice it you cannot stop noticing it.
 
-Lively Cities adds **184 hand-placed figures** across **27 regions** — a fletching apprentice
+Lively Cities adds **311 hand-placed figures** across **27 regions** — a fletching apprentice
 working at her bench, a drunken peasant near the tavern, two thieves sitting on a wall in
 Varrock, a squirrel, a rat, someone cooking over a fire. Some stand, some sit, some walk a
 route. They talk occasionally. They are entirely local to your client: no packets, no server
@@ -40,10 +40,11 @@ load, and **nothing another player can see**.
 
 | | |
 |---|---|
-| **184 entities** | 142 citizens + 42 pieces of scenery |
-| **51 wander**, 91 stand still | 5 of the 91 are `ScriptedCitizen` records whose script nothing runs — [see below](#known-limitations) |
-| **9 places** | Varrock (97), Lumbridge (21), Al Kharid (10), Ardougne (10), Catherby (10), Falador (10), the Grand Exchange (10), Draynor (11), Edgeville (5) |
-| **193 at Crowded** | an optional density that adds 51 derived extras on top |
+| **311 entities** | 269 citizens + 42 pieces of scenery |
+| **63 wander**, 206 stand still | 5 of the 206 are `ScriptedCitizen` records whose script nothing runs — [see below](#known-limitations) |
+| **9 places** | Varrock (105), Lumbridge (35), Falador (26), Al Kharid (24), Ardougne (24), Catherby (24), Draynor (25), the Grand Exchange (25), Edgeville (23) |
+| **A colour per city** | Varrock's gold, Falador's white, Lumbridge's blue, Ardougne's red — measured off the game's own banners and armour. The other four liveried cities have no heraldry of their own, so their colours are named choices instead, and Edgeville has no livery at all |
+| **320 at Crowded** | an optional density that adds 51 derived extras on top |
 
 <!-- SCREENSHOT: a close-up of two or three citizens with distinct appearances, ideally one
      mid-walk. Save as docs/img/citizens.png and replace with:
@@ -104,7 +105,10 @@ This is the part that matters more than the citizens, and it is deliberate.
   expensive part — is computed when you right-click and never per frame, so the only
   per-frame work is sliding walking figures between tiles.
   Measured over 19,000 frames of ordinary play: **8µs at the 99th percentile**, about
-  half a percent of one frame. `./gradlew runWithTimings` reproduces it.
+  half a percent of one frame. That figure is from 2026-08-29, at 184 entities; the
+  dataset now holds 311 after the 2026-09-01 livery pass, and it has not been
+  re-measured — that needs a live client and is outstanding.
+  `./gradlew runWithTimings` reproduces it.
 
 <!-- SCREENSHOT: right-click menu on a citizen showing Examine / Hide / Mute below the real
      options, with the coloured target text visible. Save as docs/img/menu.png and replace
@@ -127,7 +131,7 @@ revived. The demand outlived the maintenance by well over a year.
 retained — that data is hundreds of hours of walking around Gielinor deciding where a person
 should stand, and throwing it away would have been vandalism. See [NOTICE](NOTICE) for exactly
 what is derived: the dataset, the animation-name table, the model lighting constants, and the
-eight modifications we have made to their data.
+twelve modifications we have made to their data.
 
 What is new is everything that stops it dying the same way:
 
@@ -142,14 +146,14 @@ What is new is everything that stops it dying the same way:
   is the whole reason to prefer it. The vendored figures keep their `modelIds`; the one
   exception is Rufus, who had no boots in his (see below).
 - **New figures introduce no new cache ids at all.** The 33 citizens added to the thin
-  cities on 2026-08-29 each wear a `modelIds` array copied whole out of a record already
-  in the dataset, with that record's own recolour palette re-dealt so the copy is not its
-  donor twice. Distinct model ids: 324 before, 324 after. A new number here is a new thing
-  that can break on a game update, and this pass added none — see [NOTICE](NOTICE) item 8.
+  cities on 2026-08-29, and the 127 added on 2026-09-01, each wear a `modelIds` array
+  copied whole out of a record already in the dataset. Distinct model ids: 324 before,
+  324 after, 324 after that. A new number here is a new thing that can break on a game
+  update, and neither pass added one — see [NOTICE](NOTICE) items 8 and 12.
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they were renamed
   to anonymous barrow wights, and the Barrows has since left the dataset entirely.
-- **477 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **506 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -159,8 +163,13 @@ What is new is everything that stops it dying the same way:
 Stated plainly, because you will find them anyway.
 
 - **The dataset is still lopsided, and it is nine places rather than twenty-four.**
-  142 citizens for the whole game, 40 of them in a single Varrock region and 63 in Varrock
-  altogether. Varrock is the flagship and everywhere else is a town rather than a city.
+  269 citizens for the whole game, 71 of them in Varrock. It is a good deal less lopsided
+  than it was — Varrock held 44% of the roster before the 2026-09-01 livery pass and holds
+  26% after it — but Varrock is still the flagship, and its centre is the one part of the
+  map that pass could not add to: the densest thirty-tile window in the dataset is on
+  Varrock square and already holds 76 authored entities against an object cap of 80. (The
+  pass did add eight records to Varrock overall — seven in the church, region 12854, and
+  one east of the east gate, region 13109 — just none of them in the square itself.)
 
   The five thinnest survivors were brought up to ten citizens each on 2026-08-29 — Al
   Kharid, Catherby, Falador, Ardougne and Draynor had three or four figures apiece before
@@ -172,16 +181,25 @@ Stated plainly, because you will find them anyway.
   [docs/CITY-TOP-UP-CHECK.md](docs/CITY-TOP-UP-CHECK.md), with a Ground Markers import
   block, and that walk is the next thing this plugin needs.
 
-  Even topped up, three of those five are populated somewhere other than where a player
+  A second pass on 2026-09-01 added **127 more**, in every city but Varrock's centre, and
+  gave each city a livery — a colour measured off its own banners, crest or guards, worn on
+  the torso and legs of every generic townsperson standing in it. **None of those 127 tiles
+  has been walked either**, and they are listed in
+  [docs/CITY-LIVERY-CHECK.md](docs/CITY-LIVERY-CHECK.md) with their own Ground Markers
+  block. Four of them — a Saradominist group inside Falador's church — stand roughly
+  twenty-six tiles from the nearest tile anybody has stood on, which is the weakest
+  evidence in either pass and is flagged as such.
+
+  Even topped up, some cities are still populated somewhere other than where a player
   would look for them. This plugin ships no region file for East Ardougne's market square,
-  so Ardougne's seven are at the monastery, the farm and the Legends' Guild path. Falador's
-  four new park figures all stand inside Sir Wendes' authored wander box, which is the only
-  vouched-for ground anywhere in region 11828 — so Falador is a park scene rather than a
-  street scene. Draynor's eight are in two groups: six on the ground north of Ned's house
-  and east toward the manor gate, and two in the manor grounds (region 12340) beside the
-  Ghost's box. That first group is the thinnest evidence in the whole pass rather than
-  vouched-for ground — region 12338 shipped exactly two entities before this, so six
-  figures hang off two proven tiles, and `docs/CITY-TOP-UP-CHECK.md` says which two.
+  so Ardougne's figures are at the monastery, the farm and the Legends' Guild path, and it
+  ships no proven ground in Al Kharid's market either. Draynor now holds 24 citizens in
+  two groups: 18 in region 12338, on the ground north of Ned's house and east toward the
+  manor gate, and 6 in the manor grounds (region 12340) beside the Ghost's box. The 12338
+  group is the thinnest evidence in either pass rather than vouched-for ground — that file
+  shipped exactly one citizen, Sailor, and one piece of scenery before either pass touched
+  it, so seventeen figures hang off those same two proven tiles, and
+  `docs/CITY-TOP-UP-CHECK.md` and `docs/CITY-LIVERY-CHECK.md` between them say which two.
 
   Fifteen thinner places were removed outright on 2026-08-24 rather than shipped as they
   were: thirteen of the original twenty-four held one or two figures, and ticking "Canifis"
@@ -196,7 +214,7 @@ Stated plainly, because you will find them anyway.
   executes nothing. There is no script engine here and none is planned. The five records
   (Eugene in Edgeville, the Assistant Apothecary and the Gardener in Varrock, Mike in
   Lumbridge, Emme in Varrock) therefore stand exactly where they were placed, playing their
-  idle animation, indistinguishable in behaviour from the 86 `StationaryCitizen`s. The field
+  idle animation, indistinguishable in behaviour from the 201 `StationaryCitizen`s. The field
   is carried through the loader rather than dropped so that the shipped files stay a faithful
   copy of the format they came from — see `EntityRecord`, which says the same thing at the
   field. Anything a reader might think those five do, they do not.
@@ -218,8 +236,8 @@ Stated plainly, because you will find them anyway.
   the Dark wizard, Nightfire, Dofur and Simon — did have their *walk* corrected, for the
   skeleton reason in [NOTICE](NOTICE); none of them moves, and none of them changed
   position or pose.) Every one is listed with its tile, pose and examine text in
-  [docs/SEATING-CHECK.md](docs/SEATING-CHECK.md), together with two more who *lean*
-  rather than sit and have the same problem in a different shape — thirty-one figures on
+  [docs/SEATING-CHECK.md](docs/SEATING-CHECK.md), together with seventeen more who *lean*
+  rather than sit and have the same problem in a different shape — forty-six figures on
   one walk, with a Ground Markers import block covering all of them so the walk is a walk
   rather than a search.
 - **One cameo's costume is an approximation, and it is the one wearing armour.** Peter
@@ -269,10 +287,13 @@ Stated plainly, because you will find them anyway.
   `FrameTimings`' javadoc and in `docs/SUBMISSION.md`.
 - **Crowded adds derived figures, not authored ones.** They are silent, they do not wander,
   and they wear their source's colours rearranged. They are ambience, not characters.
-  It adds 51 of them against 142 authored citizens, and it adds them unevenly: 21 in
+  It adds 51 of them against 269 authored citizens, and it adds them unevenly: 21 in
   Varrock, 9 in Draynor, 8 in Falador, **none at all in Lumbridge**. That is a smaller
   and patchier setting than it was — it used to add 184 — because most of what it used
-  to add was wrong. A derived figure only gets made now if its source's own palette can
+  to add was wrong, and it is a smaller share of the crowd than it was again because the
+  authored half nearly doubled on 2026-09-01 while this half did not move. The 127
+  figures that pass added derive nothing: a derived figure wears its source's colours
+  rearranged, and rearranging a city's livery is exactly what a livery cannot survive. A derived figure only gets made now if its source's own palette can
   be rearranged without moving a skin tone onto a garment or moving the game's own face
   colour off the slot the author put it on, and if its source is not sitting on
   something, holding something, or lined up against a piece of scenery.
@@ -295,11 +316,14 @@ usually decisive, and pasting it saves a round trip.
 
 ## Development
 
-Built against RuneLite client **1.12.36**, targeting Java 11 bytecode. Requires a JDK ≥ 11;
-the Gradle wrapper handles the rest.
+Built against RuneLite client **1.12.37**, targeting Java 11 bytecode. Requires a JDK ≥ 11;
+the Gradle wrapper handles the rest. The version is pinned in `build.gradle` rather than
+left as `latest.release`, so this number and the ones in `./gradlew test` stay true between
+builds; bump it deliberately after an OSRS update, alongside the [cache id
+audit](#after-an-osrs-update-checking-the-dataset-still-resolves).
 
 ```bash
-./gradlew build            # compile and run the 477 tests
+./gradlew build            # compile and run the 506 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)
@@ -366,7 +390,7 @@ and `RegionDataLoaderTest` already assert, over the shipped JSON alone:
   distinct-`npcAppearanceId` count is pinned (currently 7) — if either test
   fails after you *intentionally* changed the dataset, update the pinned
   number in `ModelIdAuditTest`; if you did not touch the dataset, something
-  else changed it. (The crowd at `Crowded` is 193 — 142 authored citizens
+  else changed it. (The crowd at `Crowded` is 320 — 269 authored citizens
   plus 51 derived ones. It read 326 until the 2026-08-29 quality pass and
   briefly read 324 before that, which a note here once called a coincidence
   with the model-id count; it is not even that any more. The two are unrelated

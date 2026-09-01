@@ -84,6 +84,129 @@
                 8472
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Jamila",
+            "examineText": "Watching the desert for something that is not there.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20045-f51b-4240-9901-382df6aabf3a",
+            "regionId": 13361,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3340,
+                "y": 3148,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                28515,
+                26632,
+                176,
+                28285,
+                26630,
+                194,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                43072,
+                6798
+            ],
+            "modelRecolorReplace": [
+                55072,
+                55085,
+                40485,
+                39
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Salim",
+            "examineText": "He says the caravan is a day out. He said that yesterday.",
+            "remarks": [
+                "A day out. No more."
+            ],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20046-1131-4ce1-a88e-7754e377512f",
+            "regionId": 13361,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3336,
+                "y": 3153,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                4123,
+                11115,
+                34283,
+                11732,
+                5218
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                8078,
+                21776,
+                25238,
+                5231,
+                6798
+            ],
+            "modelRecolorReplace": [
+                55075,
+                127,
+                1451,
+                55062,
+                10378,
+                18
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Rania",
+            "examineText": "Well out of the wind, and staying there.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20047-7979-47f9-b5c3-49303c242a34",
+            "regionId": 13361,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3343,
+                "y": 3153,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18914,
+                3848,
+                353,
+                14421,
+                14395,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                43072,
+                8741,
+                4550,
+                6798
+            ],
+            "modelRecolorReplace": [
+                55084,
+                8472,
+                55097,
+                2524,
+                7613
+            ],
+            "idleAnimation": "HumanLeanReady"
         }
     ],
     "sceneryRoster": []

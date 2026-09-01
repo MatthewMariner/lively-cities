@@ -160,6 +160,172 @@
                 4919
             ],
             "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Selby",
+            "examineText": "Further in for the good wood, he says. He is not going further in.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20062-588f-4fff-ae99-f59b1ff869b0",
+            "regionId": 11061,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2761,
+                "y": 3433,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                246,
+                28515,
+                26632,
+                28285,
+                185,
+                26630,
+                176
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                25238
+            ],
+            "modelRecolorReplace": [
+                34490,
+                34472
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Ingrid",
+            "examineText": "She has an axe and a strong view about lending it.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20063-33ff-4b77-b8c6-6b129989891a",
+            "regionId": 11061,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2754,
+                "y": 3434,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                28515,
+                26632,
+                176,
+                28285,
+                26630,
+                194,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                43072,
+                6798
+            ],
+            "modelRecolorReplace": [
+                34484,
+                34502,
+                40485,
+                39
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Halvor",
+            "examineText": "Keeping the long way round between himself and the bees.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20064-1bef-4deb-8f12-233403683dd6",
+            "regionId": 11061,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2760,
+                "y": 3440,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                5215,
+                5221,
+                26619,
+                176,
+                5217,
+                26630,
+                241,
+                5233,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                7281,
+                4550,
+                6798,
+                25238
+            ],
+            "modelRecolorReplace": [
+                34480,
+                5565,
+                43030,
+                65313,
+                34462
+            ],
+            "idleAnimation": "NervousIdle"
+        },
+        {
+            "name": "Netta",
+            "examineText": "Gathering, mostly. Some of it on purpose.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2754,
+                "y": 3436,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2757,
+                "y": 3440,
+                "plane": 0
+            },
+            "uuid": "add20065-9d03-4869-9a7b-b2edf1c0ec28",
+            "regionId": 11061,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2754,
+                "y": 3438,
+                "plane": 0
+            },
+            "modelIds": [
+                393,
+                18914,
+                3848,
+                353,
+                14397,
+                14395,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                5532,
+                4550,
+                8741
+            ],
+            "modelRecolorReplace": [
+                34472,
+                10508,
+                4645,
+                34490
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

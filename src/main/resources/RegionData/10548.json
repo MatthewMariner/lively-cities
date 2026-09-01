@@ -81,6 +81,142 @@
                 10508
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Cerise",
+            "examineText": "Pigs, mud, and a fixed opinion about both.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20054-8879-4e05-a5f5-2d4410f62c2e",
+            "regionId": 10548,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2660,
+                "y": 3376,
+                "plane": 0
+            },
+            "modelIds": [
+                405,
+                15939,
+                3848,
+                353,
+                14421,
+                14395,
+                377,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                38814,
+                27548,
+                8741
+            ],
+            "modelRecolorReplace": [
+                1950,
+                1965,
+                10508,
+                10508,
+                1965
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Alard",
+            "examineText": "The gate is shut and he is fairly sure he shut it.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20055-dac3-4239-b392-96ce78e94db6",
+            "regionId": 10548,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2666,
+                "y": 3372,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                249,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                1940,
+                1955,
+                8481,
+                8472,
+                35908,
+                11146
+            ],
+            "idleAnimation": "NervousIdle"
+        },
+        {
+            "name": "Perrine",
+            "examineText": "She has the barley counted and nobody has asked.",
+            "remarks": [
+                "Six sacks. Six."
+            ],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2657,
+                "y": 3369,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2661,
+                "y": 3374,
+                "plane": 0
+            },
+            "uuid": "add20056-5485-4d69-8a40-f44f01c2d995",
+            "regionId": 10548,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2659,
+                "y": 3371,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                28515,
+                26632,
+                176,
+                28285,
+                26630,
+                194,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                43072,
+                6798
+            ],
+            "modelRecolorReplace": [
+                1962,
+                1977,
+                40485,
+                39
+            ],
+            "idleAnimation": "HumanIdle"
         }
     ],
     "sceneryRoster": []

@@ -72,15 +72,16 @@ public class AnimationSkeletonTest
 	 * <p>Pinned, and load-bearing. The comparison below skips a record with only one
 	 * animation, so a bug that made {@link EntityDefinition} drop move animations
 	 * entirely would empty the sample and turn every assertion green. This is the
-	 * number that stops that: 106 of the 142 shipped citizens have both.
+	 * number that stops that: 233 of the 269 shipped citizens have both.
 	 *
 	 * <p>It was 73 of 109 before the top-up pass on 2026-08-29 added 33 citizens to the
-	 * five thin cities. All 33 carry an idle <i>and</i> a move, because each one reuses a
-	 * shipped citizen's whole {@code modelIds} array and is animated on that body's own
-	 * framemap — so the sample this rule can speak about grew by exactly the number of
-	 * records added.
+	 * five thin cities, and 106 of 142 before the livery pass on 2026-09-01 added 127
+	 * more. Every one of those 160 carries an idle <i>and</i> a move, because each one
+	 * reuses a shipped citizen's whole {@code modelIds} array and is animated on that
+	 * body's own framemap — so the sample this rule can speak about grew by exactly the
+	 * number of records added, twice.
 	 */
-	private static final int CITIZENS_WITH_BOTH_ANIMATIONS = 106;
+	private static final int CITIZENS_WITH_BOTH_ANIMATIONS = 233;
 
 	/**
 	 * The one that would have caught all thirteen.
@@ -131,15 +132,16 @@ public class AnimationSkeletonTest
 	 * skips a record whose models nothing in the cache is built out of, so a bug that
 	 * emptied {@link ModelSkeletons} would turn every assertion green.
 	 *
-	 * <p>The arithmetic: 184 shipped records, 14 of them carrying no animation at all,
-	 * leaves 170 this rule could apply to. 145 of those have a body the cache can put a
+	 * <p>The arithmetic: 311 shipped records, 14 of them carrying no animation at all,
+	 * leaves 297 this rule could apply to. 272 of those have a body the cache can put a
 	 * rig on and 25 do not — see {@link #RECORDS_WITH_NO_RIG_EVIDENCE}.
 	 *
-	 * <p>It read 112 of 137 before the top-up pass on 2026-08-29. Every one of the 33
-	 * citizens it added wears a body already in this table, so all 33 landed in the
-	 * traceable bucket and the other one did not move at all.
+	 * <p>It read 112 of 137 before the top-up pass on 2026-08-29 and 145 of 170 before
+	 * the livery pass on 2026-09-01. Every one of the 160 citizens those two passes
+	 * added wears a body already in this table, so all 160 landed in the traceable
+	 * bucket and the other side of the split did not move at all.
 	 */
-	private static final int RECORDS_WITH_A_TRACEABLE_RIG = 145;
+	private static final int RECORDS_WITH_A_TRACEABLE_RIG = 272;
 
 	/**
 	 * The other side of that split, pinned so it cannot quietly grow.

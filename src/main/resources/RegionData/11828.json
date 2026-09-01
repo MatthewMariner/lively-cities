@@ -231,6 +231,449 @@
                 61
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Aymer",
+            "examineText": "In white, off duty, and standing as though he were not.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20090-633f-4b54-a8ea-501e4c4e4fcc",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2964,
+                "y": 3388,
+                "plane": 0
+            },
+            "modelIds": [
+                229,
+                9762,
+                6755,
+                26634,
+                176,
+                9761,
+                182,
+                9763
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4550,
+                918,
+                43072
+            ],
+            "modelRecolorReplace": [
+                107,
+                90,
+                918,
+                4005,
+                7073
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Godric",
+            "examineText": "He has walked the park twice and will walk it again.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20091-bfa5-4791-bf49-0fa96f058a9f",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2968,
+                "y": 3385,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                5215,
+                5221,
+                26619,
+                176,
+                5217,
+                26630,
+                241,
+                5233,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                7281,
+                4550,
+                6798,
+                25238
+            ],
+            "modelRecolorReplace": [
+                119,
+                5565,
+                43030,
+                65313,
+                102
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Isolde",
+            "examineText": "She is waiting for the bell and pretending not to be.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20092-c977-4787-8586-da781f2a5316",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2961,
+                "y": 3387,
+                "plane": 0
+            },
+            "modelIds": [
+                378,
+                18914,
+                479,
+                3848,
+                433,
+                11357,
+                19950
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798,
+                6032,
+                5276,
+                5400
+            ],
+            "modelRecolorReplace": [
+                80,
+                97,
+                6817,
+                10308,
+                10279,
+                61
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Ranulf",
+            "examineText": "The park is his beat and he takes it seriously.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20093-2600-4c95-9082-aa248c29fc87",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2966,
+                "y": 3389,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                4123,
+                11115,
+                34283,
+                11732,
+                5218
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                8741,
+                8078,
+                21776,
+                25238,
+                5231,
+                6798
+            ],
+            "modelRecolorReplace": [
+                107,
+                127,
+                1451,
+                90,
+                10378,
+                18
+            ],
+            "idleAnimation": "HumanLeanReady"
+        },
+        {
+            "name": "Editha",
+            "examineText": "She has the afternoon and no plans for it.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20094-98e2-4531-ac9c-5b1bb553df9d",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2959,
+                "y": 3384,
+                "plane": 0
+            },
+            "modelIds": [
+                11352,
+                391,
+                418,
+                23957,
+                10692,
+                356,
+                433,
+                7366
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                6798,
+                4550,
+                8741,
+                25238,
+                908,
+                5652
+            ],
+            "modelRecolorReplace": [
+                34213,
+                916,
+                107,
+                43818,
+                4558,
+                13859
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Osbert",
+            "examineText": "Explaining the rules of the park to nobody in particular.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20095-e7e2-4e4d-bf0f-3b68d31a585a",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2972,
+                "y": 3387,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                246,
+                28515,
+                26632,
+                28285,
+                185,
+                26630,
+                176
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                25238
+            ],
+            "modelRecolorReplace": [
+                119,
+                102
+            ],
+            "idleAnimation": "HumanSmugIdle"
+        },
+        {
+            "name": "Amice",
+            "examineText": "Pacing out the flowerbed and losing count, like everyone here.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2963,
+                "y": 3379,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2967,
+                "y": 3383,
+                "plane": 0
+            },
+            "uuid": "add20096-c01e-4d2e-851d-5a5551f3cd6a",
+            "regionId": 11828,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2965,
+                "y": 3381,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                28515,
+                26632,
+                176,
+                28285,
+                26630,
+                194,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                43072,
+                6798
+            ],
+            "modelRecolorReplace": [
+                80,
+                97,
+                40485,
+                39
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Thurstan",
+            "examineText": "He has knelt, stood, and is now simply standing.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20097-d725-4743-94fe-ba151c7b4bc1",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2995,
+                "y": 3383,
+                "plane": 0
+            },
+            "modelIds": [
+                223,
+                26630,
+                246,
+                299,
+                26619,
+                176,
+                260,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741
+            ],
+            "modelRecolorReplace": [
+                90,
+                107
+            ],
+            "idleAnimation": "MageReady"
+        },
+        {
+            "name": "Sybilla",
+            "examineText": "She came in out of the rain and stayed for the rest of it.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20098-8338-4920-a68e-2902d2d8da94",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2996,
+                "y": 3385,
+                "plane": 0
+            },
+            "modelIds": [
+                393,
+                18914,
+                3848,
+                353,
+                14397,
+                14395,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                5532,
+                4550,
+                8741
+            ],
+            "modelRecolorReplace": [
+                102,
+                10508,
+                4645,
+                119
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Gervase",
+            "examineText": "Here for the bell, the sermon, or the quiet. He has not said which.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20099-ee47-4816-b114-bc7754119cd8",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2994,
+                "y": 3381,
+                "plane": 0
+            },
+            "modelIds": [
+                230,
+                246,
+                28515,
+                26619,
+                176,
+                256
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798
+            ],
+            "modelRecolorReplace": [
+                80,
+                97,
+                127
+            ],
+            "idleAnimation": "MageReady"
+        },
+        {
+            "name": "Adela",
+            "examineText": "She has read the plaque and is working out who is under it.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20100-36f2-4508-873e-40b02df451b6",
+            "regionId": 11828,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2997,
+                "y": 3382,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18914,
+                3848,
+                353,
+                14421,
+                14395,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                43072,
+                8741,
+                4550,
+                6798
+            ],
+            "modelRecolorReplace": [
+                90,
+                8472,
+                107,
+                2524,
+                7613
+            ],
+            "idleAnimation": "SuzieIdle"
         }
     ],
     "sceneryRoster": []

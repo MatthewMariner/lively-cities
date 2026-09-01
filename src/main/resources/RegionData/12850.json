@@ -331,6 +331,382 @@
                 5276
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Tam",
+            "examineText": "New here, and it shows.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20106-e68c-4414-a61e-c35ad89c8e61",
+            "regionId": 12850,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3222,
+                "y": 3230,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                249,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                40484,
+                40500,
+                8481,
+                8472,
+                35908,
+                11146
+            ],
+            "idleAnimation": "NervousIdle"
+        },
+        {
+            "name": "Nell",
+            "examineText": "She has given the same directions four times this morning.",
+            "remarks": [
+                "It is north. Keep going."
+            ],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20107-f5a8-439d-b354-adabbebb5d74",
+            "regionId": 12850,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3229,
+                "y": 3230,
+                "plane": 0
+            },
+            "modelIds": [
+                11352,
+                391,
+                418,
+                23957,
+                10692,
+                356,
+                433,
+                7366
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                6798,
+                4550,
+                8741,
+                25238,
+                908,
+                5652
+            ],
+            "modelRecolorReplace": [
+                34213,
+                916,
+                40512,
+                40496,
+                4558,
+                13859
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Roderick",
+            "examineText": "Between the shop and the castle, and stuck there.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20108-10c9-4c2f-8265-7edcb640d39e",
+            "regionId": 12850,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3232,
+                "y": 3234,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                40474,
+                40490,
+                35908,
+                11146,
+                8481,
+                8472
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Bramwell",
+            "examineText": "He has been warned about the wizard and is looking anyway.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20109-9a23-4406-9461-51aa4fee90f0",
+            "regionId": 12850,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3225,
+                "y": 3239,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                246,
+                28515,
+                26632,
+                28285,
+                185,
+                26630,
+                176
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                25238
+            ],
+            "modelRecolorReplace": [
+                40500,
+                40484
+            ],
+            "idleAnimation": "HumanLeanReady"
+        },
+        {
+            "name": "Lisbeth",
+            "examineText": "She is not with the dwarf, and would like that understood.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20110-5a53-4889-ad85-984c78f16cf8",
+            "regionId": 12850,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3231,
+                "y": 3244,
+                "plane": 0
+            },
+            "modelIds": [
+                378,
+                18914,
+                479,
+                3848,
+                433,
+                11357,
+                19950
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798,
+                6032,
+                5276,
+                5400
+            ],
+            "modelRecolorReplace": [
+                99,
+                40500,
+                6817,
+                10308,
+                10279,
+                61
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Ordric",
+            "examineText": "Waiting on the ferry, or on somebody who knows about the ferry.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20111-b018-4662-bd99-5e6f2759b6a2",
+            "regionId": 12850,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3234,
+                "y": 3255,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                5215,
+                5221,
+                26619,
+                176,
+                5217,
+                26630,
+                241,
+                5233,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                7281,
+                4550,
+                6798,
+                25238
+            ],
+            "modelRecolorReplace": [
+                40512,
+                5565,
+                43030,
+                65313,
+                40496
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Fenna",
+            "examineText": "She has crossed the bridge twice and is thinking about a third.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20112-299d-4d3f-87c5-b408095eea52",
+            "regionId": 12850,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3218,
+                "y": 3253,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                28515,
+                26632,
+                176,
+                28285,
+                26630,
+                194,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                43072,
+                6798
+            ],
+            "modelRecolorReplace": [
+                40474,
+                40490,
+                40485,
+                39
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Wat",
+            "examineText": "Walking the north bank because the south bank is busy.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 3207,
+                "y": 3248,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 3212,
+                "y": 3252,
+                "plane": 0
+            },
+            "uuid": "add20113-aac0-4826-97aa-ebc8dda6fca8",
+            "regionId": 12850,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3209,
+                "y": 3250,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                247,
+                302,
+                27139,
+                179,
+                28285,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                6798,
+                8741
+            ],
+            "modelRecolorReplace": [
+                40484,
+                7236,
+                40500
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Gilda",
+            "examineText": "She has the good spot on the bank and is not moving.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20114-13cc-4671-acd7-110e60241667",
+            "regionId": 12850,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3241,
+                "y": 3228,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18554,
+                483,
+                3476,
+                353,
+                14395,
+                14395,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                6798,
+                43072
+            ],
+            "modelRecolorReplace": [
+                40512,
+                40496,
+                322,
+                8472
+            ],
+            "idleAnimation": "Think"
         }
     ],
     "sceneryRoster": [

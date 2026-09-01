@@ -37,7 +37,7 @@ public final class EntityDefinition
 	private static final int JAU_FULL_ROTATION = 2048;
 	private static final int MAX_PLANE = 3;
 
-	/** Shared, so 140 of the 184 entities do not each allocate an empty array. */
+	/** Shared, so 257 of the 311 entities do not each allocate an empty array. */
 	private static final String[] NO_REMARKS = new String[0];
 
 	private final UUID uuid;
@@ -64,6 +64,9 @@ public final class EntityDefinition
 
 	/** See {@link #isCameo()}. */
 	private final boolean cameo;
+
+	/** See {@link #isNoEcho()}. */
+	private final boolean noEcho;
 
 	private final short[] recolorFind;
 	private final short[] recolorReplace;
@@ -109,6 +112,7 @@ public final class EntityDefinition
 		int[] modelIds,
 		int npcAppearanceId,
 		boolean cameo,
+		boolean noEcho,
 		short[] recolorFind,
 		short[] recolorReplace,
 		@Nullable float[] scale,
@@ -135,6 +139,7 @@ public final class EntityDefinition
 		this.modelIds = modelIds;
 		this.npcAppearanceId = npcAppearanceId;
 		this.cameo = cameo;
+		this.noEcho = noEcho;
 		this.recolorFind = recolorFind;
 		this.recolorReplace = recolorReplace;
 		this.scale = scale;
@@ -256,6 +261,7 @@ public final class EntityDefinition
 			modelIds,
 			npcAppearanceId,
 			cameo(record, type, label),
+			record.noEcho != null && record.noEcho,
 			find,
 			replace,
 			vector3(record.scale, "scale", label),
@@ -338,6 +344,12 @@ public final class EntityDefinition
 			// it is written down because "an echo is not a cameo" is a property of
 			// being an echo, and a future second derivation path would need it too.
 			false,
+			// An echo never seeds an echo of its own, so this flag has nothing left to
+			// govern by the time it would be read. It is set true rather than false
+			// because that is the truthful value — CitizenEcho.echoesOfSource refuses
+			// an echo on its first line, and a flag that said "derive from me" while
+			// nothing can would be a second, disagreeing statement of the same fact.
+			true,
 			recolorFind,
 			recolorReplace,
 			source.scale == null ? null : source.scale.clone(),
@@ -554,9 +566,9 @@ public final class EntityDefinition
 	 * The one-liners this entity may say, with the four ways of having nothing to
 	 * say flattened into one empty array.
 	 *
-	 * <p>All four occur in the shipped data: 44 citizens carry remarks, 66 carry
-	 * {@code "remarks": []}, 32 carry no {@code remarks} field at all — 44 + 66 + 32
-	 * being the 142 shipped citizens — and all 42 scenery records omit it.
+	 * <p>All four occur in the shipped data: 54 citizens carry remarks, 183 carry
+	 * {@code "remarks": []}, 32 carry no {@code remarks} field at all — 54 + 183 + 32
+	 * being the 269 shipped citizens — and all 42 scenery records omit it.
 	 * {@link CitizenRemarks#forDefinition} then has one condition to check rather
 	 * than four, and {@link CitizenChatter} never has to ask what kind of silence it
 	 * is looking at. {@code CitizenRemarksTest} recomputes the partition from the
@@ -816,7 +828,7 @@ public final class EntityDefinition
 
 	/**
 	 * @return the one-liners this entity may say, never null and never containing a
-	 * blank. Empty for scenery and for the 98 shipped citizens with nothing
+	 * blank. Empty for scenery and for the 215 shipped citizens with nothing
 	 * authored.
 	 *
 	 * <p>The array itself, not a copy — the same call this class already makes for
@@ -887,6 +899,21 @@ public final class EntityDefinition
 	public boolean isCameo()
 	{
 		return cameo;
+	}
+
+	/**
+	 * @return true if this record refuses to seed derived "Passer-by" figures — see
+	 * {@link EntityRecord#noEcho} for the argument, and
+	 * {@code CitizenEcho.echoesOfSource} for where it is honoured.
+	 *
+	 * <p>Unlike {@link #isCameo()} this changes nothing about how the record itself
+	 * renders. It is a statement about what may be derived <i>from</i> it, and it is
+	 * the only field in this class that is about the derivation rather than about the
+	 * figure.
+	 */
+	public boolean isNoEcho()
+	{
+		return noEcho;
 	}
 
 	public short[] getRecolorFind()

@@ -17,8 +17,9 @@ import net.runelite.api.coords.WorldPoint;
  * Extra citizens, derived from the authored ones — the whole of
  * {@link CrowdDensity#CROWDED}.
  *
- * <p>The dataset holds 142 hand-placed citizens and the user asked for twice as
- * many. There is no second dataset, so the second half has to come from the first:
+ * <p>The dataset held 142 hand-placed citizens when this class was written and the
+ * user asked for twice as many. There was no second dataset, so the second half had
+ * to come from the first:
  * an <b>echo</b> is a citizen built entirely out of one authored citizen's own
  * record, standing on separately-validated ground a few tiles away, wearing that
  * citizen's own colours re-dealt, and carrying none of its identity.
@@ -50,6 +51,12 @@ import net.runelite.api.coords.WorldPoint;
  *       looked at. They are opt-in content behind their own checkbox and an echo is
  *       not, so an echo of one would be a body the {@code cameos} setting does not
  *       govern — see {@link #echoesOfSource};</li>
+ *   <li>the <b>127 liveried townsfolk</b> added on 2026-09-01 refuse it themselves,
+ *       through {@code EntityRecord.noEcho} — the flag this javadoc used to say should
+ *       be added "when there is a record that needs it, not before", and they are that
+ *       record. Their colours sit on the slots they sit on in order to say which city
+ *       the figure belongs to, and a re-deal's whole method is to put those colours on
+ *       different slots;</li>
  *   <li>a source <b>dressed from an {@code npcAppearanceId}</b> is refused too, and
  *       for a sharper reason: its colours come from the composition rather than from
  *       its record, so re-dealing the record's palette would change nothing and the
@@ -77,9 +84,16 @@ import net.runelite.api.coords.WorldPoint;
  *       supports only one — 23 of them ask for two and 5 for one, so <b>51</b> echoes
  *       are asked for and all 51 find somewhere legal to stand (see below).</li>
  * </ul>
- * That comes to <b>51 echoes against 142 authored citizens — 193 in total,
- * 1.36×</b>. {@code CitizenEchoTest} recomputes all of those numbers from the
+ * That comes to <b>51 echoes against 269 authored citizens — 320 in total,
+ * 1.19×</b>. {@code CitizenEchoTest} recomputes all of those numbers from the
  * shipped files rather than trusting this paragraph.
+ *
+ * <p><b>The multiplier fell to 1.19× on 2026-09-01 without a single echo being
+ * lost</b>, and the direction is worth reading correctly: 127 authored citizens
+ * arrived, none of them seeds, so the derived half of the crowd is unchanged at 51
+ * while the authored half nearly doubled. That is this feature doing a smaller share
+ * of the work rather than doing it worse — the answer to "Lumbridge gets no echoes at
+ * all" was always going to be authored content, and that is what arrived.
  *
  * <p><b>It used to be 96 seeds, 185 asked for, 184 placed and 2.30×</b>, and that
  * was the "roughly twice as many" the original request asked for. It was also
@@ -92,8 +106,9 @@ import net.runelite.api.coords.WorldPoint;
  * did, and 1.32× when the 2026-08-30 pass gave the game's own face colour its own
  * class.
  *
- * <p><b>It is 1.36× now, and the rise is a data change rather than a rule change.</b>
- * Nothing here was loosened: the 2026-08-31 pass repainted the seventeen authored
+ * <p><b>It rose to 1.36× on 2026-08-31, and the rise was a data change rather than a
+ * rule change.</b>
+ * Nothing here was loosened: that pass repainted the seventeen authored
  * records that were painting a legs slot a colour out of {@link #isFlesh}'s gamut, on
  * the owner's report that figures still looked trouserless at {@link CrowdDensity#FULL}
  * — where no echo exists at all, so the fault was in the records and not in this class.
@@ -101,13 +116,14 @@ import net.runelite.api.coords.WorldPoint;
  * colour on its own side of the boundary, so four more citizens became seeds and five
  * more echoes appeared. The rule that admits them is the one that was already there.
  *
- * <p>Whether {@link CrowdDensity#CROWDED} still earns its place at 1.36× is a fair
+ * <p>Whether {@link CrowdDensity#CROWDED} still earns its place at 1.19× is a fair
  * question and a separate one. It is worth asking with the shape of the answer in
  * view rather than only the average: Varrock gets 21 echoes, Draynor 9 and Falador 8,
  * while <b>Lumbridge gets none at all</b>, so for a player standing there the setting
- * does nothing whatever. That is an argument about content — several cities are thin
- * and want authoring — rather than an argument about this class, and it is now made
- * with a real number rather than with a forecast.
+ * does nothing whatever. That was an argument about content — several cities were thin
+ * and wanted authoring — and the 2026-09-01 pass is the content. The case for this
+ * class is weaker than it was, and that is the right way for it to get weaker: a city
+ * with 30 hand-placed citizens in it needs fewer strangers than one with 16.
  *
  * <p>(The 2.30× total read 324 between the top-up on 2026-08-29 and the review pass
  * that followed it, and a comment here observed that the dataset also held 324
@@ -257,10 +273,10 @@ final class CitizenEcho
 	 * copies of one body in one doorway.
 	 *
 	 * <p>It is <b>not</b> the number that produces a doubling, and this javadoc said it
-	 * was until the 2026-08-30 pass: two per citizen would turn 142 into 326 only if
-	 * every citizen seeded two, and after the flesh and body rules 28 of them seed at
-	 * all. The figure it actually produces is the one in this class's javadoc — 51
-	 * echoes, 193 in total, 1.36× — and this constant is only its ceiling. A cap and a
+	 * was until the 2026-08-30 pass: two per citizen would turn 269 into 807 only if
+	 * every citizen seeded two, and after the record, flesh and body rules 28 of them
+	 * seed at all. The figure it actually produces is the one in this class's javadoc —
+	 * 51 echoes, 320 in total, 1.19× — and this constant is only its ceiling. A cap and a
 	 * total are different claims, and stating the cap as though it were the total is
 	 * how "roughly twice as many" outlived the arithmetic that supported it.
 	 */
@@ -324,7 +340,7 @@ final class CitizenEcho
 	private static final long ECHO_UUID_SALT_HIGH = 0x9E3779B97F4A7C15L;
 	private static final long ECHO_UUID_SALT_LOW = 0xBF58476D1CE4E5B9L;
 
-	/** Shared, so the 118 citizens that seed nothing do not each allocate a list. */
+	/** Shared, so the 241 citizens that seed nothing do not each allocate a list. */
 	private static final List<EntityDefinition> NONE = Collections.emptyList();
 
 	/**
@@ -428,6 +444,22 @@ final class CitizenEcho
 			// authored recolour (their palette comes from an NPC composition at
 			// render time), so the palette check below would refuse them anyway
 			// today — and that is a coincidence about this dataset, not a rule.
+			return NONE;
+		}
+
+		if (source.isNoEcho())
+		{
+			// The record says so. This is the one gate here that is not derived from
+			// anything, and it is the flag this class's javadoc said should be added
+			// "when there is a record that needs it, not before" — see
+			// EntityRecord.noEcho for the record that needed it and why no derivable
+			// rule could have caught it.
+			//
+			// In short: an echo's difference from its source is the source's palette
+			// re-dealt, and a liveried citizen's palette is the one thing about it
+			// that must not move. Every other gate below asks what a figure is or what
+			// it is doing; this one asks what its colours are for, which the numbers
+			// cannot say.
 			return NONE;
 		}
 
@@ -619,7 +651,7 @@ final class CitizenEcho
 			// ModelData.scale, so the no-op is {-1,-1,-1} and {0,0,0} would collapse the
 			// figure to a point. Rather than guess at an identity no shipped record uses,
 			// any authored scale at all is refused — a record that does not want to be
-			// resized simply has no scale field, which is what 175 of the 184 shipped
+			// resized simply has no scale field, which is what 302 of the 311 shipped
 			// records do — only 9 carry one, and 2 of those are citizens.
 			return false;
 		}
@@ -1110,7 +1142,7 @@ final class CitizenEcho
 	 * The ring of tiles at exactly {@link #MIN_SEPARATION_TILES} from the source, in
 	 * a hash-rotated pass.
 	 *
-	 * <p>The fallback for the 91 shipped citizens with no box, and the top-up for the
+	 * <p>The fallback for the 206 shipped citizens with no box, and the top-up for the
 	 * three shipped wanderers whose box cannot hold two well-separated echoes — either
 	 * because it is too small, or because somebody else is already standing in the
 	 * part of it that would do. These are candidates and nothing more: the ring says

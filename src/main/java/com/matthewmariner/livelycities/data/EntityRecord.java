@@ -84,10 +84,44 @@ public class EntityRecord
 	 * cameo unless both {@code cameos} and its city's checkbox are on, and
 	 * {@code CitizenEcho} refuses to derive anything from one.
 	 *
-	 * <p>Absent (or false) for all 178 other entities — the 145 vendored ones and
-	 * the 33 ordinary townsfolk authored for the five thin cities on 2026-08-29.
+	 * <p>Absent (or false) for all 305 other entities — the 145 vendored ones, the 33
+	 * ordinary townsfolk authored for the five thin cities on 2026-08-29 and the 127
+	 * liveried townsfolk authored on 2026-09-01.
 	 */
 	public Boolean cameo;
+
+	/**
+	 * Whether {@code CitizenEcho} may derive a "Passer-by" from this record.
+	 * Absent (or false) means it may, which is what every record predating
+	 * 2026-09-01 relies on.
+	 *
+	 * <p><b>Why it exists, and why it did not before.</b> {@code CitizenEcho}'s
+	 * javadoc proposed exactly this field, refused it — "it should be added when
+	 * there is a record that needs it, not before" — and named the condition: a
+	 * record no derivable rule can refuse, whose palette an echo must not re-deal.
+	 * The 127 liveried townsfolk added on 2026-09-01 are that record, 127 times.
+	 *
+	 * <p>An echo's whole mechanism is <i>the source's own palette, re-dealt</i> —
+	 * the tunic colour is deliberately moved to where the hair colour was. That is
+	 * a sound way to vary a citizen whose colours are arbitrary, and it is precisely
+	 * wrong for one whose colours are not: a liveried citizen wears Varrock's gold
+	 * on the torso slot and Varrock's near-black on the legs slot <i>because those
+	 * are the slots that make the colours read as a city's</i>. Re-deal it and the
+	 * gold lands on the boots, a donor's own colour lands on the chest, and the
+	 * figure stops saying the one thing it was authored to say.
+	 *
+	 * <p>No rule already in {@code CitizenEcho} can see that. The body rules ask what
+	 * the figure is doing, the palette rules ask whether a colour would cross the
+	 * flesh boundary, and a liveried record passes both — it is a person standing
+	 * still in colours that are nowhere near skin. The fact the derivation needs is
+	 * about <i>authorial intent</i>, and intent is not derivable from the numbers.
+	 * So it is stated.
+	 *
+	 * <p>Defaulting to {@code false} matters and is the shape {@link #cameo} already
+	 * has: a record that says nothing keeps the behaviour it had, so this field can
+	 * never silently switch off a derivation somebody was relying on.
+	 */
+	public Boolean noEcho;
 
 	// Authoring metadata, not used at render time
 	public Integer baseNpcId;

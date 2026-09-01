@@ -35,6 +35,46 @@
                 61
             ],
             "idleAnimation": "Think"
+        },
+        {
+            "name": "Constance",
+            "examineText": "Waiting on the guild to open, which it already has.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20105-7036-48bd-91b8-dc317a572eca",
+            "regionId": 11571,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2933,
+                "y": 3285,
+                "plane": 0
+            },
+            "modelIds": [
+                6848,
+                9620,
+                12752,
+                10301,
+                12138,
+                26630,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4626,
+                6798,
+                10330
+            ],
+            "modelRecolorReplace": [
+                119,
+                102,
+                43818,
+                8070,
+                94
+            ],
+            "idleAnimation": "Think"
         }
     ],
     "sceneryRoster": []

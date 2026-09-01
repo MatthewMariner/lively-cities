@@ -257,6 +257,453 @@
                 13859
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Corwin",
+            "examineText": "He has been promised a berth and is holding out for a better one.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20066-0bc2-4982-a1bd-dc96d1554e5a",
+            "regionId": 11317,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2831,
+                "y": 3444,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                34484,
+                34502,
+                35908,
+                11146,
+                8481,
+                8472
+            ],
+            "idleAnimation": "HumanLeanReady"
+        },
+        {
+            "name": "Brenna",
+            "examineText": "Down for the tide and early by two hours.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20067-6d9e-408a-b676-2dcf563323a2",
+            "regionId": 11317,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2824,
+                "y": 3445,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18554,
+                483,
+                3476,
+                353,
+                14395,
+                14395,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                6798,
+                43072
+            ],
+            "modelRecolorReplace": [
+                34490,
+                34472,
+                322,
+                8472
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Tarrant",
+            "examineText": "Mending nothing, watching everything.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20068-ebd1-477c-8073-860750aa10de",
+            "regionId": 11317,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2830,
+                "y": 3439,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                249,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                34462,
+                34480,
+                8481,
+                8472,
+                35908,
+                11146
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Maren",
+            "examineText": "Doing the round of the town, twice a day, whatever the weather.",
+            "remarks": [
+                "The wind will turn."
+            ],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2821,
+                "y": 3437,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2825,
+                "y": 3442,
+                "plane": 0
+            },
+            "uuid": "add20069-3536-4a4c-9e1c-a8db9a3d9d8a",
+            "regionId": 11317,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2823,
+                "y": 3439,
+                "plane": 0
+            },
+            "modelIds": [
+                378,
+                18914,
+                479,
+                3848,
+                433,
+                11357,
+                19950
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                6798,
+                6032,
+                5276,
+                5400
+            ],
+            "modelRecolorReplace": [
+                12845,
+                34490,
+                6817,
+                10308,
+                10279,
+                61
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Rowena",
+            "examineText": "Out on the shore because the town is full of people.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20070-c40e-44da-aee9-0bef8b1d54da",
+            "regionId": 11317,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2851,
+                "y": 3439,
+                "plane": 0
+            },
+            "modelIds": [
+                11352,
+                391,
+                418,
+                23957,
+                10692,
+                356,
+                433,
+                7366
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                6798,
+                4550,
+                8741,
+                25238,
+                908,
+                5652
+            ],
+            "modelRecolorReplace": [
+                34213,
+                916,
+                34490,
+                34472,
+                4558,
+                13859
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Alric",
+            "examineText": "He has seen the boat and is not impressed by it.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20071-3266-4738-b61f-2121bcf064f8",
+            "regionId": 11317,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2856,
+                "y": 3433,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                4123,
+                11115,
+                34283,
+                11732,
+                5218
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                8078,
+                21776,
+                25238,
+                5231,
+                6798
+            ],
+            "modelRecolorReplace": [
+                34502,
+                127,
+                1451,
+                34484,
+                10378,
+                18
+            ],
+            "idleAnimation": "HumanSmugIdle"
+        },
+        {
+            "name": "Sigrun",
+            "examineText": "Counting sails, and getting a different answer each time.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20072-7581-4936-8580-f405a2fd4f86",
+            "regionId": 11317,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2847,
+                "y": 3431,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18914,
+                3848,
+                353,
+                14421,
+                14395,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                43072,
+                8741,
+                4550,
+                6798
+            ],
+            "modelRecolorReplace": [
+                34462,
+                8472,
+                34480,
+                2524,
+                7613
+            ],
+            "idleAnimation": "Think"
+        },
+        {
+            "name": "Edrick",
+            "examineText": "Walking the headland for the view and telling everybody so.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "wanderBoxBL": {
+                "x": 2855,
+                "y": 3436,
+                "plane": 0
+            },
+            "wanderBoxTR": {
+                "x": 2859,
+                "y": 3440,
+                "plane": 0
+            },
+            "uuid": "add20073-6b17-4b76-9556-28f689a02a62",
+            "regionId": 11317,
+            "entityType": "WanderingCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2857,
+                "y": 3438,
+                "plane": 0
+            },
+            "modelIds": [
+                207,
+                296,
+                18958,
+                27139,
+                4924,
+                25669,
+                246,
+                25651
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                43072,
+                25238,
+                10138,
+                13196,
+                6798,
+                127,
+                8741,
+                8720,
+                8472,
+                38160,
+                38036
+            ],
+            "modelRecolorReplace": [
+                7187,
+                34472,
+                7187,
+                7196,
+                7187,
+                37888,
+                34490,
+                5132,
+                5132,
+                5384,
+                7634
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Thomasin",
+            "examineText": "Between the beach and the bank, and in no hurry about either.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20074-1f3e-41b2-acbc-085fe83ff484",
+            "regionId": 11317,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2839,
+                "y": 3441,
+                "plane": 0
+            },
+            "modelIds": [
+                3848,
+                353,
+                14395,
+                14421,
+                18554,
+                5434,
+                398,
+                5433,
+                317,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                7952,
+                4550
+            ],
+            "modelRecolorReplace": [
+                34502,
+                34484,
+                61347,
+                4564
+            ],
+            "idleAnimation": "HumanLeanReady"
+        },
+        {
+            "name": "Gorden",
+            "examineText": "He has the nets in and the afternoon to himself.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20075-c772-41ce-b38f-0a5dd286849e",
+            "regionId": 11317,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 2843,
+                "y": 3436,
+                "plane": 0
+            },
+            "modelIds": [
+                6848,
+                9620,
+                12752,
+                10301,
+                12138,
+                26630,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4626,
+                6798,
+                10330
+            ],
+            "modelRecolorReplace": [
+                34490,
+                12845,
+                34472,
+                8070,
+                94
+            ],
+            "idleAnimation": "ArmsCrossedReady"
         }
     ],
     "sceneryRoster": []

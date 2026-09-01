@@ -219,7 +219,7 @@ public class CrowdDensityTest
 	public void thinningIsNotPathologicalOnTheShippedRoster()
 	{
 		List<UUID> uuids = shippedUuids();
-		assertEquals("the whole shipped roster", 184, uuids.size());
+		assertEquals("the whole shipped roster", 311, uuids.size());
 
 		for (CrowdDensity density : CrowdDensity.values())
 		{

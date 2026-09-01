@@ -32,12 +32,12 @@ against your pushed HEAD and shows the plugin as **outdated** the moment they di
 
 | Check | Command | Expected |
 |---|---|---|
-| Tests | `./gradlew clean test` | all green (461) |
-| Every new placement walked in game | `docs/CITY-TOP-UP-CHECK.md` | 57 markers imported, all 33 boxes ticked — **still outstanding as of the 2026-08-29 release** |
+| Tests | `./gradlew clean test` | all green (506) |
+| Every new placement walked in game | `docs/CITY-TOP-UP-CHECK.md` · `docs/CITY-LIVERY-CHECK.md` | 57 + 151 markers imported, all 33 + 127 boxes ticked — **still outstanding** |
 | Offline dataset audit | *(part of the above)* | green |
 | No filesystem API in `src/main` | *(part of the above — `ShippedSourceTest`)* | green; see [below](#no-filesystem-writes-in-the-shipped-jar) |
 | Cache ids still resolve | `./run-windows.sh --audit` | no failing ids outside the known-permanent-null section |
-| Frame cost still inside its thresholds | `./run-windows.sh --timings`, then play for a few minutes | measured at release: per-frame p99 **8µs**, per-tick p99 **5.50ms**. Re-measure after anything that touches the visibility pass |
+| Frame cost still inside its thresholds | `./run-windows.sh --timings`, then play for a few minutes | measured 2026-08-29 at 184 entities: per-frame p99 **8µs**, per-tick p99 **5.50ms**. The dataset is now 311 entities after the 2026-09-01 livery pass — **re-measure outstanding, needs a live client** |
 | Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight ~/Workspaces/osrs/lively-cities` | `Result: PASS` |
 | Compiles under the hub's own build | see [Verifying the hub build](#verifying-the-hub-build) | `BUILD SUCCESSFUL` |
 | Screenshots in the README | — | *deliberately deferred (2026-08-24) — the page ships with placeholders* |
@@ -68,7 +68,7 @@ S=$(mktemp -d)
 git archive HEAD src/main | tar -x -C "$S"
 curl -so "$S/build.gradle" \
   https://raw.githubusercontent.com/runelite/plugin-hub-tooling/master/package/src/main/resources/net/runelite/pluginhub/packager/standard-build.gradle
-sed -i 's|compileOnly "net.runelite:client"|compileOnly "net.runelite:client:1.12.36"|' "$S/build.gradle"
+sed -i 's|compileOnly "net.runelite:client"|compileOnly "net.runelite:client:1.12.37"|' "$S/build.gradle"
 echo "rootProject.name = 'lively-cities'" > "$S/settings.gradle"
 cp -r gradle gradlew "$S/"
 ( cd "$S" && ./gradlew compileJava )
@@ -243,7 +243,7 @@ appears verbatim in merged hub PRs — it answers the reviewer's actual question
 > trouser in the first place builds perfectly and still has no legs, and 47 of the 98
 > kit-built human citizens were in exactly that state at launch — the largest single cause
 > being a hood model pasted where legs and boots belong on twenty of them. Repaired on
-> 2026-08-29 (`NOTICE` item 9), and `BodySlotLintTest` is now the third defence: it asks the
+> 2026-08-30 (`NOTICE` item 9), and `BodySlotLintTest` is now the third defence: it asks the
 > dataset itself whether every human figure has geometry at the shin, at the hand and on the
 > floor.
 >
@@ -255,7 +255,7 @@ appears verbatim in merged hub PRs — it answers the reviewer's actual question
 > now refuses it categorically.
 >
 > That rule was one value wide and the fault was a gamut wide. Playing at `Full` on
-> 2026-08-31 — where no derived figure exists — still showed trouserless figures, because
+> 2026-08-30 — where no derived figure exists — still showed trouserless figures, because
 > seventeen records painted the legs base a flesh-*class* tan and the nearest of them was one
 > hue step and two lightness steps from the face colour. A third rule now refuses any
 > flesh-gamut colour on a legs slot, using the plugin's own `CitizenEcho.isFlesh` rather than
@@ -266,7 +266,7 @@ appears verbatim in merged hub PRs — it answers the reviewer's actual question
 > is where skin belongs; they are counted and named by a test so the figure cannot grow in
 > silence.
 >
-> The same fault existed in the derivation and shipped: two of the 44 echoes at `Crowded`
+> The same fault existed in the derivation and shipped: two of the 51 echoes at `Crowded`
 > wore the face colour on a garment, one of them on the legs. The re-deal rule compared
 > flesh-*classes*, so a dark leather brown swapping places with the face colour looked
 > class-preserving. The face colour is now its own class and cannot be moved off the slot the
@@ -300,6 +300,12 @@ appears verbatim in merged hub PRs — it answers the reviewer's actual question
 > showed that spike was a region load being averaged in with ordinary ticks rather than the
 > model-building burst it was assumed to be. The README carries the full before-and-after.
 
+**The frame-cost figures above are as submitted, and are now stale by entity count.**
+They were measured 2026-08-29 at 184 entities; the dataset has since grown to 311 after
+the 2026-09-01 livery pass. The table in [Before you file an
+update](#before-you-file-an-update) carries the re-measure as outstanding rather than
+guessing a new number — that needs a live client, which this document cannot supply.
+
 ## After you send one
 
 Two status checks, read **separately**:
@@ -323,16 +329,17 @@ your pushed HEAD and marks the plugin **outdated** the moment they diverge.
 Neither blocks anything; both are disclosed in the README rather than hidden. They are the
 first candidates for an update.
 
-- **Thirty-three placements have never been walked.** `docs/CITY-TOP-UP-CHECK.md` is the
-  walk — 57 Ground Markers, five stops, one circuit. Nothing offline can tell whether a tile
-  is walkable, so a figure could be standing in a wall. Riskiest: **Maud** and **Corliss** in
-  Draynor, and the thirteen with no wander box beneath them.
+- **A hundred and sixty placements have never been walked** — 33 from 2026-08-29 and 127 from 2026-09-01. `docs/CITY-TOP-UP-CHECK.md` is the
+  walk — 57 Ground Markers, five stops, one circuit — plus the livery pass's own 151 markers over nine stops in `docs/CITY-LIVERY-CHECK.md`. Nothing offline can tell whether a tile
+  is walkable, so a figure could be standing in a wall. Riskiest: **Adela**, **Sybilla**,
+  **Thurstan** and **Gervase**, the Saradominist group inside Falador's church, 24 to 27
+  tiles from the nearest proven tile — and the thirteen with no wander box beneath them.
 - **Two re-kitted figures nobody has seen.** *Anselm* and *Brother Edwy* in the Ardougne
   monastery were given different bodies late; the ids are verified against the cache but how
   they read is not.
 - ~~**The East bank workman** is missing leggings, and at `Crowded` his derived twin is
   examined as an anonymous "Passer-by" while dressed in the same uniform.~~ Fixed on
-  2026-08-29, and he was not alone: 47 of the 98 kit-built human citizens were shipping
+  2026-08-30, and he was not alone: 47 of the 98 kit-built human citizens were shipping
   without legs, hands or footwear. He is "City workman" (13109), and his leggings had been
   replaced by an Elder Chaos druid hood — the same paste that had cost twenty citizens a
   body part. `BodySlotLintTest` holds it now. The `npcAppearanceId` route suggested here was

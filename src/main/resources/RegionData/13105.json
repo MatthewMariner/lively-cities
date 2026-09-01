@@ -217,6 +217,251 @@
                 6705
             ],
             "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Farid",
+            "examineText": "He is paid by the goat and counts carefully.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20034-34a7-4eeb-ab86-517333c0c71a",
+            "regionId": 13105,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3308,
+                "y": 3145,
+                "plane": 0
+            },
+            "modelIds": [
+                6086,
+                249,
+                28515,
+                26619,
+                28285,
+                185,
+                176
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                4550
+            ],
+            "modelRecolorReplace": [
+                55085,
+                55072,
+                5555
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Layla",
+            "examineText": "Out of the sun for as long as it lasts.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20035-4113-42fa-b82e-e76a874987b2",
+            "regionId": 13105,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3313,
+                "y": 3145,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                364,
+                18554,
+                3848,
+                353,
+                431,
+                14395,
+                185
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                4550,
+                8741,
+                25238,
+                59515
+            ],
+            "modelRecolorReplace": [
+                6705,
+                55097,
+                55084,
+                127
+            ],
+            "idleAnimation": "SuzieIdle"
+        },
+        {
+            "name": "Zaid",
+            "examineText": "Minding the gap in the fence, which is his whole job.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20036-81eb-4775-892d-50f2aa40d448",
+            "regionId": 13105,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3304,
+                "y": 3141,
+                "plane": 0
+            },
+            "modelIds": [
+                391,
+                249,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                55062,
+                55075,
+                8481,
+                8472,
+                35908,
+                11146
+            ],
+            "idleAnimation": "ArmsCrossedReady"
+        },
+        {
+            "name": "Amina",
+            "examineText": "She has the water and everybody knows it.",
+            "remarks": [
+                "Not until the shade moves."
+            ],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20037-af7a-4110-9e10-89fb550fa2f2",
+            "regionId": 13105,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3311,
+                "y": 3147,
+                "plane": 0
+            },
+            "modelIds": [
+                11352,
+                391,
+                418,
+                23957,
+                10692,
+                356,
+                433,
+                7366
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                6798,
+                4550,
+                8741,
+                25238,
+                908,
+                5652
+            ],
+            "modelRecolorReplace": [
+                34213,
+                916,
+                55085,
+                55072,
+                4558,
+                13859
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Karim",
+            "examineText": "Waiting for the herd to come back to him.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20038-f740-4e2c-a28b-1ca125dd4ae8",
+            "regionId": 13105,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3318,
+                "y": 3140,
+                "plane": 0
+            },
+            "modelIds": [
+                217,
+                246,
+                25676,
+                14373,
+                185,
+                12138,
+                26630,
+                176
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                25238,
+                8741,
+                8860,
+                16,
+                8,
+                922
+            ],
+            "modelRecolorReplace": [
+                99,
+                55085,
+                35908,
+                11146,
+                8481,
+                8472
+            ],
+            "idleAnimation": "HumanLeanReady"
+        },
+        {
+            "name": "Nour",
+            "examineText": "She has walked in from the pass and is not walking back yet.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20039-08cb-4f12-bfcb-4cf9ffb822bd",
+            "regionId": 13105,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3305,
+                "y": 3138,
+                "plane": 0
+            },
+            "modelIds": [
+                390,
+                18554,
+                483,
+                3476,
+                353,
+                14395,
+                14395,
+                185
+            ],
+            "baseOrientation": 0,
+            "modelRecolorFind": [
+                8741,
+                25238,
+                6798,
+                43072
+            ],
+            "modelRecolorReplace": [
+                55097,
+                55084,
+                322,
+                8472
+            ],
+            "idleAnimation": "Think"
         }
     ],
     "sceneryRoster": []

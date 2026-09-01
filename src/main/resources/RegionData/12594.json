@@ -139,6 +139,128 @@
             "modelRecolorFind": [],
             "modelRecolorReplace": [],
             "idleAnimation": "GoblinIdle3"
+        },
+        {
+            "name": "Symon",
+            "examineText": "He has been to see the prisoner and wishes he had not.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20115-2f0f-4824-b39d-13393cc5ad95",
+            "regionId": 12594,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3185,
+                "y": 3222,
+                "plane": 0
+            },
+            "modelIds": [
+                229,
+                11811,
+                15106,
+                14373,
+                180,
+                12138,
+                26630,
+                185
+            ],
+            "baseOrientation": 1024,
+            "modelRecolorFind": [
+                8741,
+                8860,
+                38036,
+                33030,
+                4550,
+                25238
+            ],
+            "modelRecolorReplace": [
+                40490,
+                90,
+                908,
+                532,
+                918,
+                40474
+            ],
+            "idleAnimation": "NervousIdle"
+        },
+        {
+            "name": "Alys",
+            "examineText": "She brings the bread down on a Tuesday.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20116-d6ca-44a3-8b97-b8faf66d586f",
+            "regionId": 12594,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3179,
+                "y": 3217,
+                "plane": 0
+            },
+            "modelIds": [
+                393,
+                18914,
+                3848,
+                353,
+                14397,
+                14395,
+                185
+            ],
+            "baseOrientation": 512,
+            "modelRecolorFind": [
+                25238,
+                5532,
+                4550,
+                8741
+            ],
+            "modelRecolorReplace": [
+                40484,
+                10508,
+                4645,
+                40500
+            ],
+            "idleAnimation": "HumanIdle"
+        },
+        {
+            "name": "Peveril",
+            "examineText": "Well clear of the goblins, and checking.",
+            "remarks": [],
+            "moveAnimation": "HumanWalk",
+            "uuid": "add20117-4a9f-4898-901f-4648ea802a1f",
+            "regionId": 12594,
+            "entityType": "StationaryCitizen",
+            "noEcho": true,
+            "worldLocation": {
+                "x": 3187,
+                "y": 3252,
+                "plane": 0
+            },
+            "modelIds": [
+                214,
+                4123,
+                11115,
+                34283,
+                11732,
+                5218
+            ],
+            "baseOrientation": 1536,
+            "modelRecolorFind": [
+                8741,
+                8078,
+                21776,
+                25238,
+                5231,
+                6798
+            ],
+            "modelRecolorReplace": [
+                40500,
+                127,
+                1451,
+                99,
+                10378,
+                18
+            ],
+            "idleAnimation": "ArmsCrossedReady"
         }
     ],
     "sceneryRoster": [
