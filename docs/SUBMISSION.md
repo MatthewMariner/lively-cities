@@ -38,7 +38,7 @@ against your pushed HEAD and shows the plugin as **outdated** the moment they di
 | No filesystem API in `src/main` | *(part of the above — `ShippedSourceTest`)* | green; see [below](#no-filesystem-writes-in-the-shipped-jar) |
 | Cache ids still resolve | `./run-windows.sh --audit` | no failing ids outside the known-permanent-null section |
 | Frame cost still inside its thresholds | `./run-windows.sh --timings`, then play for a few minutes | measured 2026-08-29 at 184 entities: per-frame p99 **8µs**, per-tick p99 **5.50ms**. The dataset is now 311 entities after the 2026-09-01 livery pass — **re-measure outstanding, needs a live client** |
-| Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight ~/Workspaces/osrs/lively-cities` | `Result: PASS` |
+| Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight "$HOME/Workspaces/Mariner Digital Agency/Projects/osrs/lively-cities"` | `Result: PASS` |
 | Compiles under the hub's own build | see [Verifying the hub build](#verifying-the-hub-build) | `BUILD SUCCESSFUL` |
 | Screenshots in the README | — | *deliberately deferred (2026-08-24) — the page ships with placeholders* |
 | Jagex third-party client guidelines | read them in a browser | unchanged from your last read |
@@ -184,7 +184,7 @@ gh repo fork runelite/plugin-hub --clone --remote
 cd plugin-hub
 git checkout -B lively-cities-update upstream/master        # always branch off fresh master
 printf 'repository=https://github.com/MatthewMariner/lively-cities.git\ncommit=%s\nauthors=MatthewMariner\n' \
-  "$(git -C ~/Workspaces/osrs/lively-cities rev-parse HEAD)" > plugins/lively-cities
+  "$(git -C "$HOME/Workspaces/Mariner Digital Agency/Projects/osrs/lively-cities" rev-parse HEAD)" > plugins/lively-cities
 git diff --stat                                             # expect: 1 file, 1 insertion, 1 deletion
 git commit -am "Update Lively Cities"
 git push -f -u origin lively-cities-update
