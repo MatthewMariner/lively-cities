@@ -110,10 +110,17 @@ build you prove is not the build you are filing.
 **What changed (2026-08-24).** Everything that wrote a file moved out of `src/main` and into
 `src/test/java`. `ReportWriter` moved verbatim — same `.part` draft, same `ATOMIC_MOVE` with a
 plain-replace fallback — and the two things that called it are now a second RuneLite plugin,
-`LivelyCitiesDevReportsPlugin`, which lives in the test source set. `src/main` keeps the
-measuring and the auditing: `FrameTimings` still owns the histograms and the cadence,
-`CacheIdAudit` still owns the cache walk, and both still produce the same plain text. They
-just hand out a `String` and stop there.
+`LivelyCitiesDevReportsPlugin`, which lives in the test source set. `src/main` kept the
+measuring: `FrameTimings` still owns the histograms and the cadence, and still produces the
+same plain text — it just hands out a `String` and stops there.
+
+`CacheIdAudit` was in that sentence too, and it stopped being true in the pass the class
+count below records as **66 → 63**. The cache walk followed `ReportWriter` into `src/test`,
+because once the reporting had moved there was nothing in the shipped jar that called it, and
+a cache-walker with no reachable caller is weight the hub builds, serves and reviews for
+nobody. What `src/main` keeps of the auditing is `CacheIdPlausibility`, the id-range ceiling
+that `EntityDefinition` applies at load time; the walk itself, its report and the system
+property that switches it on are all in the test source set.
 
 Nothing about the tooling changed. `./gradlew runWithTimings` and `./gradlew auditCacheIds`
 both already ran on `sourceSets.test.runtimeClasspath`, so the reporter is on the classpath of
