@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.37-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-506-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-507-brightgreen)](#development)
 
 </div>
 
@@ -70,8 +70,17 @@ you see. Above about 16 tiles distant figures will sometimes pop in as the clien
 its scene; that is a limit of how much world the game keeps loaded, not a bug, and the setting
 says so.
 
-**Overhead text** — a hard off switch, plus how often anyone speaks and how long a line
-stays up. You can also mute one individual by right-clicking them.
+**Overhead text** — a hard off switch, plus four dials behind it: how often anyone speaks,
+how long a line stays up, and two that bound where the talking happens.
+**Chatter distance** (1 to 30 tiles, default 15) is how close somebody has to be before they
+will say anything, and it is deliberately tighter than the render distance, because a citizen
+twenty tiles away is scenery.
+**At most on screen** (1 to 12, default 3) is what stops a crowd becoming a wall of text:
+Varrock square holds forty citizens, and at the tightest cadence the other dials allow, about
+nine of them would be talking at any moment without it.
+You can also mute one individual by right-clicking them, and
+**Unmute all citizens** gives everybody their voice back — the same shape as Hide and
+"Unhide all" below, and it unticks itself once it has been acted on.
 
 **9 city checkboxes** — turn any place off and its citizens vanish on the click, not on the
 next region crossing.
@@ -153,7 +162,7 @@ What is new is everything that stops it dying the same way:
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they were renamed
   to anonymous barrow wights, and the Barrows has since left the dataset entirely.
-- **506 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **507 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -323,7 +332,7 @@ builds; bump it deliberately after an OSRS update, alongside the [cache id
 audit](#after-an-osrs-update-checking-the-dataset-still-resolves).
 
 ```bash
-./gradlew build            # compile and run the 506 tests
+./gradlew build            # compile and run the 507 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)

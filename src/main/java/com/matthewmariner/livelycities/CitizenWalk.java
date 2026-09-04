@@ -109,11 +109,34 @@ final class CitizenWalk
 	 * citizen can take. Indexed {@code [dx + 1][dy + 1]}.
 	 *
 	 * <p>The convention is the client's own, taken from
-	 * {@code Angle.getNearestDirection()}, which buckets {@code (angle >> 9) & 3}
-	 * as 0 = south, 1 = west, 2 = north, 3 = east — i.e. the angle rises as the
-	 * facing turns clockwise from south. A table rather than
-	 * {@code atan2(-dx, -dy)} because there are only eight answers, all exact, and
-	 * a lookup cannot be a rounding bug.
+	 * {@code Angle.getNearestDirection()}: 0 = south, 1 = west, 2 = north, 3 = east —
+	 * i.e. the angle rises as the facing turns clockwise from south, through a full
+	 * turn of 2048 units.
+	 *
+	 * <p><b>The method, disassembled, is three steps and not one.</b> This javadoc
+	 * quoted it as {@code (angle >> 9) & 3} — the bucketing without the rounding, which
+	 * is the part that makes it a <em>nearest</em>-direction. Out of
+	 * {@code runelite-api}, it is:
+	 * <pre>
+	 *   int d = angle &gt;&gt;&gt; 9;              // unsigned, not &gt;&gt;
+	 *   if ((angle &amp; 256) != 0) d++;       // round to the nearer of the two
+	 *   switch (d &amp; 3) { 0 SOUTH, 1 WEST, 2 NORTH, 3 EAST }
+	 * </pre>
+	 * At the four cardinals (0, 512, 1024, 1536) bit 256 is clear, the increment never
+	 * fires and the two forms agree — which is why the mapping above was right anyway,
+	 * and why nothing here behaves differently. They disagree at exactly the four
+	 * diagonals this table ships: 256 is {@code WEST} under the real method and
+	 * {@code SOUTH} under the truncating one, and 768, 1280 and 1792 are each off by
+	 * one bucket the same way. Nothing in this plugin calls
+	 * {@code getNearestDirection}, so the cost of the wrong quotation fell on anybody
+	 * checking this table against it — including {@code ../entourage}, which copied
+	 * the sentence verbatim before either was corrected.
+	 *
+	 * <p>A table rather than {@code atan2(-dx, -dy)} because there are only eight
+	 * answers, every one of them exact, and a lookup cannot be a rounding bug. What
+	 * defends the entries is not this quotation but
+	 * {@code CitizenWalkTest.theCardinalOrientationsMatchTheClientsOwnBuckets}, which
+	 * derives all eight from the geometry independently.
 	 */
 	private static final int[][] STEP_ORIENTATION = {
 		//        dy = -1 (south)  dy = 0        dy = +1 (north)

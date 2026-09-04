@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.runelite.api.coords.WorldPoint;
@@ -370,6 +371,149 @@ public class RegionDataLoaderTest
 			1, count(readme, "# compile and run the " + tests + " tests"));
 		assertEquals("the submission checklist's Tests row",
 			1, count(submission, "| all green (" + tests + ") |"));
+	}
+
+	/**
+	 * <b>Every setting a user can see has something about it in the README.</b>
+	 *
+	 * <p>Three did not, and had not since the day they were added:
+	 * {@code chatterRadius}, {@code maxConcurrentRemarks} and {@code unmuteAll}. The last
+	 * is the one that mattered — the README told a reader how to mute an individual
+	 * citizen and never told them the way back, so a documented feature was a one-way
+	 * door.
+	 *
+	 * <p>It sits here with the other README guards for the reason the test above gives:
+	 * splitting one file's claims across two test classes is how half of them stop being
+	 * checked.
+	 *
+	 * <p><b>The map below is meant to go red when a setting is added.</b> That is the
+	 * design, not a maintenance cost: it is checked for equality against the
+	 * {@code @ConfigItem} declarations in {@code LivelyCitiesConfig}, so a new visible
+	 * item fails this test until somebody has written a line of README for it and named
+	 * the phrase here. Do not fix that by deleting the row — a setting with no
+	 * documentation behind it is the whole defect. Hidden items are exempt, because they
+	 * have no control for a reader to find.
+	 *
+	 * <p>The phrase for each is a distinctive fragment of the README's own prose rather
+	 * than the RuneLite label: several are described in sentences rather than by their
+	 * control names, and rewording the sentence out from under the setting should not
+	 * quietly pass. The nine city checkboxes share one — the README documents them as a
+	 * group, and {@link #theReadmesPlaceTableIsTheDatasetItDescribes()} is what checks
+	 * them one at a time. Each phrase must appear exactly once.
+	 */
+	@Test
+	public void everySettingAUserCanSeeIsDescribedInTheReadme() throws IOException
+	{
+		final String cityCheckboxes = "**9 city checkboxes** — turn any place off";
+
+		Map<String, String> documented = new TreeMap<>();
+		documented.put("cullRadius", "**Render distance** — 5 to 30 tiles, default 25");
+		documented.put("crowdDensity", "**Crowd density** — `Sparse` · `Normal` · `Full` · `Crowded`");
+		documented.put("cameos", "**Friend cameos** — off by default");
+		documented.put("overheadText", "**Overhead text** — a hard off switch");
+		documented.put("remarkIntervalTicks", "how often anyone speaks");
+		documented.put("remarkDwellTicks", "how long a line stays up");
+		documented.put("chatterRadius", "**Chatter distance** (1 to 30 tiles, default 15)");
+		documented.put("maxConcurrentRemarks", "**At most on screen** (1 to 12, default 3)");
+		documented.put(CitizenOverrides.UNHIDE_ALL_KEY, "\"Unhide all\" brings them back");
+		documented.put(CitizenOverrides.UNMUTE_ALL_KEY,
+			"**Unmute all citizens** gives everybody their voice back");
+		for (String key : new String[]{
+			"cityAlKharid", "cityArdougne", "cityCatherby", "cityDraynor", "cityEdgeville",
+			"cityFalador", "cityGrandExchange", "cityLumbridge", "cityVarrock"})
+		{
+			documented.put(key, cityCheckboxes);
+		}
+
+		assertEquals("the settings this test knows about have to be the settings there are — "
+				+ "a new @ConfigItem belongs in the README first and in the map above second",
+			visibleConfigKeys(), documented.keySet());
+
+		String readme = new String(
+			Files.readAllBytes(new File("README.md").toPath()), StandardCharsets.UTF_8);
+		for (Map.Entry<String, String> entry : documented.entrySet())
+		{
+			assertEquals("the README's line about " + entry.getKey(),
+				1, count(readme, entry.getValue()));
+		}
+	}
+
+	/**
+	 * The {@code keyName} of every {@code @ConfigItem} in {@code LivelyCitiesConfig} that
+	 * RuneLite actually draws a control for.
+	 *
+	 * <p>Read out of the source rather than off the interface, because what this needs is
+	 * the {@code hidden = true} flag and the constants two of the annotations reference,
+	 * and neither survives into anything a test could ask about without reflection —
+	 * which this project does not use anywhere, shipped or not.
+	 *
+	 * <p>The scan walks parentheses rather than matching a regex across the whole file:
+	 * an annotation argument list contains commas, quotes and nested calls, and a lazy
+	 * {@code .*?} that stopped at the first {@code )} would silently read half of one.
+	 */
+	private static Set<String> visibleConfigKeys() throws IOException
+	{
+		String source = new String(Files.readAllBytes(
+			new File("src/main/java/com/matthewmariner/livelycities/LivelyCitiesConfig.java")
+				.toPath()), StandardCharsets.UTF_8);
+
+		// The keyNames that are constants rather than literals, resolved through the
+		// constants themselves so a rename travels here instead of being re-typed.
+		Map<String, String> constants = new HashMap<>();
+		constants.put("CitizenOverrides.HIDDEN_KEY", CitizenOverrides.HIDDEN_KEY);
+		constants.put("CitizenOverrides.MUTED_KEY", CitizenOverrides.MUTED_KEY);
+		constants.put("CitizenOverrides.UNHIDE_ALL_KEY", CitizenOverrides.UNHIDE_ALL_KEY);
+		constants.put("CitizenOverrides.UNMUTE_ALL_KEY", CitizenOverrides.UNMUTE_ALL_KEY);
+
+		Set<String> keys = new TreeSet<>();
+		Pattern keyName = Pattern.compile("keyName\\s*=\\s*(?:\"([^\"]+)\"|([\\w.]+))");
+		final String marker = "@ConfigItem(";
+		int declarations = 0;
+
+		for (int at = source.indexOf(marker); at >= 0; at = source.indexOf(marker, at + 1))
+		{
+			int open = at + marker.length();
+			int depth = 1;
+			int end = open;
+			while (depth > 0)
+			{
+				assertTrue("unbalanced @ConfigItem at offset " + at, end < source.length());
+				char c = source.charAt(end++);
+				if (c == '(')
+				{
+					depth++;
+				}
+				else if (c == ')')
+				{
+					depth--;
+				}
+			}
+
+			String block = source.substring(open, end - 1);
+			declarations++;
+			if (block.contains("hidden = true"))
+			{
+				continue;
+			}
+
+			Matcher match = keyName.matcher(block);
+			assertTrue("every @ConfigItem must name a key: " + block, match.find());
+			if (match.group(1) != null)
+			{
+				keys.add(match.group(1));
+			}
+			else
+			{
+				String resolved = constants.get(match.group(2));
+				assertNotNull("unresolved keyName constant " + match.group(2)
+					+ " — add it to the table above rather than skipping it", resolved);
+				keys.add(resolved);
+			}
+		}
+
+		assertEquals("the scan has to find every @ConfigItem in the file, or this test is "
+			+ "checking a subset it picked for itself", 21, declarations);
+		return keys;
 	}
 
 	private static void collectJavaSources(File dir, List<File> into)

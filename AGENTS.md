@@ -1,5 +1,40 @@
 # RuneLite Plugin Development — Agent Guidelines
 
+## Working in this repository
+
+- **This plugin is live on the Plugin Hub and is being downloaded by real users.**
+  A change here eventually means a hub manifest bump, so treat `src/main` as
+  production code: no speculative refactors, no drive-by reformatting, and
+  nothing lands that has not been through `./gradlew build` green.
+- **The repo path contains a space** (`.../Mariner Digital Agency/Projects/osrs/lively-cities`).
+  Quote every path in shell commands and scripts.
+- **A guard is proven by breaking it.** The discipline this project holds
+  itself to is mutation testing in spirit even without a Gradle mutation
+  plugin wired in: before trusting a test (or a whole suite) to mean what it
+  claims, deliberately break the thing it is supposed to catch — delete the
+  call, flip the condition, hardcode the return — and confirm the test goes
+  red. A test that stays green through the mutation it exists to catch is
+  worse than no test, because it reads as coverage that is not there. Two of
+  the files in `src/test` say in their own javadoc which mutation caused them
+  to be written; that is the format. After adding a constraint, re-run the
+  mutations on the *neighbouring* guards too — this project has had four cases
+  where a new check silently made an older test vacuous.
+- **Dev-only tooling belongs in the test source set, never in `src/main`.**
+  Anything that does filesystem I/O, prints a report, or exists purely to help
+  a developer (an audit task, a timing harness, the `./gradlew run` entry
+  point itself) is compiled into `src/test`, not shipped in the plugin jar.
+  The shipped jar is what the Plugin Hub's automated review scans; the test
+  source set is not. This repo is the one that has to live by it: `build.gradle`
+  registers `auditCacheIds` and `runWithTimings`, both of which run against
+  `sourceSets.test.runtimeClasspath`, and `ReportWriter`, `CacheIdAudit` and
+  `LivelyCitiesDevReportsPlugin` all sit in `src/test` for exactly this reason.
+  `docs/SUBMISSION.md` carries the reviewer quotes behind the rule and the
+  class-count accounting that proves the jar stayed clean.
+- **Commits are conventional, in a human voice, with no AI attribution of any
+  kind.** No "Generated with Claude" trailer, no `Co-Authored-By` for an
+  assistant, no emoji. Say what changed and why, in prose, the way a person
+  who did the work would write it up.
+
 ## Logging
 
 - Use `log.debug()` for developer/diagnostic logging.

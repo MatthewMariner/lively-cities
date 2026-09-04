@@ -28,9 +28,13 @@ import net.runelite.api.coords.WorldPoint;
  * <ul>
  *   <li>{@code dz.getCollisionMaps()} returns the field {@code ab:[Lgc;}, which
  *       the constructor allocates as {@code anewarray gc} of length
- *       {@code iconst_4} — <b>one map per plane</b>, indexed by plane, and its
- *       elements are filled in as the scene loads, so an element can be
- *       {@code null}.</li>
+ *       {@code iconst_4} — <b>one map per plane</b>, indexed by plane — and then
+ *       fills all four slots in a loop <i>before it returns</i>. The array is
+ *       assigned once, in that constructor, and so is every element of it. An
+ *       earlier version of this javadoc said the elements "are filled in as the
+ *       scene loads, so an element can be {@code null}"; two independent
+ *       disassemblies, of 1.12.36 and of 1.12.38, say the opposite. See
+ *       <b>What the null checks are for</b> below.</li>
  *   <li>{@code gc.getFlags()} returns the field {@code bb:[[I}, allocated in
  *       {@code gc.<init>(int,int,boolean)} as
  *       {@code multianewarray "[[I"} over the two size fields — first dimension
@@ -77,8 +81,21 @@ import net.runelite.api.coords.WorldPoint;
  *       are not consulted either.</li>
  * </ul>
  *
+ * <p><b>What the null checks are for.</b> Not for a client state anybody has
+ * observed. On the injected client {@code getCollisionMaps()} never returns
+ * {@code null} and no element of what it returns is ever {@code null}, because both
+ * the array and its four entries are assigned in the world view's own constructor
+ * before it returns. The checks guard the {@link WorldView} <i>interface</i>, which
+ * promises none of that: this plugin does not construct the implementation and does
+ * not get to make claims about one it was handed. A branch that costs a comparison
+ * and turns an unowned {@code NullPointerException} into {@link Verdict#UNKNOWN} is
+ * worth keeping even against a client that cannot take it — this method runs from a
+ * per-game-tick visibility pass, where a throw abandons every entity after the
+ * offending one, including the ones that were about to be deactivated. What is not
+ * worth keeping is the claim that it happens, which is what this paragraph replaced.
+ *
  * <p><b>{@link Verdict#UNKNOWN} is not "probably fine".</b> Every way of failing
- * to get an answer — no maps yet, no map for that plane, the tile outside the
+ * to get an answer — no maps at all, no map for that plane, the tile outside the
  * loaded scene, a view whose flags array is origin-shifted — comes back as
  * {@code UNKNOWN}, and the caller decides. {@link CitizenEcho} treats
  * {@code UNKNOWN} as "only if a human already vouched for this ground", i.e. only
@@ -150,8 +167,10 @@ final class StandableGround
 		CollisionData map = maps[plane];
 		if (map == null)
 		{
-			// The array is allocated with four slots before the scene is built, so
-			// this is the ordinary "not loaded yet" case rather than an error.
+			// Not a state the injected client produces: the world view's constructor
+			// allocates the four-slot array and fills every slot before it returns.
+			// This guards the WorldView interface, which promises nothing of the sort
+			// — see "What the null checks are for" in the class javadoc.
 			return Verdict.UNKNOWN;
 		}
 

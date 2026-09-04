@@ -211,9 +211,17 @@ public class CitizenWalkTest
 
 	/**
 	 * The client's convention, spelled out independently of the implementation:
-	 * 0 is south and the angle rises as the facing turns clockwise, which is what
-	 * {@code Angle.getNearestDirection()} decodes as
-	 * {@code (angle >> 9) & 3 -> south, west, north, east}.
+	 * 0 is south and the angle rises as the facing turns clockwise, which is the
+	 * 0/1/2/3 to south/west/north/east that {@code Angle.getNearestDirection()} ends
+	 * in.
+	 *
+	 * <p>This javadoc used to quote that method as {@code (angle >> 9) & 3}, which is
+	 * the bucketing with the rounding term dropped — see
+	 * {@code CitizenWalk.STEP_ORIENTATION} for the disassembly and for the four
+	 * diagonals the two forms disagree on. The quotation is not what this helper rests
+	 * on: it derives all eight answers from {@code atan2} and the test below pins them
+	 * against the literal values, so the table is checked against the geometry and never
+	 * against a sentence.
 	 */
 	private static int expectedOrientation(int dx, int dy)
 	{
