@@ -1,0 +1,55 @@
+# Runs what a contributor is asked to run before pushing, on a machine that has
+# never seen this repository before.
+#
+# Every test count this project quotes — the README badge, docs/SUBMISSION.md's
+# checklist, and the guard in RegionDataLoaderTest that pins both against the
+# number of @Test methods — has until now rested on somebody's local run. So has
+# every claim the suite exists to defend. One clean-checkout build on push and on
+# pull request is the proportionate answer: it catches the things a working tree
+# hides, which are a file that was never `git add`ed and a test that only passes
+# because of something left in build/.
+#
+# The Plugin Hub does not build this. Its packager clones the repo and then walks
+# the tree skipping anything whose path contains ".git" — which covers .github/
+# as well as .git/ — deletes the root *.gradle files, substitutes its own
+# build.gradle and settings.gradle, and runs two injected tasks with its own
+# Gradle installation. It never reads this file, never runs `test`, and never
+# executes ./gradlew. This is for us, not for them.
+
+name: build
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# Read-only, and no secrets are used. A workflow is repo content that a hub
+# security reviewer can see, so it stays as boring as it looks.
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 21 because that is what the machine this is developed on runs, and
+      # because Gradle 8.10 wants a JDK it knows. It is not what decides the
+      # bytecode: build.gradle sets options.release.set(11), which pins both the
+      # class file version and the visible JDK API to 11 whatever the toolchain
+      # is, and that is the constraint the hub actually enforces.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      # The same command the README's Development section tells a human to run.
+      # Not `test`: `build` is what also compiles src/main the way the jar does.
+      - run: ./gradlew build --no-daemon
