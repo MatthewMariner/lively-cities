@@ -112,11 +112,24 @@ if [ "$isolated" = 1 ]; then
 	# 2026-08-23: 84 distinct model ids failed against a 280 KB cold cache while
 	# the real one held 26 MB. Copy once; afterwards the isolated cache warms
 	# itself like any other.
+	# Mirror whatever layout the real home uses, rather than deciding per cache.
+	# The only difference between the two run modes is user.home, so a cache the
+	# client reads from $HOME/.runelite/<d> has to be seeded to
+	# <stage>/home/.runelite/<d>. Forcing jagexcache to <stage>/home/<d> was a
+	# bug that hid for two weeks: the copy succeeded, every guard below passed,
+	# and the client never looked there. Observed 2026-09-04 — a 384 MB seed
+	# nothing had ever read, sitting beside the 217 MB cache the client had
+	# built itself from cold, which is the exact condition this seeding exists
+	# to prevent. Guards that check a copy succeeded cannot tell you it landed
+	# somewhere anyone reads.
 	for d in cache jagexcache; do
-		real="${WIN_HOME_UNIX}/.runelite/${d}"
-		[ -d "$real" ] || real="${WIN_HOME_UNIX}/${d}"
-		iso="${STAGE_UNIX}/home/.runelite/${d}"
-		[ "$d" = jagexcache ] && iso="${STAGE_UNIX}/home/${d}"
+		rel=".runelite/${d}"
+		real="${WIN_HOME_UNIX}/${rel}"
+		if [ ! -d "$real" ]; then
+			rel="${d}"
+			real="${WIN_HOME_UNIX}/${rel}"
+		fi
+		iso="${STAGE_UNIX}/home/${rel}"
 		if [ -d "$real" ] && [ "$(du -s "$real" 2>/dev/null | cut -f1)" -gt 2048 ]; then
 			cur=$(du -s "$iso" 2>/dev/null | cut -f1 || echo 0)
 			if [ "${cur:-0}" -lt 2048 ]; then
