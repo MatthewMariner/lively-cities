@@ -35,6 +35,11 @@ import net.runelite.api.coords.WorldPoint;
  *       loaded scene covers. Only these are considered for spawning.</li>
  * </ul>
  *
+ * <p>There is a third, {@link #retained}, and it is empty on every run that goes to
+ * plan. It exists because {@code built} is the <i>only</i> holder of these wrappers,
+ * so a teardown that clears it while the client still has an object registered
+ * strands that object with no reference anywhere. See that field.
+ *
  * <p><b>Scope is keyed on the entity's tile, not on its file name.</b> The two
  * differ: "Dark wizard" is authored in {@code 12853.json} but stands at
  * (3261, 3386), which is region 12852. Deciding visibility by file name would
@@ -183,6 +188,42 @@ class EntityScene
 	 * Keys are always a subset of {@link #built}'s.
 	 */
 	private final Map<Integer, Long> lastInScope = new HashMap<>();
+
+	/**
+	 * The wrappers teardown could not get the client to let go of. Empty on every
+	 * ordinary run.
+	 *
+	 * <p>{@link LivelyEntity#despawn()} catches its own {@code RuntimeException}, marks the
+	 * entity broken and returns {@code false}, so a client that threw out of
+	 * {@code removeRuneLiteObject} leaves the object registered. {@link #shutdown()} used
+	 * to notice exactly that, log an error about it, and then clear {@link #built} anyway —
+	 * which is worse than having no check, because {@link #built} was the only thing holding
+	 * those wrappers. What was left was a {@code RuneLiteObject} still in the client's
+	 * registered-object list with no Java reference anywhere: it renders forever, re-enabling
+	 * the plugin cannot reach it, and only a client restart removes it. Keeping the wrapper
+	 * costs a pointer. Dropping it costs a figure standing in Varrock for the rest of the
+	 * session.
+	 *
+	 * <p><b>A list of its own rather than a corner of {@link #built}, and that is a decision
+	 * rather than a convenience.</b> {@link #built} is keyed by region file and
+	 * {@link #ensureBuilt} returns early for a key it already holds, so leaving one
+	 * unreleasable wrapper filed under region 12852 would mean the next walk into Varrock
+	 * rebuilds nothing there — one broken citizen where a hundred should be, for the rest of
+	 * the session — and the eviction that would eventually clear the key drops the reference,
+	 * which is the leak again by a slower route. Lifting them out instead is what lets every
+	 * other collection clear exactly as it always did: {@link #lastInScope} keys a region
+	 * that is gone, {@link #parsed} and {@link #withoutData} are pure caches of file
+	 * contents, and {@link #scopeRegions}, {@link #inScope} and {@link #walkers} describe a
+	 * scene that no longer exists. Nothing that survives here points at any of them, so the
+	 * next {@link #syncRegions} loads and builds every region from scratch.
+	 *
+	 * <p>What survives is a wrapper, its lit model, and the object the client will not
+	 * release: out of scope, never a spawn candidate, and asked again on the next
+	 * {@link #deactivateAll()} in case the client has come to its senses. A RuneLite plugin
+	 * instance outlives a disable/enable cycle, so this list does too, and the next teardown
+	 * is a real second chance rather than a gesture.
+	 */
+	private final List<LivelyEntity> retained = new ArrayList<>();
 
 	/** Wrappers whose tile is in a region the currently loaded scene covers. */
 	private final List<LivelyEntity> inScope = new ArrayList<>();
@@ -790,22 +831,40 @@ class EntityScene
 	}
 
 	/**
-	 * Full teardown: deactivate everything, drop every wrapper and cache.
+	 * Full teardown: deactivate everything, then drop every wrapper the client has
+	 * actually let go of — and only those.
+	 *
+	 * <p><b>The one line here that is not bookkeeping is {@link #retainStillRegistered()}.</b>
+	 * This method used to count what was still active, log an error about it, and clear
+	 * {@link #built} anyway, which detected the leak and then made it permanent. Anything the
+	 * client still has an object for now moves to {@link #retained} instead; see that field
+	 * for why it does not simply stay where it is, and for what the other collections do
+	 * about it (nothing — they clear, and that is the point).
+	 *
+	 * <p>The count comes from the sweep rather than from {@link #countActive()}, and that is
+	 * the second defect in the same eleven lines. {@code countActive()} calls
+	 * {@code isActive()} straight, so a client that throws when asked whether it still holds
+	 * an object threw that exception out of this method — abandoning the teardown partway,
+	 * with the overlay already deregistered, every cache still populated and a stack trace
+	 * in the user's log. {@link #stillRegistered} contains it and answers "yes", the
+	 * conservative direction: a wrapper still held can be despawned again, one already
+	 * dropped cannot.
 	 *
 	 * @return the number of objects deactivated by this call
 	 */
 	int shutdown()
 	{
 		int cleared = deactivateAll();
-		int remaining = countActive();
+		int held = retainStillRegistered();
 
-		log.info("Lively Cities teardown: deactivated {} object(s); {} still active; "
+		log.info("Lively Cities teardown: deactivated {} object(s); {} still held; "
 				+ "session totals {} spawn(s) / {} despawn(s)",
-			cleared, remaining, totalSpawns, totalDespawns);
+			cleared, held, totalSpawns, totalDespawns);
 
-		if (remaining != 0)
+		if (held != 0)
 		{
-			log.error("Lively Cities leaked {} active object(s) on shutdown", remaining);
+			log.warn("Lively Cities could not deactivate {} object(s) at teardown — keeping the "
+				+ "reference(s) so a later teardown can try again, rather than leaking the object(s)", held);
 		}
 
 		built.clear();
@@ -862,7 +921,12 @@ class EntityScene
 	}
 
 	/**
-	 * @return how many objects the client currently reports as registered
+	 * @return how many objects the client currently reports as registered, out of the
+	 * wrappers this scene is still driving. Deliberately not counting {@link #retained}:
+	 * every caller is describing the live scene, and a held wrapper is by definition no
+	 * longer part of one. {@link #getRetainedCount()} is the other half. Asks the client
+	 * straight, so it throws if the client does — {@link #shutdown()} uses
+	 * {@link #stillRegistered} instead for exactly that reason.
 	 */
 	int countActive()
 	{
@@ -1164,25 +1228,96 @@ class EntityScene
 	}
 
 	/**
+	 * @return how many wrappers this scene is holding on to because the client would not
+	 * release their objects. Zero on every ordinary run — see {@link #retained}.
+	 */
+	int getRetainedCount()
+	{
+		return retained.size();
+	}
+
+	/**
 	 * Walks every wrapper currently cached, not just the ones in scope — that is
 	 * the whole point.
+	 *
+	 * <p>{@link #retained} is walked too, and it is the only thing that ever gets those
+	 * objects off the screen: a wrapper the client refused to release at an earlier
+	 * teardown is precisely the one worth asking about again. It costs one pass over an
+	 * empty list on every ordinary run.
 	 */
 	private int deactivateAll()
 	{
 		int cleared = 0;
 		for (List<LivelyEntity> entities : built.values())
 		{
+			cleared += deactivateEach(entities);
+		}
+		cleared += deactivateEach(retained);
+		totalDespawns += cleared;
+		return cleared;
+	}
+
+	private int deactivateEach(List<LivelyEntity> entities)
+	{
+		int cleared = 0;
+		for (LivelyEntity entity : entities)
+		{
+			entity.setWanted(false);
+			if (despawnQuietly(entity))
+			{
+				cleared++;
+			}
+		}
+		return cleared;
+	}
+
+	/**
+	 * Moves every wrapper the client still has an object for out of {@link #built} and into
+	 * {@link #retained}, and lets go of the ones it does not — {@link #shutdown()} clears
+	 * {@link #built} on the next line, so what is not moved here is dropped.
+	 *
+	 * <p>{@link #retained} is swept first: a wrapper held over from an earlier teardown that
+	 * this one managed to deactivate is a reference nothing needs any more, and a list that
+	 * only ever grows is its own kind of leak.
+	 *
+	 * @return how many wrappers are being held when this returns
+	 */
+	private int retainStillRegistered()
+	{
+		retained.removeIf(entity -> !stillRegistered(entity));
+
+		for (List<LivelyEntity> entities : built.values())
+		{
 			for (LivelyEntity entity : entities)
 			{
-				entity.setWanted(false);
-				if (despawnQuietly(entity))
+				if (stillRegistered(entity))
 				{
-					cleared++;
+					retained.add(entity);
 				}
 			}
 		}
-		totalDespawns += cleared;
-		return cleared;
+
+		return retained.size();
+	}
+
+	/**
+	 * @return whether the client still has this entity's object, treating a throw as
+	 * "yes". A client that will not answer is not one to take at its word, and the two
+	 * mistakes are not symmetrical: a wrapper still held can be despawned again, one
+	 * already dropped cannot.
+	 */
+	private static boolean stillRegistered(LivelyEntity entity)
+	{
+		try
+		{
+			return entity.isActive();
+		}
+		catch (RuntimeException e)
+		{
+			log.warn("{}: threw when asked whether it is still registered",
+				entity.getDefinition().label(), e);
+			return true;
+		}
 	}
 
 	private void ensureBuilt(int regionId)

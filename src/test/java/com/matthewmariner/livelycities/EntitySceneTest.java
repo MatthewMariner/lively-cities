@@ -77,6 +77,127 @@ public class EntitySceneTest
 		assertEquals("shutdown reports what it deactivated", 4, scene.shutdown());
 		assertEquals("shutdown must leave nothing registered", 0, client.registeredCount());
 		assertEquals("and must drop every wrapper", 0, scene.getCachedRegionCount());
+		assertEquals("with nothing held back, because nothing needed holding",
+			0, scene.getRetainedCount());
+	}
+
+	/**
+	 * <b>The leak that lives in the gap between "we tried" and "it worked".</b>
+	 * {@code LivelyEntity.despawn()} catches its own {@code RuntimeException}, marks the
+	 * entity broken and returns {@code false} — so a client that threw out of
+	 * {@code removeRuneLiteObject} leaves the object registered, and a teardown that then
+	 * cleared {@code built} unconditionally dropped the last reference to it. The object
+	 * goes on rendering, re-enabling the plugin cannot reach it, and nothing short of a
+	 * client restart removes it.
+	 *
+	 * <p>That is the one artefact this plugin's teardown contract exists to make
+	 * impossible, and the version of {@code shutdown()} this test replaced was worse than
+	 * no check at all: it counted the leak, logged an error about it, and then discarded
+	 * the only handle that could ever have undone it.
+	 *
+	 * <p>No realistic in-client trigger for the throw is known. That makes it latent, not
+	 * acceptable — the promise is unconditional, so it has to hold against a client that
+	 * misbehaves.
+	 */
+	@Test
+	public void anEntityThatCouldNotBeDeactivatedIsKeptRatherThanLeaked()
+	{
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3220, 3355, 4));
+
+		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, PLAYER, view);
+		assertEquals("the state has to be there before the teardown means anything",
+			4, client.registeredCount());
+
+		client.refusingDeactivation();
+		assertEquals("nothing came off the screen", 0, scene.shutdown());
+
+		assertEquals("the client still has them", 4, client.registeredCount());
+		assertEquals("so something still holds the references to them",
+			4, scene.getRetainedCount());
+	}
+
+	/** And a client that will not even say is treated as one that still has it. */
+	@Test
+	public void anEntityTheClientWillNotAnswerAboutIsKeptToo()
+	{
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3220, 3355, 3));
+
+		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, PLAYER, view);
+		assertEquals(3, client.registeredCount());
+
+		client.withThrowingRegistrationChecks();
+		scene.shutdown();
+
+		assertEquals("keeping them costs three pointers; dropping them costs three figures "
+			+ "nobody can remove", 3, scene.getRetainedCount());
+	}
+
+	/**
+	 * The other half of the bargain: a held wrapper is held so it can be <i>asked
+	 * again</i>, and the ask has to actually happen. A list that only ever grows is its
+	 * own kind of leak.
+	 */
+	@Test
+	public void aHeldEntityIsDeactivatedAndReleasedOnceTheClientRecovers()
+	{
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3220, 3355, 2));
+
+		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, PLAYER, view);
+
+		client.refusingDeactivation();
+		scene.shutdown();
+		assertEquals(2, scene.getRetainedCount());
+		assertEquals(2, client.registeredCount());
+
+		// The plugin is toggled off a second time — or the client comes to its senses
+		// while it is still off. Either way the held wrappers are the only route back.
+		client.acceptingDeactivation();
+		assertEquals("the second teardown gets them off the screen", 2, scene.shutdown());
+
+		assertEquals("and the client is empty", 0, client.registeredCount());
+		assertEquals("and nothing is held any more", 0, scene.getRetainedCount());
+	}
+
+	/**
+	 * What must <i>not</i> survive a teardown that held something back: the region cache.
+	 *
+	 * <p>{@code ensureBuilt} returns early for a region id it already holds, so a held
+	 * wrapper left filed under region 12852 would mean the next walk into Varrock rebuilds
+	 * nothing there — one broken citizen where a hundred should be, for the rest of the
+	 * session. The held wrappers come out of {@code built} for exactly that reason.
+	 */
+	@Test
+	public void aTeardownThatHeldSomethingBackStillRebuildsTheRegionAfterwards()
+	{
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3220, 3355, 4));
+
+		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, PLAYER, view);
+
+		client.refusingDeactivation();
+		scene.shutdown();
+		assertEquals(4, scene.getRetainedCount());
+		assertEquals("the region cache is empty whatever was held", 0, scene.getCachedRegionCount());
+
+		// Enabled again, walked back into Varrock.
+		client.acceptingDeactivation();
+		FakeWorldView back = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(back);
+		VisibilityPasses.settle(scene, PLAYER, back);
+
+		assertEquals("every citizen the region file names is built again",
+			4, scene.getInScopeCount());
+		assertEquals("four fresh ones on screen, and the four the client would not release "
+			+ "still on it — which is the situation rather than a regression: what the "
+			+ "teardown bought is that those four can still be reached", 8, client.registeredCount());
+		assertEquals("and they are still held", 4, scene.getRetainedCount());
 	}
 
 	@Test

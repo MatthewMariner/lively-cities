@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import javax.annotation.Nullable;
 import net.runelite.api.Constants;
 import net.runelite.api.GameState;
@@ -23,6 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * The plugin class itself: the two clocks, the six invalidating game states, and
@@ -829,11 +831,6 @@ public class LivelyCitiesPluginLifecycleTest
 	}
 
 	/**
-	 * The real {@link ClientThread}, minus the thread. {@code invoke(Runnable)}
-	 * runs inline on the real one whenever the caller is already on the client
-	 * thread, which is every path the plugin uses it for.
-	 */
-	/**
 	 * The overlay manager, as two lists.
 	 *
 	 * <p>Registered rather than counted, so "shutDown removes the same overlay
@@ -868,6 +865,30 @@ public class LivelyCitiesPluginLifecycleTest
 		}
 	}
 
+	/**
+	 * The real {@link ClientThread}, minus the thread. {@code invoke(Runnable)} runs
+	 * inline on the real one whenever the caller is already on the client thread, which
+	 * is every path this plugin uses it for.
+	 *
+	 * <p><b>The {@code BooleanSupplier} override is the guard, and it is here rather than
+	 * beside any one call site because it covers all four at once.</b>
+	 * {@code ClientThread} overloads {@code invoke} on {@link Runnable} and
+	 * {@link BooleanSupplier}, and the two mean very different things: a
+	 * {@code BooleanSupplier} is put on a queue and <b>re-run every tick until it returns
+	 * true</b>. Which overload a call site binds to is decided by the return type of the
+	 * method it wraps, so a signature change somewhere else entirely can move it —
+	 * silently, because both overloads compile. JLS 15.12.2.5 makes the value-returning
+	 * function type the more specific one, so a lambda that becomes value-compatible does
+	 * not become ambiguous; {@code BooleanSupplier} simply wins.
+	 *
+	 * <p>This plugin has four {@code invoke} call sites — the first pass in
+	 * {@code startUp}, the teardown in {@code shutDown}, the invalidate in
+	 * {@code onGameStateChanged} and the visibility pass in {@code onConfigChanged} — and
+	 * every one of them is driven by a test in this class. None may ever be a repeating
+	 * task: a teardown that runs forever, or a scene invalidate that never finishes
+	 * invalidating, is not a thing a user could diagnose. So reaching this overload at
+	 * all fails the test that reached it.
+	 */
 	private static final class InlineClientThread extends ClientThread
 	{
 		private int invocations;
@@ -877,6 +898,16 @@ public class LivelyCitiesPluginLifecycleTest
 		{
 			invocations++;
 			runnable.run();
+		}
+
+		@Override
+		public void invoke(BooleanSupplier supplier)
+		{
+			fail("this plugin has no repeating client-thread task: invoke(BooleanSupplier) "
+				+ "re-queues its argument every tick until it returns true. Reaching it means "
+				+ "a call site bound to the wrong overload, which happens on its own when the "
+				+ "method behind it grows a boolean return. Use a block lambda whose body is a "
+				+ "bare statement — that has no value, so only Runnable fits.");
 		}
 	}
 

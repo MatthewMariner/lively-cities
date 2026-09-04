@@ -218,7 +218,24 @@ public class LivelyCitiesPlugin extends Plugin
 
 		// Not blocking: invoke() runs inline on the client thread and defers
 		// otherwise. The count lands in the log either way.
-		clientThread.invoke(scene::shutdown);
+		//
+		// A block lambda rather than `scene::shutdown`, for the same reason the braces
+		// in startUp() are load-bearing. That method reference binds to the Runnable
+		// overload today only because shutdown() returns int, which cannot be a
+		// BooleanSupplier's result. Give it a boolean return one day and it silently
+		// rebinds — JLS 15.12.2.5 makes the value-returning function type the more
+		// specific of the two, so BooleanSupplier wins outright rather than the call
+		// becoming ambiguous and failing to compile — and ClientThread re-queues a
+		// BooleanSupplier every tick until it returns true. That is a teardown that
+		// runs forever, with no warning and no character of this call site changed. A
+		// block lambda whose body is a bare statement has no value, so only Runnable
+		// ever fits. LivelyCitiesPluginLifecycleTest's InlineClientThread fails the
+		// test outright if the BooleanSupplier overload is ever reached from anywhere
+		// in this class, so the binding is pinned rather than merely intended.
+		clientThread.invoke(() ->
+		{
+			scene.shutdown();
+		});
 	}
 
 	@Subscribe
@@ -239,7 +256,19 @@ public class LivelyCitiesPlugin extends Plugin
 				// The remembered right-click target is about to be a wrapper the
 				// scene has forgotten.
 				citizenMenu.forget();
-				clientThread.invoke(() -> scene.invalidate(state.name()));
+
+				// Braces again, and not for symmetry. `() -> scene.invalidate(..)` is
+				// an expression lambda, and invalidate() returns int — so it is
+				// void-compatible only, and only Runnable fits. The day that return
+				// type becomes boolean, the same lambda becomes value-compatible too
+				// and BooleanSupplier wins the overload, which would re-queue this
+				// every tick until it returned true: a scene load that never finishes
+				// invalidating. The block form has no value to offer, so it cannot
+				// drift.
+				clientThread.invoke(() ->
+				{
+					scene.invalidate(state.name());
+				});
 				break;
 
 			// Deliberately no work on LOGGED_IN: the local player may still be
