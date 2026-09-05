@@ -564,6 +564,31 @@ public class LivelyCitiesPlugin extends Plugin
 	}
 
 	/**
+	 * The reading to draw when the panel is opened before anything has been pushed to
+	 * it — see {@link PanelModel#loggedOut}.
+	 *
+	 * <p><b>Why the panel has to ask for one at all.</b> {@link #refreshPanel} is the only
+	 * thing that ever hands a model over, and it is driven by {@link GameTick} — which the
+	 * client does not post while there is no world. So enabling the plugin at the login
+	 * screen, or opening the panel there, left it with the null model it was constructed
+	 * with until the player logged in: nine bordered cards with no name, no on/off and no
+	 * counts, no density selected, and an overrides section with nothing in it at all.
+	 *
+	 * <p><b>Client-free, and that is what makes it callable from Swing.</b> The dials, the
+	 * two uuid lists and the citizen counts come out of the profile and the classpath;
+	 * nothing here reads the client, so there is no thread to hop to and no reading that
+	 * could throw off the client thread. The one number that would need a client —
+	 * how many figures are on screen — is zero when there is no world, which is
+	 * {@link SceneCensus#EMPTY}.
+	 *
+	 * <p>Package-private, and {@link LivelyCitiesPanel#onActivate} is its only caller.
+	 */
+	PanelModel loggedOutModel()
+	{
+		return PanelModel.loggedOut(config, overrides.hiddenUuids(), overrides.mutedUuids(), directory);
+	}
+
+	/**
 	 * Turns one city's checkbox on or off, from the panel.
 	 *
 	 * <p><b>Writes the same key the config screen writes</b>, through the same

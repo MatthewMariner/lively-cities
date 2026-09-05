@@ -133,7 +133,8 @@ public class PanelModelTest
 	@Test
 	public void theCardsAreThereWithNoWorldAtAll()
 	{
-		PanelModel model = PanelModel.loggedOut(config, directory());
+		PanelModel model = PanelModel.loggedOut(config,
+			Collections.emptySet(), Collections.emptySet(), directory());
 
 		assertFalse(model.isInWorld());
 		assertNull("nowhere to be", model.getHere());
@@ -144,6 +145,30 @@ public class PanelModelTest
 		assertEquals("what is on screen is a fact about the session",
 			0, row(model, City.VARROCK).getActive());
 		assertTrue("and nobody is overridden by default", model.getOverrides().isEmpty());
+	}
+
+	/**
+	 * <b>And the overrides are not a live number.</b>
+	 *
+	 * <p>Hiding and muting live in the profile, so they survive having no world exactly
+	 * the way the nine cards do. This method used to pass {@code Collections.emptySet()}
+	 * for both, which put "Hidden and muted (0)" over "Nobody is hidden or muted." in
+	 * front of anybody who had hidden somebody and then opened the panel at the login
+	 * screen — a confident wrong answer where there had been an absent one.
+	 */
+	@Test
+	public void beingLoggedOutUnhidesNobody()
+	{
+		FakeRegions regions = new FakeRegions();
+		EntityDefinition someone = regions.citizen(12852, 3225, 3360, 0);
+
+		PanelModel model = PanelModel.loggedOut(config,
+			Collections.singleton(someone.getUuid()), Collections.emptySet(),
+			new CitizenDirectory(regions));
+
+		assertFalse("still nowhere to be", model.isInWorld());
+		assertEquals("and still hidden", 1, model.getOverrides().size());
+		assertTrue(model.getOverrides().get(0).isHidden());
 	}
 
 	// --- where the player is --------------------------------------------------

@@ -38,17 +38,29 @@ import net.runelite.api.coords.WorldPoint;
 final class PanelModel
 {
 	/**
-	 * What the panel shows before the first game tick, and after a logout.
+	 * What the panel shows before the first game tick.
 	 *
 	 * <p>Not "no cities": the nine cards are a fact about the plugin rather than about
 	 * the session, and a panel that emptied itself at the login screen would look
 	 * broken at the exact moment somebody opens it to find out what the plugin does.
 	 * The live numbers are the part that goes to zero.
+	 *
+	 * <p><b>The overrides are not, which is why they are passed in rather than emptied
+	 * here.</b> Hiding and muting live in the profile, so the list of them is exactly as
+	 * true at the login screen as it is in Varrock square. Emptied, the section would
+	 * read "Hidden and muted (0)" over "Nobody is hidden or muted." for somebody who has
+	 * hidden twelve citizens — a worse answer than the blank this method exists to
+	 * replace, because it is a confident one. Same reason
+	 * {@link LivelyCitiesPlugin#onGameStateChanged} composes an ordinary model on the way
+	 * out of a world instead of calling this: leaving a world does not un-hide anybody.
+	 *
+	 * @param hidden {@link CitizenOverrides#hiddenUuids()}, as for {@link #of}
+	 * @param muted  {@link CitizenOverrides#mutedUuids()}, as for {@link #of}
 	 */
-	static PanelModel loggedOut(LivelyCitiesConfig config, CitizenDirectory directory)
+	static PanelModel loggedOut(
+		LivelyCitiesConfig config, Set<UUID> hidden, Set<UUID> muted, CitizenDirectory directory)
 	{
-		return of(null, SceneCensus.EMPTY, config,
-			Collections.emptySet(), Collections.emptySet(), directory);
+		return of(null, SceneCensus.EMPTY, config, hidden, muted, directory);
 	}
 
 	private final boolean inWorld;

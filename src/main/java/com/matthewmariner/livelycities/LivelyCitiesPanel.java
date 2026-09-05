@@ -239,11 +239,25 @@ class LivelyCitiesPanel extends PluginPanel
 	 * immediately rather than after the next game tick — up to 600ms of "which region
 	 * am I in" being one tick stale is nothing; an empty panel for 600ms every time it
 	 * is opened is the thing people notice.
+	 *
+	 * <p><b>And when there is no last reading, one is asked for.</b> The readings arrive
+	 * on the game tick, and the client posts no game tick while there is no world — so a
+	 * panel opened at the login screen, which is the exact moment somebody opens it to
+	 * find out what the plugin does, met {@link #redraw}'s null branch and stayed there
+	 * until the player logged in. Asked for rather than composed here: this class reads no
+	 * settings and knows no citizens, and {@link LivelyCitiesPlugin#loggedOutModel} touches
+	 * no client, so there is nothing to marshal.
 	 */
 	@Override
 	public void onActivate()
 	{
 		open = true;
+
+		if (model == null)
+		{
+			model = plugin.loggedOutModel();
+		}
+
 		redraw();
 	}
 

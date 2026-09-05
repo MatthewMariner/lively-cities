@@ -60,7 +60,7 @@ public class LivelyCitiesPanelTest
 	public void everyPlaceIsOnThePanel()
 	{
 		LivelyCitiesPanel panel = panel();
-		panel.accept(PanelModel.loggedOut(config, directory));
+		panel.accept(loggedOut(config));
 		drain();
 
 		List<String> text = labels(panel);
@@ -131,6 +131,74 @@ public class LivelyCitiesPanelTest
 		}
 	}
 
+	/**
+	 * <b>Opening the panel at the login screen shows the panel, not nine empty outlines.</b>
+	 *
+	 * <p>Readings arrive through {@code accept}, {@code accept} is driven by
+	 * {@code refreshPanel}, and {@code refreshPanel} is driven by {@code GameTick} — which
+	 * the client does not post while there is no world. So the whole of this test is the
+	 * thing that used to be missing: {@code onActivate} with nothing ever pushed. The panel
+	 * shipped with {@code model} null in that case and {@link LivelyCitiesPanel}'s null
+	 * branch drew nine bordered cards with no name, no on/off and no counts, no density
+	 * chip selected, and an overrides section with no children in it at all — not even its
+	 * empty-state sentence — until the player logged in.
+	 *
+	 * <p>Asserted through the labels rather than through the model, because the model was
+	 * never the part that was missing: {@code PanelModel.loggedOut} was complete, correct
+	 * and covered by six tests, with no caller anywhere in {@code src/main}.
+	 */
+	@Test
+	public void thePanelHasContentBeforeTheFirstGameTick()
+	{
+		LivelyCitiesPanel panel = panel();
+
+		// No accept(). This is the login screen: nothing has been pushed and nothing will
+		// be until there is a world.
+		panel.onActivate();
+
+		List<String> text = labels(panel);
+		for (City city : City.values())
+		{
+			assertTrue(city.getLabel() + " has no card: " + text, text.contains(city.getLabel()));
+		}
+
+		assertEquals("every card has to say whether its city is on",
+			City.values().length, count(text, "on"));
+		assertTrue("with the dataset's own count on it: " + text, text.contains("71 citizens"));
+		assertTrue("and Edgeville's, which is a different number", text.contains("22 citizens"));
+		assertTrue("the overrides section says something rather than nothing: " + text,
+			text.contains("Nobody is hidden or muted."));
+		assertTrue("and its header counts them",
+			text.stream().anyMatch(line -> line.endsWith("Hidden and muted (0)")));
+	}
+
+	/**
+	 * And the hidden list is the profile's, not an empty one.
+	 *
+	 * <p>Hiding and muting are stored in the config, so they are as true at the login
+	 * screen as anywhere. A pre-tick reading that emptied them would put "Hidden and muted
+	 * (0)" over "Nobody is hidden or muted." in front of somebody who had hidden three
+	 * citizens — which is worse than the blank it replaces, because it is a confident
+	 * answer rather than an absent one, and it would sit there until they logged in.
+	 */
+	@Test
+	public void theLoginScreenPanelStillKnowsWhoIsHidden()
+	{
+		FakeRegions regions = new FakeRegions();
+		FakeConfig config = new FakeConfig();
+		config.overrides().hide(regions.citizen(12852, 3225, 3360, 0));
+		config.overrides().mute(regions.talker(12852, 3226, 3360, "Busy today."));
+
+		LivelyCitiesPanel panel = new LivelyCitiesPanel(plugin(config));
+		panel.onActivate();
+
+		List<String> text = labels(panel);
+		assertTrue("the header has to carry the real count: " + text,
+			text.stream().anyMatch(line -> line.endsWith("Hidden and muted (2)")));
+		assertEquals("with the way back for the hidden one", 1, actionsLabelled(panel, "show").size());
+		assertEquals("and for the muted one", 1, actionsLabelled(panel, "unmute").size());
+	}
+
 	// --- the search box --------------------------------------------------------
 
 	/**
@@ -144,7 +212,7 @@ public class LivelyCitiesPanelTest
 	public void theSearchBoxFiltersTheCards() throws Exception
 	{
 		LivelyCitiesPanel panel = panel();
-		panel.accept(PanelModel.loggedOut(config, directory));
+		panel.accept(loggedOut(config));
 		drain();
 
 		assertEquals("every card starts visible",
@@ -296,7 +364,7 @@ public class LivelyCitiesPanelTest
 	public void anEmptyListSaysSoRatherThanShowingNothing()
 	{
 		LivelyCitiesPanel panel = panel();
-		panel.accept(PanelModel.loggedOut(config, directory));
+		panel.accept(loggedOut(config));
 		drain();
 
 		assertTrue("the empty state has to say something: " + labels(panel),
@@ -322,7 +390,7 @@ public class LivelyCitiesPanelTest
 		{
 			FakeConfig config = new FakeConfig().setCrowdDensity(CrowdDensity.SPARSE);
 			LivelyCitiesPanel panel = new LivelyCitiesPanel(plugin(config));
-			panel.accept(PanelModel.loggedOut(config, directory));
+			panel.accept(loggedOut(config));
 			drain();
 
 			JLabel chip = labelReading(panel, density.toString());
@@ -361,7 +429,7 @@ public class LivelyCitiesPanelTest
 			// "you are in Varrock" label cannot be the first thing reading "Varrock" and
 			// send this click at the header instead of at the card. The first version of
 			// this test did exactly that and failed on one city in nine.
-			panel.accept(PanelModel.loggedOut(config, directory));
+			panel.accept(loggedOut(config));
 			drain();
 
 			JLabel name = labelReading(panel, city.getLabel());
@@ -422,7 +490,7 @@ public class LivelyCitiesPanelTest
 	public void noRowOnThePanelIsPinnedToZeroHeight()
 	{
 		LivelyCitiesPanel panel = panel();
-		panel.accept(PanelModel.loggedOut(config, directory));
+		panel.accept(loggedOut(config));
 		drain();
 
 		List<String> pinned = new ArrayList<>();
@@ -513,7 +581,23 @@ public class LivelyCitiesPanelTest
 		plugin.config = config;
 		plugin.configWriter = config.writer();
 		plugin.overrides = config.overrides();
+
+		// The real 27-file dataset, because the panel asks this plugin for the pre-tick
+		// reading and the counts on the cards are the dataset's — see
+		// thePanelHasContentBeforeTheFirstGameTick.
+		plugin.directory = directory;
 		return plugin;
+	}
+
+	/**
+	 * The pre-tick reading, composed the way {@link LivelyCitiesPlugin#loggedOutModel}
+	 * composes it — from the fixture's own override store rather than from two empty
+	 * sets, so a test that hides somebody first sees them.
+	 */
+	private PanelModel loggedOut(FakeConfig config)
+	{
+		return PanelModel.loggedOut(config, config.overrides().hiddenUuids(),
+			config.overrides().mutedUuids(), directory);
 	}
 
 	private PanelModel model(FakeConfig config, Set<UUID> hidden, Set<UUID> muted)
