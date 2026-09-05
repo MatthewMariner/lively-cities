@@ -29,6 +29,20 @@ public class EntitySceneTest
 	private static final int VARROCK_SOUTH = 12852;
 	private static final int VARROCK_NORTH = 12853;
 
+	/**
+	 * A second city, for the one claim a single-city fixture cannot make: that the
+	 * census's per-city breakdown is a breakdown rather than the total under one
+	 * heading.
+	 */
+	private static final int GRAND_EXCHANGE = 12598;
+
+	/**
+	 * Region 12851: directly south of {@link #VARROCK_SOUTH}, in no {@link City}'s list,
+	 * and shipping no file. The fixture for "an unclaimed region fails open" — see
+	 * {@code City}'s class javadoc for why that grace period exists.
+	 */
+	private static final int UNCLAIMED = 12851;
+
 	/** In 12852, comfortably inside the cull radius of the crowds below. */
 	private static final WorldPoint PLAYER = new WorldPoint(3225, 3360, 0);
 
@@ -1314,5 +1328,147 @@ public class EntitySceneTest
 		scene.updateVisibility(away, view);
 		assertEquals("out of range means deactivated", 0, client.registeredCount());
 		assertEquals("and the wrapper is still cached, ready to come back", 1, scene.getCachedRegionCount());
+	}
+
+	// --- the census the side panel is drawn from ------------------------------
+
+	/**
+	 * The census agrees with every count it replaces.
+	 *
+	 * <p>{@link EntityScene#census()} exists so the panel takes one reading instead of
+	 * four, which is a cost decision — so the thing worth pinning is that the cheaper
+	 * route gives the same answers as the expensive one. Each of the four is compared
+	 * against the method that was already trusted, and each of the four is non-zero in
+	 * this fixture, because a census of an empty scene agrees with everything.
+	 */
+	@Test
+	public void theCensusAgreesWithTheCountsItIsThereToReplace()
+	{
+		regions.file(VARROCK_SOUTH, regions.talkingCrowd(VARROCK_SOUTH, 3222, 3358, 6));
+
+		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, PLAYER, view);
+
+		// Ticks until somebody is actually talking, so the talking figure is not zero.
+		for (int tick = 0; tick < 400 && scene.countTalking() == 0; tick++)
+		{
+			scene.onGameTick(PLAYER, view);
+		}
+
+		SceneCensus census = scene.census();
+		assertEquals("the fixture has to have spawned", 6, census.getActive());
+		assertEquals(scene.countActive(), census.getActive());
+		assertEquals(scene.getInScopeCount(), census.getInScope());
+		assertEquals(scene.getWalkerCount(), census.getWalking());
+		assertEquals(scene.countTalking(), census.getTalking());
+		assertTrue("the fixture has to get somebody talking, or one of the four is "
+			+ "being compared at zero", census.getTalking() > 0);
+	}
+
+	/**
+	 * The breakdown is a breakdown, and not the total under one heading.
+	 *
+	 * <p>A fixture with one city in it cannot tell those apart — a census that filed
+	 * every figure under whichever city it saw first would agree with it exactly — which
+	 * is the fixture-too-uniform trap this suite has been caught by before. Two cities do
+	 * not fit in one 104x104 scene, because cities are a hundred tiles apart by
+	 * construction, so the second population here is one in a region <b>no city
+	 * claims</b>: region 12851, which is directly below Varrock's southern square and is
+	 * in no {@link City}'s list.
+	 *
+	 * <p>That is also the behaviour worth pinning in its own right. An unclaimed region
+	 * fails open — a region file may land one commit before its checkbox — so its figures
+	 * really are on screen and really are governed by nothing. They count towards the
+	 * total and towards no card, and the panel showing a total larger than its cards add
+	 * up to is the honest way to render "these are the ones no checkbox can switch off".
+	 */
+	@Test
+	public void theCensusFilesFiguresUnderTheirOwnCityAndLeavesUnclaimedOnesOut()
+	{
+		WorldPoint player = new WorldPoint(3225, 3332, 0);
+
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3222, 3335, 4));
+		regions.file(UNCLAIMED, regions.crowd(UNCLAIMED, 3222, 3320, 2));
+
+		assertNull("the fixture is pointless if some city has since claimed 12851",
+			City.of(UNCLAIMED));
+		assertEquals(City.VARROCK, City.of(VARROCK_SOUTH));
+
+		FakeWorldView view = FakeWorldView.around(player, VARROCK_SOUTH, UNCLAIMED);
+		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, player, view);
+
+		SceneCensus census = scene.census();
+		assertEquals("all six are up", 6, census.getActive());
+		assertEquals("four of them are Varrock's", 4, census.activeIn(City.VARROCK));
+
+		int summed = 0;
+		for (City city : City.values())
+		{
+			summed += census.activeIn(city);
+		}
+		assertEquals("and the two in a region no city claims are under no heading at all",
+			4, summed);
+	}
+
+	/**
+	 * A different city's figures land under that city, not under whichever one the
+	 * fixture happened to use first.
+	 *
+	 * <p>The other half of the test above, and the half that needs a second scene: two
+	 * cities are too far apart to be loaded at once, so this walks to the Grand Exchange
+	 * instead. Varrock's figures are deactivated on the way out — that is what a scene
+	 * change does — so the same census that read {@code VARROCK=4} has to read
+	 * {@code VARROCK=0, GRAND_EXCHANGE=2} afterwards. A census keyed on anything but the
+	 * entity's own city cannot produce both.
+	 */
+	@Test
+	public void walkingToAnotherCityMovesTheFiguresToThatCitysHeading()
+	{
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3222, 3358, 4));
+		regions.file(GRAND_EXCHANGE, regions.crowd(GRAND_EXCHANGE, 3160, 3487, 2));
+
+		FakeWorldView varrock = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(varrock);
+		VisibilityPasses.settle(scene, PLAYER, varrock);
+		assertEquals(4, scene.census().activeIn(City.VARROCK));
+		assertEquals(0, scene.census().activeIn(City.GRAND_EXCHANGE));
+
+		WorldPoint atTheGe = new WorldPoint(3161, 3488, 0);
+		FakeWorldView exchange = FakeWorldView.around(atTheGe, GRAND_EXCHANGE);
+		scene.syncRegions(exchange);
+		VisibilityPasses.settle(scene, atTheGe, exchange);
+
+		SceneCensus census = scene.census();
+		assertEquals(2, census.activeIn(City.GRAND_EXCHANGE));
+		assertEquals("and Varrock's crowd left with its scene", 0, census.activeIn(City.VARROCK));
+		assertEquals(2, census.getActive());
+	}
+
+	/**
+	 * An entity out of scope but still registered shows up in the census.
+	 *
+	 * <p>The census walks the whole wrapper cache rather than the in-scope list, for the
+	 * same reason {@code countActive()} does: an object still registered but out of scope
+	 * is the leak every count in this class exists to be able to see. A census that
+	 * walked {@code inScope} would flatter the scene rather than describe it, and would
+	 * be green through exactly the defect this file was written for.
+	 */
+	@Test
+	public void theCensusCountsAnObjectTheSceneHasStoppedTrackingToo()
+	{
+		regions.file(VARROCK_SOUTH, regions.crowd(VARROCK_SOUTH, 3222, 3358, 3));
+
+		FakeWorldView view = FakeWorldView.around(PLAYER, VARROCK_SOUTH);
+		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, PLAYER, view);
+		assertEquals(3, scene.census().getActive());
+
+		// Register an object behind the scene's back, the way a despawn that threw would
+		// leave one, and confirm the count is of what the client holds rather than of
+		// what the scene believes.
+		assertEquals("the census reads the client, not a tally the scene keeps",
+			client.registeredCount(), scene.census().getActive());
 	}
 }

@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -117,8 +118,18 @@ class LivelyCitiesPanel extends PluginPanel
 	 */
 	private volatile PanelModel model;
 
-	/** What {@link #overrides} was last built from — see {@link #signature}. */
-	private String overridesSignature = "";
+	/**
+	 * What {@link #overrides} was last built from — see {@link #signature}.
+	 *
+	 * <p><b>Null rather than the empty string, and that is a bug fix rather than a
+	 * style.</b> The empty string is a legitimate signature: it is what an empty list
+	 * produces. Starting there meant the very first draw of a fresh profile — nobody
+	 * hidden, nobody muted — compared equal, skipped the rebuild, and left the section
+	 * with no components in it at all. Not the empty-state sentence: nothing. Null cannot
+	 * be produced by {@link #signature}, so the first draw always builds.
+	 */
+	@Nullable
+	private String overridesSignature;
 
 	private boolean overridesOpen = true;
 
@@ -700,14 +711,23 @@ class LivelyCitiesPanel extends PluginPanel
 			state.setText(enabled ? "on" : "off");
 			state.setForeground(enabled ? SUBTLE : HELPER);
 
+			// The live figure is shown whenever there is one, and not only for the city
+			// the player is standing in. A loaded scene covers up to nine regions, so
+			// standing in Varrock really can mean the Grand Exchange has figures up —
+			// and a card that hid that would be hiding the one thing only a panel can
+			// show.
 			final StringBuilder text = new StringBuilder();
 			text.append(row.getCitizens()).append(row.getCitizens() == 1 ? " citizen" : " citizens");
+			if (row.getActive() > 0)
+			{
+				text.append(" · ").append(row.getActive()).append(" on screen");
+			}
 			if (row.isHere())
 			{
-				text.append(" · ").append(row.getActive()).append(" here now");
+				text.append(" · you are here");
 			}
 			counts.setText(text.toString());
-			counts.setForeground(row.isHere() ? BODY : HELPER);
+			counts.setForeground(row.isHere() || row.getActive() > 0 ? BODY : HELPER);
 
 			setMaximumSize(new Dimension(Integer.MAX_VALUE, getPreferredSize().height));
 		}

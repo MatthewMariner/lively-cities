@@ -1,10 +1,18 @@
 package com.matthewmariner.livelycities;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -291,6 +299,211 @@ public class CityTest
 	 * The region id arrays are the enum's state, so handing out the original would
 	 * let any caller edit the mapping for the rest of the session.
 	 */
+	/**
+	 * <b>Each city's {@code configKey} is the key on the checkbox its own
+	 * {@code enabledIn} reads.</b>
+	 *
+	 * <p>This is the guard the side panel needs and nothing else does. Rendering only
+	 * ever asks "is this city on?", which {@link City#enabledIn} answers; the panel has
+	 * to <i>write</i> the checkbox, which needs the key, and a key paired with the wrong
+	 * getter is a card that reads "Varrock: on" and unticks Lumbridge. On a live plugin
+	 * that is a setting silently changed under a user who did not ask.
+	 *
+	 * <p><b>Composed rather than compared, because comparing is what a copy-paste
+	 * survives.</b> The chain checked here is: the enum's key → the {@code @ConfigItem}
+	 * in the source that declares that key → the getter that annotation sits on → the
+	 * getter {@code enabledIn} actually calls. {@link KeyedConfig} closes the last link
+	 * by answering {@code true} from exactly one getter, named by its own method name, so
+	 * a constant pointing at another city's key produces a city that thinks it is off.
+	 *
+	 * <p>The source is read rather than reflected on, for the reason
+	 * {@code RegionDataLoaderTest.visibleConfigKeys} gives: reflection is banned in this
+	 * project, shipped or not, and the annotation's argument is a constant whose name is
+	 * only visible in the text.
+	 */
+	@Test
+	public void everyCityCheckboxKeySitsOnTheGetterThatCityReads() throws IOException
+	{
+		Map<String, String> gettersByKey = cityGettersByKey();
+		assertEquals("one city @ConfigItem per city", City.values().length, gettersByKey.size());
+
+		Set<String> keys = new TreeSet<>();
+		for (City city : City.values())
+		{
+			String key = city.getConfigKey();
+			assertTrue(city + " reuses the key '" + key + "'", keys.add(key));
+
+			String getter = gettersByKey.get(key);
+			assertNotNull(city + " names key '" + key + "', which no @ConfigItem in "
+				+ "LivelyCitiesConfig declares", getter);
+
+			// The getter that annotation sits on is the one this city reads — and every
+			// other city reads a different one.
+			assertTrue(city + "'s key is declared on " + getter + "(), which is not the "
+					+ "getter " + city + ".enabledIn calls",
+				city.enabledIn(new KeyedConfig(getter)));
+
+			for (City other : City.values())
+			{
+				if (other != city)
+				{
+					assertFalse(other + " must not read " + city + "'s checkbox",
+						other.enabledIn(new KeyedConfig(getter)));
+				}
+			}
+		}
+
+		assertEquals("nine distinct keys", City.values().length, keys.size());
+	}
+
+	/**
+	 * The nine {@code city*} {@code @ConfigItem}s in the config source, as
+	 * key → the getter the annotation is attached to.
+	 *
+	 * <p>The scan walks parentheses rather than matching a regex across the file, for the
+	 * reason {@code RegionDataLoaderTest} gives: an annotation argument list contains
+	 * commas, quotes and nested calls, and a lazy {@code .*?} stopping at the first
+	 * {@code )} reads half of one.
+	 */
+	private static Map<String, String> cityGettersByKey() throws IOException
+	{
+		String source = new String(Files.readAllBytes(
+			new File("src/main/java/com/matthewmariner/livelycities/LivelyCitiesConfig.java")
+				.toPath()), StandardCharsets.UTF_8);
+
+		// The interface's own key constants, read out of the source rather than off the
+		// interface, so a constant whose declared value stopped matching City's would be
+		// caught here rather than agreeing with itself.
+		Map<String, String> constants = new HashMap<>();
+		Matcher declaration = Pattern
+			.compile("String\\s+(KEY_\\w+)\\s*=\\s*\"([^\"]+)\"\\s*;")
+			.matcher(source);
+		while (declaration.find())
+		{
+			constants.put(declaration.group(1), declaration.group(2));
+		}
+		assertTrue("no KEY_ constants found, so this scan is checking nothing",
+			constants.size() >= City.values().length);
+
+		Map<String, String> out = new TreeMap<>();
+		Pattern keyName = Pattern.compile("keyName\\s*=\\s*(?:\"([^\"]+)\"|([\\w.]+))");
+		Pattern getter = Pattern.compile("\\A\\s*default\\s+boolean\\s+(\\w+)\\s*\\(");
+		final String marker = "@ConfigItem(";
+
+		for (int at = source.indexOf(marker); at >= 0; at = source.indexOf(marker, at + 1))
+		{
+			int open = at + marker.length();
+			int depth = 1;
+			int end = open;
+			while (depth > 0)
+			{
+				assertTrue("unbalanced @ConfigItem at offset " + at, end < source.length());
+				char c = source.charAt(end++);
+				if (c == '(')
+				{
+					depth++;
+				}
+				else if (c == ')')
+				{
+					depth--;
+				}
+			}
+
+			Matcher match = keyName.matcher(source.substring(open, end - 1));
+			assertTrue("every @ConfigItem must name a key", match.find());
+
+			String key = match.group(1) != null ? match.group(1) : constants.get(match.group(2));
+			if (key == null || !key.startsWith("city"))
+			{
+				continue;
+			}
+
+			Matcher declared = getter.matcher(source.substring(end));
+			assertTrue("the @ConfigItem for '" + key + "' has to be attached to a boolean "
+				+ "getter", declared.find());
+			assertNull("two @ConfigItems declare '" + key + "'", out.put(key, declared.group(1)));
+		}
+
+		return out;
+	}
+
+	/**
+	 * A config where exactly one city getter answers {@code true}, chosen by its own
+	 * method name.
+	 *
+	 * <p>{@link FakeConfig} cannot do this job: it wires each getter to a {@link City},
+	 * which is the mapping under test, so asking it would be asking the thing under test
+	 * to grade itself. Here the only thing a getter knows is what it is called.
+	 */
+	private static final class KeyedConfig implements LivelyCitiesConfig
+	{
+		private final String getter;
+
+		private KeyedConfig(String getter)
+		{
+			this.getter = getter;
+		}
+
+		private boolean is(String name)
+		{
+			return getter.equals(name);
+		}
+
+		@Override
+		public boolean cityAlKharid()
+		{
+			return is("cityAlKharid");
+		}
+
+		@Override
+		public boolean cityArdougne()
+		{
+			return is("cityArdougne");
+		}
+
+		@Override
+		public boolean cityCatherby()
+		{
+			return is("cityCatherby");
+		}
+
+		@Override
+		public boolean cityDraynor()
+		{
+			return is("cityDraynor");
+		}
+
+		@Override
+		public boolean cityEdgeville()
+		{
+			return is("cityEdgeville");
+		}
+
+		@Override
+		public boolean cityFalador()
+		{
+			return is("cityFalador");
+		}
+
+		@Override
+		public boolean cityGrandExchange()
+		{
+			return is("cityGrandExchange");
+		}
+
+		@Override
+		public boolean cityLumbridge()
+		{
+			return is("cityLumbridge");
+		}
+
+		@Override
+		public boolean cityVarrock()
+		{
+			return is("cityVarrock");
+		}
+	}
+
 	@Test
 	public void theRegionIdsCannotBeEditedThroughTheGetter()
 	{

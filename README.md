@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.37-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-511-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-565-brightgreen)](#development)
 
 </div>
 
@@ -162,7 +162,7 @@ What is new is everything that stops it dying the same way:
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they were renamed
   to anonymous barrow wights, and the Barrows has since left the dataset entirely.
-- **511 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **565 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -332,7 +332,7 @@ builds; bump it deliberately after an OSRS update, alongside the [cache id
 audit](#after-an-osrs-update-checking-the-dataset-still-resolves).
 
 ```bash
-./gradlew build            # compile and run the 511 tests
+./gradlew build            # compile and run the 565 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)

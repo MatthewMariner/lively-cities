@@ -121,7 +121,12 @@ final class PanelModel
 		{
 			cities.add(new CityRow(
 				city,
-				City.isEnabled(city.getRegionIds()[0], config),
+				// The city's own getter, not City.isEnabled(regionId, config). The two
+				// agree for a region the city claims, but isEnabled fails open for a
+				// region no city claims — a deliberate grace period for a region file
+				// that lands before its checkbox — and a card asking about its own
+				// checkbox has no such question to ask. enabledIn is the checkbox.
+				city.enabledIn(config),
 				directory.citizenCount(city),
 				census.activeIn(city),
 				city == here));

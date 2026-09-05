@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import javax.annotation.Nullable;
 import net.runelite.api.Constants;
@@ -21,6 +22,7 @@ import net.runelite.client.ui.overlay.Overlay;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -512,6 +514,335 @@ public class LivelyCitiesPluginLifecycleTest
 
 		plugin.shutDown();
 		assertTrue("shutdown must leave nothing registered", overlays.live().isEmpty());
+	}
+
+	/**
+	 * The sidebar button goes in on startup and is gone after shutdown.
+	 *
+	 * <p><b>The same promise as the overlay above, and it is the one this plugin has
+	 * already had to fix once.</b> A {@code NavigationButton} left in the toolbar is a
+	 * button that opens a panel whose plugin is gone — and {@code ClientToolbar} keys its
+	 * navigation off the button <i>instance</i>, so a second one built on the way back in
+	 * would leave the first sitting there for the rest of the session, unreachable by
+	 * anything short of a client restart. That is the leaked-active-object bug wearing a
+	 * different coat, which is why {@link SidePanel} is an interface: so this is an
+	 * assertion rather than a reading of the source.
+	 *
+	 * <p>Removed <b>unconditionally</b>, not under whatever condition put it there. There
+	 * is no setting behind the button today; the counts are asserted so that adding one
+	 * cannot quietly make the teardown conditional too.
+	 */
+	@Test
+	public void theSidebarButtonIsAddedOnStartUpAndGoneAfterShutDown()
+	{
+		RecordingScene scene = new RecordingScene();
+		client.setGameState(GameState.LOGIN_SCREEN);
+		LivelyCitiesPlugin plugin = plugin(scene);
+
+		assertFalse("nothing is in the sidebar before startUp", sidebar.inSidebar());
+
+		plugin.startUp();
+		assertTrue("startUp has to put the button there", sidebar.inSidebar());
+		assertEquals("exactly once", 1, sidebar.getShown());
+
+		plugin.shutDown();
+		assertFalse("shutdown must leave nothing in the sidebar", sidebar.inSidebar());
+		assertEquals("exactly once", 1, sidebar.getHidden());
+	}
+
+	/**
+	 * A disable/enable cycle leaves one button, not two.
+	 *
+	 * <p>A RuneLite plugin instance outlives a disable/enable, so this really is the same
+	 * object doing it again — and the failure being guarded is the one where the teardown
+	 * half is skipped or the button is rebuilt each time. Counting both calls is what
+	 * separates "added, removed, added" from "added, added".
+	 */
+	@Test
+	public void enablingTwiceLeavesOneButtonInTheSidebar()
+	{
+		RecordingScene scene = new RecordingScene();
+		client.setGameState(GameState.LOGIN_SCREEN);
+		LivelyCitiesPlugin plugin = plugin(scene);
+
+		plugin.startUp();
+		plugin.shutDown();
+		plugin.startUp();
+
+		assertTrue(sidebar.inSidebar());
+		assertEquals(2, sidebar.getShown());
+		assertEquals(1, sidebar.getHidden());
+
+		plugin.shutDown();
+		assertFalse("and the second teardown clears the second button",
+			sidebar.inSidebar());
+		assertEquals(2, sidebar.getHidden());
+	}
+
+	// --- the panel is fed from the game tick, and only when open --------------
+
+	/**
+	 * <b>A closed panel costs one boolean read per tick and nothing else.</b>
+	 *
+	 * <p>Composing a model walks every cached wrapper and asks the client about each one.
+	 * That is real per-tick work in a plugin whose entire performance argument is that it
+	 * does almost none, and nobody is looking at a closed panel — which is the whole
+	 * reason {@link SidePanel#isOpen()} is in the seam rather than being something the
+	 * panel decides for itself after the work is done.
+	 *
+	 * <p>A hundred ticks rather than one, so "it skipped the first" cannot pass.
+	 */
+	@Test
+	public void aClosedPanelIsNeverHandedAModel()
+	{
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene);
+		plugin.startUp();
+
+		for (int tick = 0; tick < 100; tick++)
+		{
+			client.advanceGameCycle(CLIENT_TICKS_PER_GAME_TICK);
+			plugin.onGameTick(new GameTick());
+		}
+		plugin.onConfigChanged(configChanged(LivelyCitiesConfig.GROUP, "cityVarrock"));
+
+		assertEquals("the ticks still had to happen", 101, scene.gameTicks);
+		assertTrue("but nothing may be composed for a panel nobody has open",
+			sidebar.models().isEmpty());
+	}
+
+	/** An open one is fed every tick, because everything on it moves every tick. */
+	@Test
+	public void anOpenPanelIsHandedAModelEveryGameTick()
+	{
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene);
+		plugin.startUp();
+		sidebar.opened();
+
+		for (int tick = 0; tick < 5; tick++)
+		{
+			client.advanceGameCycle(CLIENT_TICKS_PER_GAME_TICK);
+			plugin.onGameTick(new GameTick());
+		}
+
+		assertEquals("one model per tick", 5, sidebar.models().size());
+		assertNotNull(sidebar.last());
+		assertEquals("and it describes where the player is standing",
+			City.VARROCK, sidebar.last().getHere());
+	}
+
+	/**
+	 * A click has to be visible on the panel now, not 600ms from now.
+	 *
+	 * <p>Unticking a city already deactivates its citizens on the click rather than on
+	 * the next tick — that is what {@code onConfigChanged} exists for — and a card that
+	 * went on saying "on" until the next game tick would look like a click that did not
+	 * land. The write and the redraw are the same event.
+	 */
+	@Test
+	public void aSettingsChangeRedrawsTheOpenPanelAtOnce()
+	{
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene);
+		plugin.startUp();
+		sidebar.opened();
+
+		plugin.onConfigChanged(configChanged(LivelyCitiesConfig.GROUP, "cityVarrock"));
+
+		assertEquals(1, sidebar.models().size());
+	}
+
+	/**
+	 * Logging out redraws it too, and the redraw says there is no world.
+	 *
+	 * <p>A panel left showing the last true reading — "Varrock, 34 on screen" — over an
+	 * empty world is worse than one showing nothing, because it is indistinguishable from
+	 * a current reading.
+	 */
+	@Test
+	public void losingTheSceneRedrawsTheOpenPanel()
+	{
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene);
+		plugin.startUp();
+		sidebar.opened();
+
+		client.setLocalPlayer(null);
+		GameStateChanged event = new GameStateChanged();
+		event.setGameState(GameState.LOGIN_SCREEN);
+		plugin.onGameStateChanged(event);
+
+		assertEquals(1, sidebar.models().size());
+		assertFalse("and it has to say there is nobody anywhere",
+			sidebar.last().isInWorld());
+	}
+
+	/**
+	 * Nothing is composed after teardown, however open the panel was.
+	 *
+	 * <p>{@code hide()} tells the panel it has left the sidebar, so the flag cannot
+	 * outlive the thing it describes — the same shape as {@code processedGameTick} being
+	 * cleared for the developer-only reporter, and for the same reason.
+	 */
+	@Test
+	public void nothingIsComposedForThePanelAfterShutDown()
+	{
+		RecordingScene scene = new RecordingScene();
+		LivelyCitiesPlugin plugin = plugin(scene);
+		plugin.startUp();
+		sidebar.opened();
+		plugin.onGameTick(new GameTick());
+		assertEquals(1, sidebar.models().size());
+
+		plugin.shutDown();
+		plugin.onGameTick(new GameTick());
+		plugin.onConfigChanged(configChanged(LivelyCitiesConfig.GROUP, "cityVarrock"));
+
+		assertEquals("a torn-down plugin must not go on composing models",
+			1, sidebar.models().size());
+	}
+
+	// --- what the panel writes ------------------------------------------------
+
+	/**
+	 * A city card writes the very key its own checkbox declares.
+	 *
+	 * <p>This is what makes the panel and the settings screen two views of one setting
+	 * rather than two settings. All nine, because a loop over {@code City.values()} is
+	 * exactly the shape that makes "every card writes the key of the city after it" a
+	 * plausible defect, and only nine different keys can see it.
+	 */
+	@Test
+	public void everyCityCardWritesTheKeyItsOwnCheckboxDeclares()
+	{
+		for (City city : City.values())
+		{
+			FakeConfig config = new FakeConfig();
+			LivelyCitiesPlugin plugin = plugin(new RecordingScene(), config);
+
+			plugin.setCityEnabled(city, false);
+
+			assertEquals("one write", 1, config.writes().size());
+			assertEquals(city.getConfigKey() + "=false", config.writes().get(0));
+			assertEquals("and it is the value the config screen would store",
+				"false", config.stored(city.getConfigKey()));
+		}
+	}
+
+	/**
+	 * A click that would change nothing writes nothing.
+	 *
+	 * <p>{@code ConfigManager} posts a {@code ConfigChanged} per write and this plugin
+	 * answers every one with a full visibility pass over every entity in scope, so a
+	 * no-op write is a no-op pass over a hundred citizens. The same rule
+	 * {@code UuidSetting.add} keeps.
+	 */
+	@Test
+	public void switchingACityToWhatItAlreadyIsWritesNothing()
+	{
+		FakeConfig config = new FakeConfig();
+		LivelyCitiesPlugin plugin = plugin(new RecordingScene(), config);
+
+		plugin.setCityEnabled(City.VARROCK, true);
+		assertTrue("Varrock is already on", config.writes().isEmpty());
+
+		config.disableOnly(City.VARROCK);
+		plugin.setCityEnabled(City.VARROCK, false);
+		assertTrue("and already off", config.writes().isEmpty());
+	}
+
+	/**
+	 * The density chip writes the enum's own name, which is what {@code ConfigManager}
+	 * stores an enum as and reads one back with — so it round-trips through the settings
+	 * screen's dropdown rather than sitting beside it.
+	 */
+	@Test
+	public void theDensityChipWritesTheValueTheConfigScreenReads()
+	{
+		for (CrowdDensity density : CrowdDensity.values())
+		{
+			FakeConfig config = new FakeConfig().setCrowdDensity(CrowdDensity.FULL);
+			LivelyCitiesPlugin plugin = plugin(new RecordingScene(), config);
+
+			plugin.setCrowdDensity(density);
+
+			if (density == CrowdDensity.FULL)
+			{
+				assertTrue("the one already selected writes nothing",
+					config.writes().isEmpty());
+				continue;
+			}
+
+			assertEquals(1, config.writes().size());
+			assertEquals(LivelyCitiesConfig.KEY_CROWD_DENSITY + "=" + density.name(),
+				config.writes().get(0));
+			assertEquals(density,
+				CrowdDensity.valueOf(config.stored(LivelyCitiesConfig.KEY_CROWD_DENSITY)));
+		}
+	}
+
+	/**
+	 * Unhiding one citizen from the panel restores that one and nobody else.
+	 *
+	 * <p><b>This is the repair the panel exists for.</b> The shipped undo is a checkbox
+	 * that unhides everybody, so taking back one decision cost every other one — and the
+	 * assertion that matters is not that the citizen came back but that the other two
+	 * did not.
+	 */
+	@Test
+	public void unhidingOneCitizenFromThePanelLeavesTheOthersHidden()
+	{
+		FakeConfig config = new FakeConfig();
+		LivelyCitiesPlugin plugin = plugin(new RecordingScene(), config);
+
+		FakeRegions regions = new FakeRegions();
+		EntityDefinition first = regions.citizen(REGION, 3225, 3360, 0);
+		EntityDefinition second = regions.citizen(REGION, 3226, 3360, 0);
+		EntityDefinition third = regions.citizen(REGION, 3227, 3360, 0);
+		config.overrides().hide(first);
+		config.overrides().hide(second);
+		config.overrides().hide(third);
+		assertEquals(3, config.overrides().hiddenUuids().size());
+
+		plugin.unhide(second.getUuid());
+
+		assertEquals("one back, two still hidden", 2, config.overrides().hiddenUuids().size());
+		assertTrue(config.overrides().hiddenUuids().contains(first.getUuid()));
+		assertFalse(config.overrides().hiddenUuids().contains(second.getUuid()));
+		assertTrue(config.overrides().hiddenUuids().contains(third.getUuid()));
+	}
+
+	/** And unmuting is the mute list's own, not the hide list's. */
+	@Test
+	public void unmutingOneCitizenFromThePanelLeavesTheHideListAlone()
+	{
+		FakeConfig config = new FakeConfig();
+		LivelyCitiesPlugin plugin = plugin(new RecordingScene(), config);
+
+		FakeRegions regions = new FakeRegions();
+		EntityDefinition hidden = regions.citizen(REGION, 3225, 3360, 0);
+		EntityDefinition muted = regions.talker(REGION, 3226, 3360, "Busy today.");
+		config.overrides().hide(hidden);
+		config.overrides().mute(muted);
+
+		plugin.unmute(muted.getUuid());
+
+		assertTrue("the mute goes", config.overrides().mutedUuids().isEmpty());
+		assertEquals("the hide does not", 1, config.overrides().hiddenUuids().size());
+	}
+
+	/** Restoring somebody who was never overridden writes nothing at all. */
+	@Test
+	public void restoringSomebodyWhoWasNeverOverriddenWritesNothing()
+	{
+		FakeConfig config = new FakeConfig();
+		LivelyCitiesPlugin plugin = plugin(new RecordingScene(), config);
+
+		plugin.unhide(UUID.randomUUID());
+		plugin.unmute(UUID.randomUUID());
+
+		assertTrue(config.writes().isEmpty());
 	}
 
 	// --- the interaction handlers -------------------------------------------

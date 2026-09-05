@@ -183,4 +183,90 @@ public class UuidSettingTest
 		store.value = null;
 		assertEquals("including all the way back to nothing", 0, reader.size());
 	}
+
+	// --- taking one back out -------------------------------------------------
+
+	/**
+	 * Removing one uuid keeps the others, and keeps them through the string.
+	 *
+	 * <p>The whole reason {@code remove} exists: until the side panel there was only
+	 * {@link UuidSetting#clear()}, so taking back one decision meant losing every other
+	 * one. The assertion that matters is the second one — that the two who were not
+	 * named are still there <b>after a re-parse</b>, which is where a remove that
+	 * rewrote the string wrongly would show up. A fresh {@code UuidSetting} over the
+	 * same store is what forces that re-parse; asking the same instance would be asking
+	 * its primed cache.
+	 */
+	@Test
+	public void removingOneKeepsTheRestThroughTheString()
+	{
+		Store store = new Store();
+		UuidSetting setting = new UuidSetting(KEY, store::read, store.writer());
+
+		setting.add(ONE);
+		setting.add(TWO);
+		setting.add(THREE);
+
+		assertTrue("TWO was in the set", setting.remove(TWO));
+		assertEquals(2, setting.size());
+
+		UuidSetting reread = new UuidSetting(KEY, store::read, store.writer());
+		assertEquals("and the string it wrote holds the other two", 2, reread.size());
+		assertTrue(reread.contains(ONE));
+		assertFalse(reread.contains(TWO));
+		assertTrue(reread.contains(THREE));
+	}
+
+	/**
+	 * Removing a uuid that is not there writes nothing.
+	 *
+	 * <p>The same rule {@code add} keeps in the other direction, and for the same
+	 * reason: {@code ConfigManager} posts a {@code ConfigChanged} per write and this
+	 * plugin answers each one with a full visibility pass over every entity in scope, so
+	 * a write that changes no bytes is a pass over a hundred citizens for nothing.
+	 */
+	@Test
+	public void removingSomebodyWhoIsNotThereWritesNothing()
+	{
+		Store store = new Store();
+		UuidSetting setting = new UuidSetting(KEY, store::read, store.writer());
+
+		setting.add(ONE);
+		int writesBefore = store.writes.size();
+
+		assertFalse(setting.remove(TWO));
+		assertEquals("no write", writesBefore, store.writes.size());
+		assertEquals(1, setting.size());
+
+		assertFalse("nor on an empty set",
+			new UuidSetting("mutedCitizens", () -> null, (key, value) ->
+			{
+				throw new AssertionError("an empty set must not be written to");
+			}).remove(ONE));
+	}
+
+	/**
+	 * Removing the last one unsets the key rather than storing an empty string.
+	 *
+	 * <p>{@link ConfigWriter}'s contract: a key left in the profile reads as a user
+	 * override forever, and "the user has no setting here" is the honest end state.
+	 * {@code clear()} already did this; {@code remove()} reaching the same state by a
+	 * different route has to leave the profile in the same place, or a user who
+	 * restored their citizens one at a time would end up with a profile subtly unlike
+	 * one who pressed the button.
+	 */
+	@Test
+	public void removingTheLastOneUnsetsTheKey()
+	{
+		Store store = new Store();
+		UuidSetting setting = new UuidSetting(KEY, store::read, store.writer());
+
+		setting.add(ONE);
+		assertEquals(String.valueOf(ONE), store.read());
+
+		assertTrue(setting.remove(ONE));
+		assertNull("an empty set is stored as no setting at all", store.read());
+		assertEquals("null", store.writes.get(store.writes.size() - 1));
+		assertEquals(0, setting.size());
+	}
 }
