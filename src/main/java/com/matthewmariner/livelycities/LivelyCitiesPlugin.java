@@ -4,6 +4,7 @@ import com.google.inject.Provides;
 import java.util.UUID;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Constants;
@@ -744,8 +745,19 @@ public class LivelyCitiesPlugin extends Plugin
 	 * that cannot be removed by anything short of a client restart, which is the
 	 * navigation-shaped version of the leaked active object this plugin already guards
 	 * against.
+	 *
+	 * <p><b>{@code @Singleton} is what makes "once" structural rather than a property of
+	 * there happening to be one injection point today.</b> A {@code @Provides} method with
+	 * no scope on it runs once per injection point, so the day something else asks for a
+	 * {@link SidePanel} — a second subscriber, a status overlay, anything — Guice builds a
+	 * second button around a second panel, {@code startUp} adds whichever one it was given,
+	 * and the other is a button nothing will ever remove. That is the leak the paragraph
+	 * above is about, arriving by the one door the teardown test cannot see: it asserts
+	 * that {@code shutDown} hides the panel it was handed, and both plugins would still be
+	 * telling the truth about their own.
 	 */
 	@Provides
+	@Singleton
 	SidePanel provideSidePanel(ClientToolbar clientToolbar, LivelyCitiesPanel panel)
 	{
 		final NavigationButton button = NavigationButton.builder()

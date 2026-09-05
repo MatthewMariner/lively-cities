@@ -1,5 +1,9 @@
 package com.matthewmariner.livelycities;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -577,6 +581,44 @@ public class LivelyCitiesPluginLifecycleTest
 		assertFalse("and the second teardown clears the second button",
 			sidebar.inSidebar());
 		assertEquals(2, sidebar.getHidden());
+	}
+
+	/**
+	 * <b>And a second injection point cannot produce a second button.</b>
+	 *
+	 * <p>The two tests above are about the button this plugin was handed. The leak they
+	 * cannot see is a <i>different</i> button: {@code provideSidePanel} builds one and
+	 * comments that it is "built once here", but an unscoped {@code @Provides} method runs
+	 * once per injection point, not once. Ask for a {@link SidePanel} anywhere else — a
+	 * second subscriber, a status overlay, anything — and Guice builds a second button
+	 * around a second panel. {@code startUp} adds whichever one it was given and the other
+	 * sits in the toolbar for the rest of the session, while both halves of the teardown
+	 * contract above go on passing, because each is telling the truth about its own.
+	 *
+	 * <p><b>Checked by reading the source, because there is nowhere else the fact lives.</b>
+	 * Proving it by injection would need a {@code ClientToolbar} — private constructor, no
+	 * mocking framework here, which is the whole reason {@link SidePanel} is an interface —
+	 * and reading the annotation off the class would be reflection, which this project does
+	 * not use. The scope is one word in one place; a scan for that word in that place is
+	 * the honest amount of machinery. Order-independent, so putting {@code @Singleton}
+	 * above {@code @Provides} is not a failure.
+	 */
+	@Test
+	public void theSidePanelProviderIsScopedSoThereCanOnlyEverBeOneButton() throws IOException
+	{
+		String source = new String(Files.readAllBytes(new File(
+			"src/main/java/com/matthewmariner/livelycities/LivelyCitiesPlugin.java").toPath()),
+			StandardCharsets.UTF_8);
+		assertTrue("the scan has to have found the file",
+			source.contains("class LivelyCitiesPlugin"));
+
+		int at = source.indexOf("SidePanel provideSidePanel(");
+		assertTrue("no SidePanel provider in the plugin at all", at > 0);
+
+		assertTrue("the SidePanel provider has to carry a scope, or \"the button is built "
+				+ "once here\" is a property of there happening to be one injection point "
+				+ "today rather than a fact about the code",
+			source.substring(Math.max(0, at - 40), at).contains("@Singleton"));
 	}
 
 	// --- the panel is fed from the game tick, and only when open --------------
