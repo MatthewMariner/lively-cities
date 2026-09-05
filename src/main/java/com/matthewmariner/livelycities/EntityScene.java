@@ -3,6 +3,7 @@ package com.matthewmariner.livelycities;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -894,6 +895,58 @@ class EntityScene
 	List<LivelyEntity> inScopeEntities()
 	{
 		return inScopeView;
+	}
+
+	/**
+	 * Everything the side panel wants to know, read in one pass — see
+	 * {@link SceneCensus}.
+	 *
+	 * <p><b>One walk of {@link #built}, not one per figure asked for.</b> The
+	 * alternative is {@link #countActive()} plus a per-city variant plus
+	 * {@link #getWalkerCount()}, which is two walks of every cached wrapper and two
+	 * rounds of {@code isActive()} calls into the client for numbers that then have to
+	 * agree with each other — and would not, because they were taken at different
+	 * moments.
+	 *
+	 * <p><b>Walks {@link #built} rather than {@link #inScope}, for the same reason
+	 * {@link #countActive()} does</b>: an object still registered but out of scope is
+	 * the leak every count in this class exists to be able to see, and a census that
+	 * could not see it would flatter the scene rather than describe it.
+	 *
+	 * <p><b>The per-city key is {@link EntityDefinition#getCityRegionId()}</b>, which
+	 * for an echo is its source's region and not its own tile's — so a derived figure
+	 * is counted against the city whose checkbox governs it, and the breakdown adds up
+	 * to the same total the cards' checkboxes control. A region no {@link City} claims
+	 * contributes to {@link SceneCensus#getActive()} and to no card, which is the
+	 * honest outcome: it is exactly the entity no checkbox can switch off.
+	 *
+	 * <p>Client thread, like everything else here — it asks the client whether each
+	 * object is registered, straight, the way {@link #countActive()} does.
+	 */
+	SceneCensus census()
+	{
+		EnumMap<City, Integer> activeByCity = new EnumMap<>(City.class);
+		int active = 0;
+
+		for (List<LivelyEntity> entities : built.values())
+		{
+			for (LivelyEntity entity : entities)
+			{
+				if (!entity.isActive())
+				{
+					continue;
+				}
+
+				active++;
+				City city = City.of(entity.getDefinition().getCityRegionId());
+				if (city != null)
+				{
+					activeByCity.merge(city, 1, Integer::sum);
+				}
+			}
+		}
+
+		return new SceneCensus(active, inScope.size(), walkers.size(), countTalking(), activeByCity);
 	}
 
 	/**

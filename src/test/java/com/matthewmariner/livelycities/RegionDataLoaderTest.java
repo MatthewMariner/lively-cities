@@ -465,6 +465,22 @@ public class RegionDataLoaderTest
 		constants.put("CitizenOverrides.UNHIDE_ALL_KEY", CitizenOverrides.UNHIDE_ALL_KEY);
 		constants.put("CitizenOverrides.UNMUTE_ALL_KEY", CitizenOverrides.UNMUTE_ALL_KEY);
 
+		// The ten keys the side panel writes. They are constants in the interface rather
+		// than literals in the annotation so that the panel and the @ConfigItem name the
+		// same string rather than two strings — see LivelyCitiesConfig.KEY_CROWD_DENSITY.
+		// Resolved through the constants themselves, so this table cannot drift from
+		// them either.
+		constants.put("KEY_CROWD_DENSITY", LivelyCitiesConfig.KEY_CROWD_DENSITY);
+		for (City city : City.values())
+		{
+			// City.getConfigKey() IS the interface constant, so pairing them here is not
+			// a second spelling of the key: it is the enum saying which constant it
+			// holds. "KEY_" + the enum constant's own name is how the annotation spells
+			// it; get that wrong and the scan below fails its own assertNotNull rather
+			// than passing on a subset, which is why deriving it is safe here.
+			constants.put("KEY_" + city.name(), city.getConfigKey());
+		}
+
 		Set<String> keys = new TreeSet<>();
 		Pattern keyName = Pattern.compile("keyName\\s*=\\s*(?:\"([^\"]+)\"|([\\w.]+))");
 		final String marker = "@ConfigItem(";

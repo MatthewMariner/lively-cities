@@ -107,6 +107,44 @@ class CitizenOverrides
 	}
 
 	/**
+	 * Brings one hidden citizen back.
+	 *
+	 * <p>The counterpart to {@link #hide}, and the half that was missing until
+	 * {@link LivelyCitiesPanel} existed: hiding is per citizen and the only undo was
+	 * {@link #unhideAll()}, so changing your mind about one figure cost you every other
+	 * decision. Nothing here respawns anything — the write posts a
+	 * {@code ConfigChanged}, the plugin answers it with a visibility pass, and the pass
+	 * has one rule. Exactly the path {@link #hide} takes, in reverse.
+	 *
+	 * @return true if this call actually unhid something
+	 */
+	boolean unhide(UUID uuid)
+	{
+		boolean removed = hidden.remove(uuid);
+		if (removed)
+		{
+			log.debug("unhiding {}, {} citizen(s) still hidden", uuid, hidden.size());
+		}
+		return removed;
+	}
+
+	/**
+	 * Lets one muted citizen talk again. Same shape and same reasoning as
+	 * {@link #unhide}.
+	 *
+	 * @return true if this call actually unmuted something
+	 */
+	boolean unmute(UUID uuid)
+	{
+		boolean removed = muted.remove(uuid);
+		if (removed)
+		{
+			log.debug("unmuting {}, {} citizen(s) still muted", uuid, muted.size());
+		}
+		return removed;
+	}
+
+	/**
 	 * @return how many citizens were unhidden
 	 */
 	int unhideAll()

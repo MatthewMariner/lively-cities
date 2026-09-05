@@ -66,7 +66,7 @@ public enum City
 {
 	// The order here is the order the checkboxes appear in, so it is alphabetical
 	// by display label rather than by region id.
-	AL_KHARID("Al Kharid", 13105, 13106, 13361)
+	AL_KHARID("Al Kharid", LivelyCitiesConfig.KEY_AL_KHARID, 13105, 13106, 13361)
 		{
 			@Override
 			boolean enabledIn(LivelyCitiesConfig config)
@@ -74,7 +74,7 @@ public enum City
 				return config.cityAlKharid();
 			}
 		},
-	ARDOUGNE("Ardougne", 10290, 10548, 10804)
+	ARDOUGNE("Ardougne", LivelyCitiesConfig.KEY_ARDOUGNE, 10290, 10548, 10804)
 		{
 			@Override
 			boolean enabledIn(LivelyCitiesConfig config)
@@ -85,7 +85,7 @@ public enum City
 	// 11061 and 11317 are the two halves of Catherby. Region 10549 (the Ranging
 	// Guild, ~160 tiles west) was once filed in here by mistake; it was moved to a
 	// checkbox of its own, and then dropped with the rest of the nine-city cut.
-	CATHERBY("Catherby", 11061, 11317)
+	CATHERBY("Catherby", LivelyCitiesConfig.KEY_CATHERBY, 11061, 11317)
 		{
 			@Override
 			boolean enabledIn(LivelyCitiesConfig config)
@@ -93,7 +93,7 @@ public enum City
 				return config.cityCatherby();
 			}
 		},
-	DRAYNOR("Draynor", 12338, 12340)
+	DRAYNOR("Draynor", LivelyCitiesConfig.KEY_DRAYNOR, 12338, 12340)
 		{
 			@Override
 			boolean enabledIn(LivelyCitiesConfig config)
@@ -101,7 +101,7 @@ public enum City
 				return config.cityDraynor();
 			}
 		},
-	EDGEVILLE("Edgeville", 12342)
+	EDGEVILLE("Edgeville", LivelyCitiesConfig.KEY_EDGEVILLE, 12342)
 		{
 			@Override
 			boolean enabledIn(LivelyCitiesConfig config)
@@ -109,7 +109,7 @@ public enum City
 				return config.cityEdgeville();
 			}
 		},
-	FALADOR("Falador", 11828, 11829, 12083, 11571)
+	FALADOR("Falador", LivelyCitiesConfig.KEY_FALADOR, 11828, 11829, 12083, 11571)
 		{
 			@Override
 			boolean enabledIn(LivelyCitiesConfig config)
@@ -117,7 +117,7 @@ public enum City
 				return config.cityFalador();
 			}
 		},
-	GRAND_EXCHANGE("Grand Exchange", 12598)
+	GRAND_EXCHANGE("Grand Exchange", LivelyCitiesConfig.KEY_GRAND_EXCHANGE, 12598)
 		{
 			@Override
 			boolean enabledIn(LivelyCitiesConfig config)
@@ -125,7 +125,7 @@ public enum City
 				return config.cityGrandExchange();
 			}
 		},
-	LUMBRIDGE("Lumbridge", 12850, 12594, 12595, 12849)
+	LUMBRIDGE("Lumbridge", LivelyCitiesConfig.KEY_LUMBRIDGE, 12850, 12594, 12595, 12849)
 		{
 			@Override
 			boolean enabledIn(LivelyCitiesConfig config)
@@ -141,7 +141,7 @@ public enum City
 	 * entity, a "City workman", stands at (3268, 3426), i.e. at the gate. Varrock
 	 * is where it belongs for that reason and no stronger one.
 	 */
-	VARROCK("Varrock", 12853, 12852, 12854, 12597, 12596, 12697, 13109)
+	VARROCK("Varrock", LivelyCitiesConfig.KEY_VARROCK, 12853, 12852, 12854, 12597, 12596, 12697, 13109)
 		{
 			@Override
 			boolean enabledIn(LivelyCitiesConfig config)
@@ -153,11 +153,13 @@ public enum City
 	private static final Map<Integer, City> BY_REGION = index();
 
 	private final String label;
+	private final String configKey;
 	private final int[] regionIds;
 
-	City(String label, int... regionIds)
+	City(String label, String configKey, int... regionIds)
 	{
 		this.label = label;
+		this.configKey = configKey;
 		this.regionIds = regionIds;
 	}
 	/**
@@ -194,6 +196,27 @@ public enum City
 	public String getLabel()
 	{
 		return label;
+	}
+
+	/**
+	 * @return the {@code keyName} of this city's checkbox — the literal string
+	 * RuneLite writes into the user's profile.
+	 *
+	 * <p><b>It is the same constant the {@code @ConfigItem} is annotated with</b>, not
+	 * a second copy of it: {@link LivelyCitiesConfig#KEY_VARROCK} and friends are
+	 * declared once and referenced from both sides. A {@code keyName} is permanent —
+	 * renaming one silently resets that setting for every user who had it — so the
+	 * thing to avoid is not a wrong string, it is <i>two</i> strings, one of which can
+	 * be changed without the other. There is only one here.
+	 *
+	 * <p>This exists because {@link LivelyCitiesPanel} writes these checkboxes.
+	 * {@link #enabledIn(LivelyCitiesConfig)} answers "is it on?" and cannot answer
+	 * "what do I write to turn it off?" — a config getter is a method, and
+	 * {@link ConfigWriter} needs the key.
+	 */
+	public String getConfigKey()
+	{
+		return configKey;
 	}
 	/**
 	 * @return this city's region ids. A copy: the array is the enum's state, and

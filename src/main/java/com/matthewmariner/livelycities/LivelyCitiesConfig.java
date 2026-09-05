@@ -89,6 +89,40 @@ public interface LivelyCitiesConfig extends Config
 {
 	String GROUP = "livelycities";
 
+	/**
+	 * The {@code keyName}s something other than this interface has to spell.
+	 *
+	 * <p>Every one of them is written by {@link LivelyCitiesPanel} through
+	 * {@link ConfigWriter}, and the panel has to name the key it is writing. Before
+	 * these existed the only way to do that was to type the string a second time
+	 * somewhere else, and a {@code keyName} typed twice is a {@code keyName} that can
+	 * be renamed once — which on a live plugin silently resets that setting for every
+	 * user who had it. Declaring each one here and referencing it from both the
+	 * annotation and the writer makes the two <i>the same string</i> rather than two
+	 * strings a test has to keep in step.
+	 *
+	 * <p>The nine city keys are reached through {@link City#getConfigKey()}, so the
+	 * region ids and the checkbox key for a place both live on its {@link City}
+	 * constant and neither is written out twice.
+	 *
+	 * <p>This changes no key's value. {@code cityAlKharid} is still
+	 * {@code cityAlKharid}; a constant is how it is spelled in the source, not what
+	 * lands in the user's profile. The rule at the top of this file is untouched:
+	 * changing what one of these constants <i>equals</i> is still a rename and still
+	 * needs a migration.
+	 */
+	String KEY_CROWD_DENSITY = "crowdDensity";
+
+	String KEY_AL_KHARID = "cityAlKharid";
+	String KEY_ARDOUGNE = "cityArdougne";
+	String KEY_CATHERBY = "cityCatherby";
+	String KEY_DRAYNOR = "cityDraynor";
+	String KEY_EDGEVILLE = "cityEdgeville";
+	String KEY_FALADOR = "cityFalador";
+	String KEY_GRAND_EXCHANGE = "cityGrandExchange";
+	String KEY_LUMBRIDGE = "cityLumbridge";
+	String KEY_VARROCK = "cityVarrock";
+
 	@ConfigSection(
 		name = "Chatter",
 		description = "What citizens say over their heads, how often, and how to make them stop.",
@@ -131,7 +165,7 @@ public interface LivelyCitiesConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "crowdDensity",
+		keyName = KEY_CROWD_DENSITY,
 		name = "Crowd density",
 		description = "Thins the roster proportionally. The same people are always the ones kept, "
 			+ "so a street looks the same every time you walk down it. "
@@ -361,63 +395,63 @@ public interface LivelyCitiesConfig extends Config
 	// position starts at 100 so a later non-city item can be slotted in above
 	// without renumbering 9 annotations.
 
-	@ConfigItem(keyName = "cityAlKharid", name = "Al Kharid", description = "Populate Al Kharid",
+	@ConfigItem(keyName = KEY_AL_KHARID, name = "Al Kharid", description = "Populate Al Kharid",
 		position = 100, section = citiesSection)
 	default boolean cityAlKharid()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityArdougne", name = "Ardougne", description = "Populate Ardougne",
+	@ConfigItem(keyName = KEY_ARDOUGNE, name = "Ardougne", description = "Populate Ardougne",
 		position = 101, section = citiesSection)
 	default boolean cityArdougne()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityCatherby", name = "Catherby", description = "Populate Catherby",
+	@ConfigItem(keyName = KEY_CATHERBY, name = "Catherby", description = "Populate Catherby",
 		position = 102, section = citiesSection)
 	default boolean cityCatherby()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityDraynor", name = "Draynor", description = "Populate Draynor",
+	@ConfigItem(keyName = KEY_DRAYNOR, name = "Draynor", description = "Populate Draynor",
 		position = 103, section = citiesSection)
 	default boolean cityDraynor()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityEdgeville", name = "Edgeville", description = "Populate Edgeville",
+	@ConfigItem(keyName = KEY_EDGEVILLE, name = "Edgeville", description = "Populate Edgeville",
 		position = 104, section = citiesSection)
 	default boolean cityEdgeville()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityFalador", name = "Falador", description = "Populate Falador",
+	@ConfigItem(keyName = KEY_FALADOR, name = "Falador", description = "Populate Falador",
 		position = 105, section = citiesSection)
 	default boolean cityFalador()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityGrandExchange", name = "Grand Exchange", description = "Populate the Grand Exchange",
+	@ConfigItem(keyName = KEY_GRAND_EXCHANGE, name = "Grand Exchange", description = "Populate the Grand Exchange",
 		position = 106, section = citiesSection)
 	default boolean cityGrandExchange()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityLumbridge", name = "Lumbridge", description = "Populate Lumbridge",
+	@ConfigItem(keyName = KEY_LUMBRIDGE, name = "Lumbridge", description = "Populate Lumbridge",
 		position = 107, section = citiesSection)
 	default boolean cityLumbridge()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "cityVarrock", name = "Varrock",
+	@ConfigItem(keyName = KEY_VARROCK, name = "Varrock",
 		description = "Populate Varrock, including the road outside the east gate",
 		position = 108, section = citiesSection)
 	default boolean cityVarrock()

@@ -85,6 +85,7 @@ public class LivelyCitiesPluginLifecycleTest
 	private FakePlayer player;
 	private InlineClientThread clientThread;
 	private RecordingOverlays overlays;
+	private RecordingSidePanel sidebar;
 
 	@Before
 	public void setUp()
@@ -94,6 +95,7 @@ public class LivelyCitiesPluginLifecycleTest
 		player = new FakePlayer(PLAYER);
 		clientThread = new InlineClientThread();
 		overlays = new RecordingOverlays();
+		sidebar = new RecordingSidePanel();
 
 		client.setLocalPlayer(player);
 		client.setTopLevelWorldView(view);
@@ -751,6 +753,14 @@ public class LivelyCitiesPluginLifecycleTest
 		plugin.citizenMenu = new CitizenMenu(client, scene, config.overrides());
 		plugin.overrides = config.overrides();
 		plugin.configWriter = config.writer();
+		plugin.config = config;
+		plugin.sidePanel = sidebar;
+
+		// A directory over a dataset with no files in it: every city reads zero citizens
+		// and no uuid resolves. That is the right default for a lifecycle test — the
+		// numbers are CitizenDirectoryTest's subject, and a fixture that loaded the real
+		// 27 files would make every test in this class pay for a parse it never looks at.
+		plugin.directory = new CitizenDirectory(new FakeRegions());
 
 		// A stopwatch that measures nothing. Off is what a shipped client gets, so it
 		// is what every test here should get; the measuring itself is FrameTimingsTest's.

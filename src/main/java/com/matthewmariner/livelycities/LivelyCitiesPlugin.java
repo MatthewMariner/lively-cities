@@ -1,6 +1,7 @@
 package com.matthewmariner.livelycities;
 
 import com.google.inject.Provides;
+import java.util.UUID;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -21,8 +22,11 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ImageUtil;
 
 /**
  * Cosmetic townsfolk and scenery, spawned from the vendored region dataset.
@@ -91,8 +95,34 @@ public class LivelyCitiesPlugin extends Plugin
 	@Inject
 	EntityScene scene;
 
+	/**
+	 * The dials, held here for one reason: the side panel draws them.
+	 *
+	 * <p>Everything else in this class reaches settings through the collaborator that
+	 * owns them — {@link EntityScene} for the render dials, {@link CitizenOverrides} for
+	 * the two uuid lists — and that is still the arrangement. What has no owner is "what
+	 * do the dials currently say?", which is exactly the question a panel showing them
+	 * has to ask before it can offer to change one.
+	 */
+	@Inject
+	LivelyCitiesConfig config;
+
 	@Inject
 	OverlayRegistry overlayRegistry;
+
+	/**
+	 * The sidebar — see {@link SidePanel}, and note that this is the interface rather
+	 * than the panel. Nothing here may touch Swing.
+	 */
+	@Inject
+	SidePanel sidePanel;
+
+	/**
+	 * Who each uuid is. Only the panel asks, and it asks lazily — see
+	 * {@link CitizenDirectory}.
+	 */
+	@Inject
+	CitizenDirectory directory;
 
 	@Inject
 	ChatterOverlay chatterOverlay;
@@ -176,6 +206,12 @@ public class LivelyCitiesPlugin extends Plugin
 
 		overlayRegistry.add(chatterOverlay);
 
+		// The button, unconditionally. It is the only affordance this plugin has that
+		// announces itself — everything else is a right-click nobody has been told about
+		// or a settings screen you have to already be looking for — so there is no
+		// setting behind it to disagree with.
+		sidePanel.show();
+
 		// Enabling the plugin mid-session is the common case in dev. Nothing to
 		// do here beyond letting the next game tick find the scene — but if we
 		// are already logged in, do not make the user wait for a state change
@@ -205,6 +241,15 @@ public class LivelyCitiesPlugin extends Plugin
 		// in the OverlayManager keeps drawing, and it would be drawing from a scene
 		// that is being emptied underneath it.
 		overlayRegistry.remove(chatterOverlay);
+
+		// And the sidebar. Same class of leak as an overlay left in the manager: a
+		// NavigationButton left in the toolbar is a button that opens a panel whose
+		// plugin is gone, and ClientToolbar keys its navigation off the button instance,
+		// so a second one built on the way back in would leave the first sitting there
+		// for the rest of the session. The panel's "somebody is looking" flag is cleared
+		// with it, or the next enable would compose a model for a panel that is not in
+		// the sidebar.
+		sidePanel.hide();
 
 		// The menu holds a reference to whichever citizen the last right-click was
 		// on. Left set, it would keep that wrapper — and its lit model — alive past
@@ -268,6 +313,12 @@ public class LivelyCitiesPlugin extends Plugin
 				clientThread.invoke(() ->
 				{
 					scene.invalidate(state.name());
+
+					// Logging out empties the scene, and a panel still showing "Varrock,
+					// 34 on screen" over an empty world is worse than one showing
+					// nothing: it is the last true reading, indistinguishable from a
+					// current one.
+					refreshPanel();
 				});
 				break;
 
@@ -282,6 +333,12 @@ public class LivelyCitiesPlugin extends Plugin
 	public void onGameTick(GameTick event)
 	{
 		processedGameTick = tick();
+
+		// The panel's clock. Everything on it either moves every tick (how many figures
+		// are on screen, who is talking) or changes on a click, and a click already runs
+		// a pass of its own through onConfigChanged — so the game tick is the only
+		// cadence it needs, and it is the cadence the numbers are true at.
+		refreshPanel();
 	}
 
 	/**
@@ -473,6 +530,105 @@ public class LivelyCitiesPlugin extends Plugin
 
 		scene.syncRegions(worldView);
 		scene.onSettingsChanged(playerLocation, worldView);
+		refreshPanel();
+	}
+
+	/**
+	 * Takes a reading and hands it to the sidebar.
+	 *
+	 * <p><b>Behind {@link SidePanel#isOpen()}, and that is a cost decision rather than a
+	 * cosmetic one.</b> Composing a model walks every cached wrapper and asks the client
+	 * whether each object is still registered — real per-tick work, in a plugin whose
+	 * whole performance argument is that it does almost none per frame and very little
+	 * per tick. Nobody is looking at a closed panel, so a closed panel costs one boolean
+	 * read every 600ms and nothing else.
+	 *
+	 * <p>Client thread: every caller is already on it, and {@link EntityScene#census()}
+	 * reads the client. The hop to Swing happens on the far side of
+	 * {@link SidePanel#refresh}, which is the panel's job rather than this one's.
+	 */
+	private void refreshPanel()
+	{
+		if (!sidePanel.isOpen())
+		{
+			return;
+		}
+
+		sidePanel.refresh(PanelModel.of(
+			playerLocation(),
+			scene.census(),
+			config,
+			overrides.hiddenUuids(),
+			overrides.mutedUuids(),
+			directory));
+	}
+
+	/**
+	 * Turns one city's checkbox on or off, from the panel.
+	 *
+	 * <p><b>Writes the same key the config screen writes</b>, through the same
+	 * {@link ConfigWriter} — see {@link City#getConfigKey()}, which is the very constant
+	 * the {@code @ConfigItem} is annotated with. So the panel and the settings screen are
+	 * two views of one setting rather than two settings, and unticking a city here shows
+	 * up unticked there.
+	 *
+	 * <p><b>A write that would change nothing does not happen.</b> {@code ConfigManager}
+	 * posts a {@code ConfigChanged} per {@code setConfiguration}, and this plugin answers
+	 * every one of those with a full visibility pass over every entity in scope — so a
+	 * no-op write is a no-op pass over a hundred citizens. The same rule
+	 * {@link UuidSetting#add} keeps, for the same reason.
+	 *
+	 * <p>Called from Swing's event dispatch thread and deliberately not marshalled:
+	 * nothing here reads the client. {@code ConfigManager} is thread-safe and is what
+	 * RuneLite's own settings panel writes through, from that same thread. The work that
+	 * <i>does</i> need the client thread — the visibility pass — is already marshalled by
+	 * {@link #onConfigChanged}, which is what the write posts.
+	 */
+	void setCityEnabled(City city, boolean enabled)
+	{
+		if (city.enabledIn(config) == enabled)
+		{
+			return;
+		}
+
+		configWriter.write(city.getConfigKey(), Boolean.toString(enabled));
+	}
+
+	/**
+	 * Moves the density dial, from the panel. Same rules as {@link #setCityEnabled}.
+	 *
+	 * <p>The value is {@link Enum#name()} because that is what {@code ConfigManager}
+	 * stores an enum as and what it reads one back with, so this round-trips through the
+	 * settings screen's dropdown rather than sitting beside it.
+	 */
+	void setCrowdDensity(CrowdDensity density)
+	{
+		if (config.crowdDensity() == density)
+		{
+			return;
+		}
+
+		configWriter.write(LivelyCitiesConfig.KEY_CROWD_DENSITY, density.name());
+	}
+
+	/**
+	 * Brings one hidden citizen back, from the panel.
+	 *
+	 * <p>The panel exists for this. Hiding is per citizen; until now the only undo was
+	 * a checkbox that unhid everybody, so taking back one decision cost every other one.
+	 * {@link CitizenOverrides} does the work and skips a write that would change nothing;
+	 * the respawn comes from the {@code ConfigChanged} that write posts, through the same
+	 * visibility pass the checkbox uses.
+	 */
+	void unhide(UUID uuid)
+	{
+		overrides.unhide(uuid);
+	}
+
+	/** Lets one muted citizen talk again. Same shape as {@link #unhide}. */
+	void unmute(UUID uuid)
+	{
+		overrides.unmute(uuid);
 	}
 
 	/**
@@ -550,6 +706,59 @@ public class LivelyCitiesPlugin extends Plugin
 			public void remove(Overlay overlay)
 			{
 				overlayManager.remove(overlay);
+			}
+		};
+	}
+
+	/**
+	 * The panel's place in the sidebar — see {@link SidePanel}.
+	 *
+	 * <p><b>The button is built once here and added and removed</b>, rather than rebuilt
+	 * on every toggle. {@code ClientToolbar} keys its navigation off the button instance,
+	 * so a second one built on the way back in would leave the first behind — a button
+	 * that cannot be removed by anything short of a client restart, which is the
+	 * navigation-shaped version of the leaked active object this plugin already guards
+	 * against.
+	 */
+	@Provides
+	SidePanel provideSidePanel(ClientToolbar clientToolbar, LivelyCitiesPanel panel)
+	{
+		final NavigationButton button = NavigationButton.builder()
+			.tooltip("Lively Cities")
+			.icon(ImageUtil.loadImageResource(LivelyCitiesPanel.class, "panel_icon.png"))
+			.priority(7)
+			.panel(panel)
+			.build();
+
+		return new SidePanel()
+		{
+			@Override
+			public void show()
+			{
+				clientToolbar.addNavigation(button);
+			}
+
+			@Override
+			public void hide()
+			{
+				clientToolbar.removeNavigation(button);
+
+				// Removing the navigation does not have to produce an onDeactivate, and
+				// a panel that still believes it is open is a panel the game tick keeps
+				// composing models for. Told here rather than inferred there.
+				panel.closed();
+			}
+
+			@Override
+			public boolean isOpen()
+			{
+				return panel.isOpen();
+			}
+
+			@Override
+			public void refresh(PanelModel model)
+			{
+				panel.accept(model);
 			}
 		};
 	}

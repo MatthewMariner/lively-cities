@@ -125,6 +125,38 @@ final class UuidSetting
 	}
 
 	/**
+	 * Takes one uuid back out and persists the rest.
+	 *
+	 * <p>The single-citizen counterpart to {@link #clear()}, and the reason it exists
+	 * is that {@code clear()} was the <i>only</i> way back. A user hides or mutes one
+	 * citizen from its right-click menu, one at a time, and the only undo the plugin
+	 * shipped was a checkbox that undid all of them at once — so restoring the one you
+	 * changed your mind about meant losing every other decision you had made. See
+	 * {@link LivelyCitiesPanel}, which is the surface that can offer a row per citizen.
+	 *
+	 * <p>Same skipped-write rule as {@link #add}, for the same reason and in the other
+	 * direction: removing a uuid that is not in the set would write a string identical
+	 * to the one already stored, and {@code ConfigManager} posts a
+	 * {@code ConfigChanged} per write which this plugin answers with a full visibility
+	 * pass over every entity in scope.
+	 *
+	 * @return true if it was there — i.e. if anything was written
+	 */
+	boolean remove(UUID uuid)
+	{
+		Set<UUID> existing = current();
+		if (!existing.contains(uuid))
+		{
+			return false;
+		}
+
+		Set<UUID> next = new LinkedHashSet<>(existing);
+		next.remove(uuid);
+		store(next);
+		return true;
+	}
+
+	/**
 	 * Empties the set.
 	 *
 	 * @return true if there was anything to empty
