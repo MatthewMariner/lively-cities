@@ -400,6 +400,62 @@ public class LivelyCitiesPanelTest
 		assertFalse("and removing the button is the other way out", panel.isOpen());
 	}
 
+	// --- layout ---------------------------------------------------------------
+
+	/**
+	 * <b>Nothing on the panel is capped at zero pixels high.</b>
+	 *
+	 * <p>Every row in a vertical {@code BoxLayout} has to have its maximum height pinned
+	 * to its preferred height, or the column stretches one row to fill the slack. The cap
+	 * has to be applied <i>after</i> the row's labels are in it: an empty {@code JPanel}
+	 * prefers to be nothing tall, so capping on the way out of the factory pins the row
+	 * at zero — and a 0px row is laid out, visible, painted, and gone. Every assertion in
+	 * this file passed with the title and all three headings capped that way, because
+	 * {@code isVisible()} is true of a component with no height.
+	 *
+	 * <p>Checked over the whole tree rather than the four rows that were wrong, so the
+	 * next component built the same way is caught too. The spacers are excluded by name:
+	 * they are deliberately a fixed few pixels and are the only things here whose height
+	 * is not derived from their contents.
+	 */
+	@Test
+	public void noRowOnThePanelIsPinnedToZeroHeight()
+	{
+		LivelyCitiesPanel panel = panel();
+		panel.accept(PanelModel.loggedOut(config, directory));
+		drain();
+
+		List<String> pinned = new ArrayList<>();
+		int checked = 0;
+		for (Component component : tree(panel))
+		{
+			if (!(component instanceof javax.swing.JComponent) || !component.isVisible())
+			{
+				continue;
+			}
+
+			java.awt.Dimension max = component.getMaximumSize();
+			java.awt.Dimension preferred = component.getPreferredSize();
+			if (preferred.height == 0)
+			{
+				// A spacer, or a container the layout gives no height of its own.
+				continue;
+			}
+
+			checked++;
+			if (max.height < preferred.height)
+			{
+				pinned.add(component.getClass().getSimpleName() + " prefers "
+					+ preferred.height + "px and is capped at " + max.height);
+			}
+		}
+
+		assertTrue("a scan that measured nothing would pass; " + checked + " components",
+			checked > 10);
+		assertEquals("a row capped below its own preferred height is a row that is laid "
+			+ "out, visible, painted and invisible: " + pinned, 0, pinned.size());
+	}
+
 	// --- the palette ----------------------------------------------------------
 
 	/**

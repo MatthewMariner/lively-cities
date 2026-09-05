@@ -439,7 +439,7 @@ class LivelyCitiesPanel extends PluginPanel
 		name.setForeground(ACCENT);
 		panel.add(name, BorderLayout.WEST);
 
-		return panel;
+		return constrain(panel);
 	}
 
 	private JPanel nowCard()
@@ -549,6 +549,9 @@ class LivelyCitiesPanel extends PluginPanel
 		final JPanel panel = row();
 		panel.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
+		// Given its text before the row is measured. The cap below is the row's preferred
+		// height, and a label with nothing in it prefers to be nothing tall.
+		overridesHeader.setText("▾  Hidden and muted");
 		overridesHeader.setFont(FontManager.getRunescapeBoldFont());
 		overridesHeader.setForeground(ACCENT);
 		panel.add(overridesHeader, BorderLayout.WEST);
@@ -563,7 +566,7 @@ class LivelyCitiesPanel extends PluginPanel
 			}
 		});
 
-		return panel;
+		return constrain(panel);
 	}
 
 	private JPanel heading(String text)
@@ -575,7 +578,7 @@ class LivelyCitiesPanel extends PluginPanel
 		label.setForeground(ACCENT);
 		panel.add(label, BorderLayout.WEST);
 
-		return panel;
+		return constrain(panel);
 	}
 
 	/** A muted grey paragraph. Wrapped as HTML because Swing labels do not wrap. */
@@ -589,11 +592,20 @@ class LivelyCitiesPanel extends PluginPanel
 		return label;
 	}
 
+	/**
+	 * An empty full-width strip.
+	 *
+	 * <p><b>Deliberately not constrained here.</b> {@link #constrain} caps a row at its
+	 * <i>preferred</i> height, and a panel with nothing in it prefers to be nothing tall
+	 * — so constraining on the way out of this method capped every heading and the title
+	 * at zero pixels and made them invisible. Callers constrain after they have added
+	 * their labels.
+	 */
 	private JPanel row()
 	{
 		final JPanel panel = new JPanel(new BorderLayout());
 		panel.setBackground(BACKDROP);
-		return constrain(panel);
+		return panel;
 	}
 
 	private static JPanel gap(int height)
@@ -610,8 +622,10 @@ class LivelyCitiesPanel extends PluginPanel
 	/**
 	 * Stops a {@code BoxLayout} row stretching to fill the column.
 	 *
-	 * <p>Called after the row's children are in place, because the cap is its preferred
-	 * height and a row with nothing in it prefers to be nothing tall.
+	 * <p><b>Only ever called after the row's children are in place.</b> The cap is the
+	 * row's preferred height, and an empty row prefers to be nothing tall — so calling
+	 * this too early is not a missing constraint, it is a row pinned to zero pixels,
+	 * which is a heading that is laid out, visible, painted and 0px high.
 	 */
 	private static JPanel constrain(JPanel panel)
 	{
