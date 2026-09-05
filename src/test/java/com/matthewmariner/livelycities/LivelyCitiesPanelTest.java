@@ -829,13 +829,28 @@ public class LivelyCitiesPanelTest
 		return out;
 	}
 
-	/** Every piece of text on the panel, in tree order. */
+	/**
+	 * Every piece of text a reader could actually see, in tree order.
+	 *
+	 * <p><b>Showing means the whole chain is showing, not just the label.</b>
+	 * {@code isVisible()} is a component's own flag and stays true inside a
+	 * {@code setVisible(false)} ancestor — and what the search filter hides is a
+	 * <i>card</i>, never the labels on it. Filtered on the label alone, this method
+	 * returned the text of every hidden card, and
+	 * {@link #everyPlaceIsOnThePanel()}, {@link #theLiveNumbersReachTheCards()} and
+	 * {@link #eachCardShowsItsOwnCitysState()} all passed with every card on the panel
+	 * hidden. {@link #visibleCards(LivelyCitiesPanel)} was already right, which is why
+	 * only the search test noticed.
+	 *
+	 * <p>Same family as the zero-height bug {@link #noRowOnThePanelIsPinnedToZeroHeight()}
+	 * exists for: asserting existence where the property being claimed is visibility.
+	 */
 	private static List<String> labels(LivelyCitiesPanel panel)
 	{
 		List<String> out = new ArrayList<>();
 		for (Component component : tree(panel))
 		{
-			if (component instanceof JLabel && component.isVisible())
+			if (component instanceof JLabel && showing(panel, component))
 			{
 				String text = ((JLabel) component).getText();
 				if (text != null && !text.isEmpty())
@@ -845,6 +860,23 @@ public class LivelyCitiesPanelTest
 			}
 		}
 		return out;
+	}
+
+	/** @return whether this component and every ancestor up to the panel is visible */
+	private static boolean showing(LivelyCitiesPanel panel, Component component)
+	{
+		for (Component at = component; at != null; at = at.getParent())
+		{
+			if (!at.isVisible())
+			{
+				return false;
+			}
+			if (at == panel)
+			{
+				break;
+			}
+		}
+		return true;
 	}
 
 	private static JLabel labelReading(LivelyCitiesPanel panel, String text)
