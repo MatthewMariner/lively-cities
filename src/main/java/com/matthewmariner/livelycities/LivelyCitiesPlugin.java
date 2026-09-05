@@ -235,6 +235,29 @@ public class LivelyCitiesPlugin extends Plugin
 		}
 	}
 
+	/**
+	 * Undoes {@link #startUp()}, in the order the ordering matters in.
+	 *
+	 * <p><b>Straight-line, with no {@code try}/{@code finally}, and that is a decision
+	 * rather than an omission.</b> A throw from the first statement here would skip the
+	 * button removal and the scene teardown — precisely the leak this method exists to
+	 * prevent, and one no amount of re-enabling can undo. So the question is whether
+	 * anything on this path can throw, and against the 1.12.37 client it cannot:
+	 * {@code ClientToolbar.removeNavigation} is one {@code SwingUtilities.invokeLater} call
+	 * and nothing else, and {@code OverlayManager.remove} is a {@code synchronized}
+	 * collection removal. Neither reaches the client through anything that could change
+	 * underneath this class — both go through the two {@code @Provides} lambdas at the
+	 * bottom of this same file — and what is left is two field writes and a
+	 * {@link ClientThread#invoke}. Nesting {@code finally} blocks around a path with no
+	 * reachable thrower would cost this method the readability the teardown contract is
+	 * actually kept by, and the contract itself is asserted rather than read:
+	 * {@code LivelyCitiesPluginLifecycleTest} checks it against recording registries.
+	 *
+	 * <p>If a step that can throw is ever added here, this paragraph is what has to be
+	 * revisited with it — and the answer then is to keep going rather than to stop, because
+	 * an overlay drawing from an emptied scene is a blank frame and a scene left standing
+	 * is every lit model and every registered object leaked.
+	 */
 	@Override
 	protected void shutDown()
 	{
