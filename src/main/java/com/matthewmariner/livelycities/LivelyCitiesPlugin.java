@@ -768,8 +768,8 @@ public class LivelyCitiesPlugin extends Plugin
 	 * second button around a second panel, {@code startUp} adds whichever one it was given,
 	 * and the other is a button nothing will ever remove. That is the leak the paragraph
 	 * above is about, arriving by the one door the teardown test cannot see: it asserts
-	 * that {@code shutDown} hides the panel it was handed, and both plugins would still be
-	 * telling the truth about their own.
+	 * that {@code shutDown} hides the {@link SidePanel} this plugin was handed, and that
+	 * assertion goes on passing while a second one sits in the toolbar.
 	 */
 	@Provides
 	@Singleton
