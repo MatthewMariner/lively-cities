@@ -103,6 +103,15 @@ class LivelyCitiesPanel extends PluginPanel
 	private final Map<CrowdDensity, JLabel> densityChips = new LinkedHashMap<>();
 	private final Map<City, CityCard> cityCards = new LinkedHashMap<>();
 
+	/**
+	 * The strut that follows each card, so the filter can take it away with the card.
+	 *
+	 * <p>A spacer is not laid out by its neighbours — it is a fixed few pixels whatever is
+	 * on either side of it — so hiding only the card left its gap behind. Filtering to one
+	 * place left eight 4px voids under it.
+	 */
+	private final Map<City, JPanel> cityGaps = new LinkedHashMap<>();
+
 	private final JPanel cities = new JPanel();
 	private final JPanel overrides = new JPanel();
 	private final JLabel overridesHeader = new JLabel();
@@ -182,7 +191,10 @@ class LivelyCitiesPanel extends PluginPanel
 			card.setAlignmentX(Component.LEFT_ALIGNMENT);
 			cityCards.put(city, card);
 			cities.add(card);
-			cities.add(gap(4));
+
+			final JPanel spacer = gap(4);
+			cityGaps.put(city, spacer);
+			cities.add(spacer);
 		}
 		column.add(cities);
 
@@ -356,7 +368,18 @@ class LivelyCitiesPanel extends PluginPanel
 				continue;
 			}
 			card.update(row);
-			card.setVisible(matches(query, row.getCity().getLabel()));
+
+			// The card and the strut under it, together. A spacer's height does not come
+			// from its neighbours, so a hidden card whose gap stayed behind is 4px of
+			// nothing — and filtering to one place left eight of them stacked under it.
+			final boolean shown = matches(query, row.getCity().getLabel());
+			card.setVisible(shown);
+
+			final JPanel spacer = cityGaps.get(row.getCity());
+			if (spacer != null)
+			{
+				spacer.setVisible(shown);
+			}
 		}
 	}
 

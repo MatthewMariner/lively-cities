@@ -229,6 +229,42 @@ public class LivelyCitiesPanelTest
 		assertEquals("a query nothing matches hides them all", 0, visibleCards(panel));
 	}
 
+	/**
+	 * A filtered-out card takes its spacer with it.
+	 *
+	 * <p>The cards are laid out as card, strut, card, strut. The filter hid the card and
+	 * left the strut, and a strut's height is a fixed few pixels rather than something its
+	 * neighbours decide — so filtering to one place left the matching card sitting on top
+	 * of eight 4px voids. Cosmetic, and invisible to every other assertion in this file,
+	 * because the panel really was showing exactly one city.
+	 *
+	 * <p>Counted out of the container the cards are in rather than by measuring pixels:
+	 * nothing here is laid out, so a height would be zero whatever the truth was.
+	 */
+	@Test
+	public void aFilteredOutCardTakesItsSpacerWithIt() throws Exception
+	{
+		LivelyCitiesPanel panel = panel();
+		panel.accept(loggedOut(config));
+		drain();
+
+		Container cards = labelReading(panel, City.VARROCK.getLabel()).getParent().getParent();
+		assertEquals("nine cards and nine struts to start with",
+			City.values().length * 2, showingChildren(cards));
+
+		type(panel, "var");
+		assertEquals("one card and one strut, not one card and nine struts",
+			2, showingChildren(cards));
+
+		type(panel, "zzzz");
+		assertEquals("and a query nothing matches leaves nothing at all",
+			0, showingChildren(cards));
+
+		type(panel, "");
+		assertEquals("clearing brings the struts back with the cards",
+			City.values().length * 2, showingChildren(cards));
+	}
+
 	// --- the hidden-and-muted list --------------------------------------------
 
 	/**
@@ -923,6 +959,20 @@ public class LivelyCitiesPanelTest
 			}
 		}
 		return visible;
+	}
+
+	/** @return how many of this container's own children are visible */
+	private static int showingChildren(Container container)
+	{
+		int showing = 0;
+		for (Component child : container.getComponents())
+		{
+			if (child.isVisible())
+			{
+				showing++;
+			}
+		}
+		return showing;
 	}
 
 	private static int count(List<String> texts, String exact)
