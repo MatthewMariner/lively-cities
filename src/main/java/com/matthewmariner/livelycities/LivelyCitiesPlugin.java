@@ -707,14 +707,6 @@ public class LivelyCitiesPlugin extends Plugin
 	}
 
 	/**
-	 * The plugin's only write path into its own settings.
-	 *
-	 * <p>This method is the whole reason {@link ConfigWriter} exists — see its
-	 * javadoc. {@code ConfigManager}'s constructor is private, so anything that took
-	 * one directly could not be constructed by a test; behind this one lambda,
-	 * everything that decides <i>what</i> to write is testable against a map.
-	 */
-	/**
 	 * The plugin's only overlay registration path — see {@link OverlayRegistry}.
 	 */
 	@Provides
@@ -800,6 +792,14 @@ public class LivelyCitiesPlugin extends Plugin
 		};
 	}
 
+	/**
+	 * The plugin's only write path into its own settings.
+	 *
+	 * <p>This method is the whole reason {@link ConfigWriter} exists — see its
+	 * javadoc. {@code ConfigManager}'s constructor is private, so anything that took
+	 * one directly could not be constructed by a test; behind this one lambda,
+	 * everything that decides <i>what</i> to write is testable against a map.
+	 */
 	@Provides
 	ConfigWriter provideConfigWriter(ConfigManager configManager)
 	{

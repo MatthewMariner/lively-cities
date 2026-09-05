@@ -422,14 +422,6 @@ class LivelyCitiesPanel extends PluginPanel
 		overrides.setVisible(overridesOpen);
 	}
 
-	/**
-	 * What {@link #drawOverrides} compares to decide whether to rebuild.
-	 *
-	 * <p>Both flags are in it, not just the uuid: a citizen who was hidden and is now
-	 * hidden <i>and</i> muted is the same uuid on the same row with a second action on
-	 * it, and a signature of uuids alone would leave that action undrawn until something
-	 * else changed.
-	 */
 	/** Adds one component to the override list, spaced and aligned like every other. */
 	private void stack(JComponent child)
 	{
@@ -438,6 +430,19 @@ class LivelyCitiesPanel extends PluginPanel
 		overrides.add(gap(4));
 	}
 
+	/**
+	 * What {@link #drawOverrides} compares to decide whether to rebuild.
+	 *
+	 * <p>Both flags are in it, not just the uuid: a citizen who was hidden and is now
+	 * hidden <i>and</i> muted is the same uuid on the same row with a second action on
+	 * it, and a signature of uuids alone would leave that action undrawn until something
+	 * else changed.
+	 *
+	 * <p>And the uuid is in it, not just the flags: bringing back the wrong person and
+	 * hiding the right one is one row before and one row after, hidden both times — so a
+	 * signature of flags alone would leave the restore pointing at somebody who is already
+	 * unhidden, and the citizen who is hidden with no way back.
+	 */
 	private static String signature(List<PanelModel.OverrideRow> rows)
 	{
 		final StringBuilder out = new StringBuilder();
