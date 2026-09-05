@@ -41,6 +41,7 @@ against your pushed HEAD and shows the plugin as **outdated** the moment they di
 | Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight "$HOME/Workspaces/Mariner Digital Agency/Projects/osrs/lively-cities"` | `Result: PASS` |
 | Compiles under the hub's own build | see [Verifying the hub build](#verifying-the-hub-build) | `BUILD SUCCESSFUL`, 64 classes — re-run 2026-09-05 |
 | Side panel driven in a live client | open the sidebar button, walk between two cities, toggle a card, move the density dial, hide somebody and restore them from the row | **still outstanding** — the panel's live counts and every colour on it need a running client |
+| Side panel opened at the login screen | hide somebody, restart the client, and open the sidebar button before logging in | **still outstanding** — nine named cards with their rosters, a density chip lit, and the hidden-and-muted section carrying the real count. It was blank here until 2026-09-05 |
 | Screenshots in the README | — | *deliberately deferred (2026-08-24) — the page ships with placeholders* |
 | Jagex third-party client guidelines | read them in a browser | unchanged from your last read |
 

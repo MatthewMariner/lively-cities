@@ -88,6 +88,11 @@ sections into the settings.
 
 The search box filters the places and the overridden citizens together, and clears with the ×.
 
+**Opened at the login screen it still has something to say.** The nine places and their
+rosters, the density dial, and everyone you have hidden or muted are all facts about the
+plugin and your profile rather than about the session, so they are there before you log in.
+Only the live figures are waiting for a world.
+
 Nothing the panel does is invisible from the other side: every value it writes goes to the
 same config key the settings screen reads.
 
