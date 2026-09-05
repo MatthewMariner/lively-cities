@@ -359,6 +359,53 @@ public class LivelyCitiesPanelTest
 			0, actionsLabelled(panel, "unmute").size());
 	}
 
+	/**
+	 * A different citizen with the same flags is a different row.
+	 *
+	 * <p><b>This test exists because of a mutation.</b> Dropping the uuid from the rebuild
+	 * signature — {@code out.append(row.getUuid())} to {@code out.append("")} — left all 574
+	 * tests green. The one test that transitions the section goes from {@code h-;} to
+	 * {@code hm;}, which differs whether or not the uuid is in it, so it pins the flags and
+	 * says nothing about identity.
+	 *
+	 * <p>The transition that tells them apart is the ordinary repair: you hid the wrong
+	 * person, so you bring them back and hide the right one. Same count, same flags, and
+	 * under the mutation the section is left exactly as it was — the only "show" on screen
+	 * points at somebody who is already unhidden, so clicking it does nothing, and the
+	 * citizen who <i>is</i> hidden has no way back from the panel at all.
+	 */
+	@Test
+	public void swappingWhoIsHiddenRebuildsTheRow()
+	{
+		FakeRegions regions = new FakeRegions();
+		EntityDefinition first = regions.citizen(12852, 3225, 3360, 0);
+		EntityDefinition second = regions.citizen(12852, 3226, 3360, 0);
+
+		FakeConfig config = new FakeConfig();
+		LivelyCitiesPlugin plugin = plugin(config);
+		config.overrides().hide(first);
+
+		LivelyCitiesPanel panel = new LivelyCitiesPanel(plugin);
+		panel.accept(model(config, uuids(first), Collections.emptySet()));
+		drain();
+		assertEquals("one hidden citizen, one way back", 1, actionsLabelled(panel, "show").size());
+
+		// One row before and one row after, hidden both times and muted neither time. The
+		// only thing that moved is who it is about.
+		config.overrides().unhide(first.getUuid());
+		config.overrides().hide(second);
+		panel.accept(model(config, uuids(second), Collections.emptySet()));
+		drain();
+
+		assertEquals("still one row", 1, actionsLabelled(panel, "show").size());
+		assertTrue("and it has to name the citizen who is hidden now: " + labels(panel),
+			labels(panel).contains(displayName(second)));
+
+		click(actionsLabelled(panel, "show").get(0));
+		assertTrue("clicking the only restore on screen has to restore the only citizen who "
+			+ "is hidden", config.overrides().hiddenUuids().isEmpty());
+	}
+
 	/** Nobody overridden is a sentence, not an empty gap. */
 	@Test
 	public void anEmptyListSaysSoRatherThanShowingNothing()
@@ -692,6 +739,17 @@ public class LivelyCitiesPanelTest
 			out.add(definition.getUuid());
 		}
 		return out;
+	}
+
+	/**
+	 * What the panel puts on the row for a citizen the directory cannot place — see
+	 * {@code PanelModel.OverrideRow.getDisplayName}. Every fixture uuid here is one,
+	 * because {@link FakeRegions} is not the shipped dataset.
+	 */
+	private static String displayName(EntityDefinition definition)
+	{
+		String text = definition.getUuid().toString();
+		return "Citizen " + text.substring(0, text.indexOf('-'));
 	}
 
 	private static List<UUID> sortedUuids(EntityDefinition... definitions)
