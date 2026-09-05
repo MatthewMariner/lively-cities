@@ -1,6 +1,6 @@
 # Screenshots
 
-The main README references four images that do not exist yet. Take them in-game and drop them
+The main README references five images that do not exist yet. Take them in-game and drop them
 here; the README has an HTML comment at each spot saying exactly what the shot should be.
 
 | File | Shot |
@@ -8,6 +8,7 @@ here; the README has an HTML comment at each spot saying exactly what the shot s
 | `hero.png` | Varrock square at **Crowded**, no interface panels open, wide 16:9, citizens at varying distances |
 | `citizens.png` | Close-up of two or three citizens with distinct appearances, ideally one mid-walk |
 | `config.png` | The RuneLite settings panel for Lively Cities with the Cities section expanded |
+| `panel.png` | The side panel, taken standing in Varrock so the header and a card carry live numbers, with the Places list and the hidden-and-muted section both visible |
 | `menu.png` | Right-click menu on a citizen — Examine/Hide/Mute below the real options, coloured target visible |
 
 RuneLite's own Screenshot plugin (default hotkey, or the camera button) writes to

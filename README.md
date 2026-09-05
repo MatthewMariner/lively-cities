@@ -10,7 +10,7 @@ RuneScape — client-side, purely visual, and gone the moment you switch it off.
 [![RuneLite](https://img.shields.io/badge/RuneLite-1.12.37-blue)](https://runelite.net)
 [![Java](https://img.shields.io/badge/Java-11-orange)](https://runelite.net)
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-565-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/tests-568-brightgreen)](#development)
 
 </div>
 
@@ -52,6 +52,47 @@ load, and **nothing another player can see**.
 
 ---
 
+## The side panel
+
+There is a button in RuneLite's sidebar from the moment the plugin is switched on. It shows
+the things a settings screen structurally cannot.
+
+<!-- SCREENSHOT: the side panel, taken while standing in Varrock so the header and at least
+     one card carry live numbers, with the Places list and the hidden-and-muted section both
+     visible. Save as docs/img/panel.png and replace this comment with:
+     ![The side panel](docs/img/panel.png) -->
+
+**Where you are, and what is actually up.** The place you are standing in, how many figures
+the client has on screen this instant, how many of those are walking, how many are talking,
+and how many the loaded scene covers in total. When a street looks thinner than you expected,
+this is where you find out whether that is the render distance, the density dial, or a
+checkbox you turned off a month ago.
+
+**A card per place rather than nine identical tickboxes.** Each card says how many citizens
+the dataset puts there and how many of them are on screen right now — and that second number
+is not only for the place you are standing in, because the game keeps up to nine regions
+loaded at once and the figures two streets over are as real as the ones in front of you.
+Clicking a card makes exactly the write the settings screen's checkbox makes: they are one
+setting shown twice, not two settings that can disagree.
+
+**The way back from one Hide or one Mute.** Everyone you have hidden or muted gets a row —
+their name, their city, and a restore for each override it carries. That was the gap worth
+closing: hiding and muting are per citizen, and the only undo the plugin shipped undid all of
+them at once, so taking back the one you regretted cost every other decision you had made.
+Somebody who is both hidden and muted is one row with both restores on it. The names come out
+of the dataset rather than out of whatever is loaded, so the citizen you silenced in Falador
+is still named while you are standing in Varrock.
+
+**The density dial where you can see it**, as four buttons instead of a dropdown three
+sections into the settings.
+
+The search box filters the places and the overridden citizens together, and clears with the ×.
+
+Nothing the panel does is invisible from the other side: every value it writes goes to the
+same config key the settings screen reads.
+
+---
+
 ## Settings
 
 Everything is a dial, because the thing this plugin's predecessor got most complained about
@@ -80,7 +121,8 @@ Varrock square holds forty citizens, and at the tightest cadence the other dials
 nine of them would be talking at any moment without it.
 You can also mute one individual by right-clicking them, and
 **Unmute all citizens** gives everybody their voice back — the same shape as Hide and
-"Unhide all" below, and it unticks itself once it has been acted on.
+"Unhide all" below, and it unticks itself once it has been acted on. To give one person their
+voice back rather than everybody, use the side panel.
 
 **9 city checkboxes** — turn any place off and its citizens vanish on the click, not on the
 next region crossing.
@@ -109,7 +151,8 @@ This is the part that matters more than the citizens, and it is deliberate.
   NPCs, objects or scene tiles. That is enforced structurally in the tests, not just
   asserted: the test client throws on every real-action call, so any code path reaching for
   one fails the build.
-- **Don't like someone?** Right-click → **Hide**. It persists. "Unhide all" brings them back.
+- **Don't like someone?** Right-click → **Hide**. It persists, the side panel lists everyone
+  you have hidden with a restore each, and "Unhide all" brings them back in one go.
 - **It measures its own cost rather than promising there isn't one.** The clickbox — the
   expensive part — is computed when you right-click and never per frame, so the only
   per-frame work is sliding walking figures between tiles.
@@ -162,7 +205,7 @@ What is new is everything that stops it dying the same way:
 - **A placement lint** checks each figure's theme against the region it stands in. It caught
   six citizens impersonating the Barrows Brothers above their own crypts; they were renamed
   to anonymous barrow wights, and the Barrows has since left the dataset entirely.
-- **565 tests**, and every guard has been broken on purpose and watched fail. A test nobody
+- **568 tests**, and every guard has been broken on purpose and watched fail. A test nobody
   has seen fail is a hypothesis.
 
 ---
@@ -332,7 +375,7 @@ builds; bump it deliberately after an OSRS update, alongside the [cache id
 audit](#after-an-osrs-update-checking-the-dataset-still-resolves).
 
 ```bash
-./gradlew build            # compile and run the 565 tests
+./gradlew build            # compile and run the 568 tests
 ./gradlew run              # a dev client with the plugin loaded
 ./gradlew auditCacheIds    # dev client + walk every cache id (see below)
 ./gradlew runWithTimings   # dev client + measure our own frame cost (see below)

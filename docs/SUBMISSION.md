@@ -32,14 +32,15 @@ against your pushed HEAD and shows the plugin as **outdated** the moment they di
 
 | Check | Command | Expected |
 |---|---|---|
-| Tests | `./gradlew clean test` | all green (565) |
+| Tests | `./gradlew clean test` | all green (568) |
 | Every new placement walked in game | `docs/CITY-TOP-UP-CHECK.md` · `docs/CITY-LIVERY-CHECK.md` | 57 + 151 markers imported, all 33 + 127 boxes ticked — **still outstanding** |
 | Offline dataset audit | *(part of the above)* | green |
 | No filesystem API in `src/main` | *(part of the above — `ShippedSourceTest`)* | green; see [below](#no-filesystem-writes-in-the-shipped-jar) |
 | Cache ids still resolve | `./run-windows.sh --audit` | no failing ids outside the known-permanent-null section |
 | Frame cost still inside its thresholds | `./run-windows.sh --timings`, then play for a few minutes | measured 2026-08-29 at 184 entities: per-frame p99 **8µs**, per-tick p99 **5.50ms**. The dataset is now 311 entities after the 2026-09-01 livery pass — **re-measure outstanding, needs a live client** |
 | Hub file-level preflight | `yarn workspace @toolchain/server osrs:preflight "$HOME/Workspaces/Mariner Digital Agency/Projects/osrs/lively-cities"` | `Result: PASS` |
-| Compiles under the hub's own build | see [Verifying the hub build](#verifying-the-hub-build) | `BUILD SUCCESSFUL` |
+| Compiles under the hub's own build | see [Verifying the hub build](#verifying-the-hub-build) | `BUILD SUCCESSFUL`, 64 classes — re-run 2026-09-05 |
+| Side panel driven in a live client | open the sidebar button, walk between two cities, toggle a card, move the density dial, hide somebody and restore them from the row | **still outstanding** — the panel's live counts and every colour on it need a running client |
 | Screenshots in the README | — | *deliberately deferred (2026-08-24) — the page ships with placeholders* |
 | Jagex third-party client guidelines | read them in a browser | unchanged from your last read |
 
@@ -74,12 +75,15 @@ cp -r gradle gradlew "$S/"
 ( cd "$S" && ./gradlew compileJava )
 ```
 
-Last verified **2026-08-29 against the released commit: BUILD SUCCESSFUL, 48 classes**. Our source uses Gson and Guice,
-which look like third-party dependencies but arrive transitively through the client — worth
-re-proving rather than assuming, so **re-run this after any new import.**
+Last verified **2026-09-05 against the side-panel commit: BUILD SUCCESSFUL, 64 classes**. Our
+source uses Gson and Guice, which look like third-party dependencies but arrive transitively
+through the client — worth re-proving rather than assuming, so **re-run this after any new
+import.** The side panel added a batch of them (`javax.swing`, `java.awt`,
+`net.runelite.client.ui`), which is exactly the case that sentence is about: they are JDK and
+client, and the hub's own build agrees.
 
-The 63 → 67 → 66 → 63 → 48 accounting, since a class count that cannot be explained is not
-evidence of anything:
+The 63 → 67 → 66 → 63 → 48 → 64 accounting, since a class count that cannot be explained is
+not evidence of anything:
 
 - **63 → 67.** `NpcAppearance` arrived with the cameos; `FrameTimings` and its two nested
   types arrived with the stopwatch. (`ReportWriter` was a rename of
@@ -94,9 +98,28 @@ evidence of anything:
   compiled output confirms it: exactly nine `City$N.class` files where there were
   twenty-four, and every other class name in the jar unchanged.
 
-Landing back on 63 before that was a coincidence worth stating rather than a target: the jar
-was the size it was before any of the developer tooling existed, and it contained none of it.
-48 is not a coincidence — it is 63 minus the fifteen checkboxes that no longer exist. See
+- **48 → 64.** The side panel, and sixteen is the whole of it — nothing was removed. Counted
+  out rather than asserted, because a Swing panel is exactly the kind of addition whose class
+  count nobody can predict: every anonymous listener is a class file.
+
+  | Classes | What |
+  |---:|---|
+  | 1 | `SidePanel`, the seam — an interface, so the lifecycle test never builds a Swing component |
+  | 1 | `LivelyCitiesPlugin$3`, the anonymous `SidePanel` the `@Provides` method returns |
+  | 8 | `LivelyCitiesPanel`, its two card types, and the five anonymous listeners between them: a `DocumentListener` on the search box and four `MouseAdapter`s |
+  | 3 | `PanelModel` and its two row types |
+  | 2 | `CitizenDirectory` and its `Entry` |
+  | 1 | `SceneCensus` |
+
+  The five listeners are the count worth checking against the file: three sit directly on the
+  panel (`LivelyCitiesPanel$1`…`$3`) and one each on `CityCard` and `OverrideCard`. A sixth
+  appearing means a listener was added somewhere, which on a panel that must not read the
+  client from Swing is worth a look.
+
+Landing back on 63 before the nine-city cut was a coincidence worth stating rather than a
+target: the jar was the size it was before any of the developer tooling existed, and it
+contained none of it. 48 was not a coincidence — it was 63 minus the fifteen checkboxes that
+no longer exist — and 64 is not either. See
 [No filesystem writes in the shipped jar](#no-filesystem-writes-in-the-shipped-jar).
 
 Note the recipe above uses `git archive HEAD`, which silently omits uncommitted changes — if

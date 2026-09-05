@@ -237,6 +237,60 @@ public class LivelyCitiesPanelTest
 		assertEquals("unmuting must not unhide", 1, config.overrides().hiddenUuids().size());
 	}
 
+	/**
+	 * A row that gains a second override grows the restore for it.
+	 *
+	 * <p><b>This test exists because of a mutation.</b> Dropping the two flags from
+	 * {@link LivelyCitiesPanel}'s rebuild signature — leaving it a list of uuids — left
+	 * all 566 tests green. Every other test in this file builds a fresh panel and pushes
+	 * one model, so the first draw always rebuilds and the signature is never consulted;
+	 * the flags only matter across a <i>transition</i>, and nothing exercised one.
+	 *
+	 * <p>The transition is the ordinary one. You hide somebody from the right-click menu
+	 * and the panel shows "show". You then mute them, from the same menu, and the model
+	 * pushed a moment later carries the same uuid — so under the mutation the section is
+	 * left exactly as it was and the mute has no way back from the panel at all, which is
+	 * the one thing this list exists to provide.
+	 */
+	@Test
+	public void aRowThatGainsASecondOverrideGrowsTheRestoreForIt()
+	{
+		FakeRegions regions = new FakeRegions();
+		EntityDefinition someone = regions.talker(12852, 3225, 3360, "Busy today.");
+
+		FakeConfig config = new FakeConfig();
+		LivelyCitiesPlugin plugin = plugin(config);
+		config.overrides().hide(someone);
+
+		LivelyCitiesPanel panel = new LivelyCitiesPanel(plugin);
+		panel.accept(model(config, uuids(someone), Collections.emptySet()));
+		drain();
+
+		assertEquals("hidden, so one way back", 1, actionsLabelled(panel, "show").size());
+		assertEquals("and not the other", 0, actionsLabelled(panel, "unmute").size());
+
+		// The same citizen, now muted as well — same uuid, same row, second override.
+		config.overrides().mute(someone);
+		panel.accept(model(config, uuids(someone), uuids(someone)));
+		drain();
+
+		assertEquals("still one row", 1, actionsLabelled(panel, "show").size());
+		assertEquals("with the second way back on it now",
+			1, actionsLabelled(panel, "unmute").size());
+		assertTrue("and a subtitle that says both: " + labels(panel),
+			labels(panel).stream().anyMatch(text -> text.endsWith("hidden and muted")));
+
+		// And back down again, because a stale signature is just as wrong in the
+		// direction that leaves an action pointing at an override that is gone.
+		config.overrides().unmute(someone.getUuid());
+		panel.accept(model(config, uuids(someone), Collections.emptySet()));
+		drain();
+
+		assertEquals(1, actionsLabelled(panel, "show").size());
+		assertEquals("the restore for an override that no longer applies has to go",
+			0, actionsLabelled(panel, "unmute").size());
+	}
+
 	/** Nobody overridden is a sentence, not an empty gap. */
 	@Test
 	public void anEmptyListSaysSoRatherThanShowingNothing()
@@ -344,6 +398,50 @@ public class LivelyCitiesPanelTest
 		panel.onActivate();
 		panel.closed();
 		assertFalse("and removing the button is the other way out", panel.isOpen());
+	}
+
+	// --- the palette ----------------------------------------------------------
+
+	/**
+	 * <b>Every colour on the panel comes from {@link net.runelite.client.ui.ColorScheme}.</b>
+	 *
+	 * <p>Not a style rule. RuneLite's sidebar is themed, and a panel carrying its own
+	 * greys is a panel that looks wrong beside every other one the moment the client's
+	 * palette moves — which it has. The failure is also silent: a hardcoded colour is
+	 * indistinguishable from the right one on the machine it was picked on.
+	 *
+	 * <p>Checked by reading the source, because there is nowhere else the fact lives: a
+	 * {@code Color} on a component at runtime is just a colour, and asking whether it
+	 * equals a {@code ColorScheme} constant would pass for anything that happened to
+	 * match today. The eight aliases at the top of the panel are the whole palette, and
+	 * every one of them is assigned from that class.
+	 *
+	 * <p>{@code CitizenLabel} is deliberately not held to this — its "this is fake"
+	 * colour has to be one the game never uses for a real menu target, which is the
+	 * opposite requirement. That is a colour in the 3D scene, not in the sidebar.
+	 */
+	@Test
+	public void thePanelTakesEveryColourFromTheClientsOwnPalette() throws Exception
+	{
+		String source = new String(java.nio.file.Files.readAllBytes(new java.io.File(
+			"src/main/java/com/matthewmariner/livelycities/LivelyCitiesPanel.java").toPath()),
+			java.nio.charset.StandardCharsets.UTF_8);
+
+		assertTrue("the scan has to have found the file", source.contains("class LivelyCitiesPanel"));
+		assertFalse("no colour may be constructed in the panel: " + source.length()
+			+ " chars scanned", source.contains("new Color("));
+		assertFalse("and none may be written as a literal", source.matches("(?s).*0x[0-9A-Fa-f]{6}.*"));
+
+		// The sample guard: a scan that matched nothing at all would pass both of the
+		// above while proving nothing about where the colours do come from.
+		int fromTheScheme = 0;
+		for (int at = source.indexOf("ColorScheme."); at >= 0;
+			at = source.indexOf("ColorScheme.", at + 1))
+		{
+			fromTheScheme++;
+		}
+		assertTrue("the panel has to actually name ColorScheme, or the two checks above are "
+			+ "checking an empty file", fromTheScheme >= 8);
 	}
 
 	// --- helpers ---------------------------------------------------------------

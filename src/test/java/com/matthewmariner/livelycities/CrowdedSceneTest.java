@@ -686,6 +686,63 @@ public class CrowdedSceneTest
 	}
 
 	/**
+	 * <b>The census credits a border-crossing echo to the card that governs it.</b>
+	 *
+	 * <p><b>This test exists because of a mutation.</b> Changing
+	 * {@code EntityScene.census()} to key its per-city breakdown on
+	 * {@link EntityDefinition#getTileRegionId()} instead of
+	 * {@link EntityDefinition#getCityRegionId()} left all 565 tests green. The two
+	 * differ for exactly one population — an echo standing over a region border — and
+	 * every census fixture until now used authored citizens, for whom they are equal by
+	 * construction. So "the panel's numbers are keyed on the checkbox" was a claim no
+	 * test could tell from "the panel's numbers are keyed on the tile".
+	 *
+	 * <p>It matters because the two answers are visibly different on the card. Under the
+	 * mutation this echo is credited to <i>no</i> city — 13110 is unclaimed — so Varrock's
+	 * card would say fewer figures are up than are up, while unticking Varrock's checkbox
+	 * would still take the figure away. A card whose number disagrees with what its own
+	 * checkbox controls is worse than no number.
+	 *
+	 * <p>The fixture is the one two tests down, for the reason its javadoc gives: the
+	 * nine-city cut left region 13110 unclaimed and file-less directly north of a
+	 * surviving city, so this is a hole the dataset actually has rather than an invented
+	 * square.
+	 */
+	@Test
+	public void theCensusCreditsAnEchoAcrossABorderToTheCityThatGovernsIt()
+	{
+		WorldPoint spot = new WorldPoint(3290, 3454, 0);
+		regions.file(VARROCK_EAST_GATE_ROAD,
+			regions.recoloured(VARROCK_EAST_GATE_ROAD, spot.getX(), spot.getY(), 6));
+		config.setCrowdDensity(CrowdDensity.CROWDED);
+
+		FakeWorldView view = FakeWorldView.around(
+			spot, VARROCK_EAST_GATE_ROAD, UNCLAIMED_NORTH_OF_THE_EAST_GATE);
+		scene.syncRegions(view);
+		VisibilityPasses.settle(scene, spot, view);
+
+		int strays = countActiveEchoesInUnclaimedRegions(scene);
+		assertTrue("the fixture depends on an echo crossing into region "
+				+ UNCLAIMED_NORTH_OF_THE_EAST_GATE + " — if the echo ring or the separation "
+				+ "distance moves, re-site the source rather than deleting this test", strays > 0);
+		assertNull("and on that region genuinely being unclaimed, or the mutation this "
+			+ "test was written for would be invisible", City.of(UNCLAIMED_NORTH_OF_THE_EAST_GATE));
+
+		SceneCensus census = scene.census();
+		assertTrue("something has to be on screen", census.getActive() > 0);
+		assertEquals("every figure up — the stray echo included — is credited to the card "
+				+ "whose checkbox switches it off",
+			census.getActive(), census.activeIn(City.VARROCK));
+
+		// And the two really are the same figures: unticking Varrock takes all of them,
+		// which is what makes "credited to the card that governs it" a statement about
+		// the same set rather than a coincidence of counts.
+		config.disableOnly(City.VARROCK);
+		scene.onSettingsChanged(spot, view);
+		assertEquals(0, scene.census().getActive());
+	}
+
+	/**
 	 * The other half of that rule, which is <b>not</b> being changed: an
 	 * <i>authored</i> entity in a region no city claims still fails open.
 	 *
