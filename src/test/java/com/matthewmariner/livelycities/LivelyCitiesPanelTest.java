@@ -373,6 +373,84 @@ public class LivelyCitiesPanelTest
 			labels(panel).stream().anyMatch(text -> text.endsWith("Hidden and muted (0)")));
 	}
 
+	/**
+	 * <b>The empty-state sentence has to agree with the header above it.</b>
+	 *
+	 * <p>The header counts the whole override list; the sentence says which kind of empty
+	 * the section is. The sentence used to be chosen inside the rebuild, and the rebuild is
+	 * skipped when the signature has not moved — and the signature only covers the rows
+	 * that survive the filter, so every draw that filters down to nothing shares the same
+	 * signature. Type a query nothing matches, then hide a citizen, and the panel read
+	 * <b>"Hidden and muted (1)"</b> directly above <b>"Nobody is hidden or muted."</b>
+	 */
+	@Test
+	public void theEmptySectionSaysWhichKindOfEmptyItIs() throws Exception
+	{
+		FakeRegions regions = new FakeRegions();
+		EntityDefinition someone = regions.citizen(12852, 3225, 3360, 0);
+
+		FakeConfig config = new FakeConfig();
+		LivelyCitiesPanel panel = new LivelyCitiesPanel(plugin(config));
+		panel.accept(model(config, Collections.emptySet(), Collections.emptySet()));
+		drain();
+
+		type(panel, "zzzz");
+		assertTrue("nobody is overridden, so that is what it says: " + labels(panel),
+			labels(panel).contains("Nobody is hidden or muted."));
+
+		// Somebody is hidden now, and the query still matches none of them — so the list
+		// filters to nothing for the second draw running, and the signature does not move.
+		config.overrides().hide(someone);
+		panel.accept(model(config, uuids(someone), Collections.emptySet()));
+		drain();
+
+		List<String> text = labels(panel);
+		assertTrue("the header counts the unfiltered list: " + text,
+			text.stream().anyMatch(line -> line.endsWith("Hidden and muted (1)")));
+		assertFalse("so the sentence under it cannot claim nobody is hidden: " + text,
+			text.contains("Nobody is hidden or muted."));
+		assertTrue("it is the filter that emptied this, and it has to say so: " + text,
+			text.contains("Nobody here matches that."));
+	}
+
+	/**
+	 * And back the other way, which is the same bug with the operands swapped.
+	 *
+	 * <p>Unhide the last citizen while a non-matching query is typed and the section was
+	 * left saying "Nobody here matches that." — over a list with nothing left to match, and
+	 * under a header reading (0).
+	 */
+	@Test
+	public void theSentenceComesBackWhenTheLastOverrideGoes() throws Exception
+	{
+		FakeRegions regions = new FakeRegions();
+		EntityDefinition someone = regions.citizen(12852, 3225, 3360, 0);
+
+		FakeConfig config = new FakeConfig();
+		config.overrides().hide(someone);
+
+		LivelyCitiesPanel panel = new LivelyCitiesPanel(plugin(config));
+		panel.accept(model(config, uuids(someone), Collections.emptySet()));
+		drain();
+		assertEquals("one row to start with", 1, actionsLabelled(panel, "show").size());
+
+		type(panel, "zzzz");
+		assertTrue("filtered out, so the other sentence: " + labels(panel),
+			labels(panel).contains("Nobody here matches that."));
+
+		config.overrides().unhide(someone.getUuid());
+		panel.accept(model(config, Collections.emptySet(), Collections.emptySet()));
+		drain();
+
+		List<String> text = labels(panel);
+		assertTrue("the header is back to nobody: " + text,
+			text.stream().anyMatch(line -> line.endsWith("Hidden and muted (0)")));
+		assertTrue("and so is the sentence: " + text,
+			text.contains("Nobody is hidden or muted."));
+		assertFalse("there is nothing left for a query to fail to match: " + text,
+			text.contains("Nobody here matches that."));
+	}
+
 	// --- the two clickable dials ----------------------------------------------
 
 	/**

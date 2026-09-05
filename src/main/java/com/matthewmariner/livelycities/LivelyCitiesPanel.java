@@ -365,6 +365,10 @@ class LivelyCitiesPanel extends PluginPanel
 	 *
 	 * <p>The signature covers the filter as well as the rows, because a filtered list
 	 * is a different list of components even when the model behind it has not moved.
+	 *
+	 * <p><b>What it does not cover is how many rows the filter threw away</b> — see the
+	 * empty-state sentence below, which is therefore chosen on every draw rather than
+	 * inside the rebuild.
 	 */
 	private void drawOverrides(PanelModel current, String query)
 	{
@@ -381,6 +385,19 @@ class LivelyCitiesPanel extends PluginPanel
 		overridesHeader.setText((overridesOpen ? "▾  " : "▸  ")
 			+ "Hidden and muted (" + current.getOverrides().size() + ")");
 
+		// Set on every draw, outside the rebuild below, because it answers the same
+		// question the header does — is anybody overridden at all? — and that is the
+		// *unfiltered* list, which the signature does not describe. Two draws that both
+		// filter down to nothing share the signature "" however much moved between them,
+		// so a sentence chosen inside the rebuild is a sentence that is never revisited.
+		// It went wrong in both directions: type a query nothing matches and then hide
+		// somebody, and the header read "Hidden and muted (1)" directly above "Nobody is
+		// hidden or muted."; unhide the last citizen with such a query typed and "Nobody
+		// here matches that." was left over a list with nothing left to match.
+		overridesEmpty.setText(current.getOverrides().isEmpty()
+			? "Nobody is hidden or muted."
+			: "Nobody here matches that.");
+
 		final String next = signature(visible);
 		if (!next.equals(overridesSignature))
 		{
@@ -389,9 +406,6 @@ class LivelyCitiesPanel extends PluginPanel
 
 			if (visible.isEmpty())
 			{
-				overridesEmpty.setText(current.getOverrides().isEmpty()
-					? "Nobody is hidden or muted."
-					: "Nobody here matches that.");
 				stack(overridesEmpty);
 				stack(helper("Right-click any citizen for Hide and Mute. Whatever you "
 					+ "choose turns up here, one row at a time, with the way back."));

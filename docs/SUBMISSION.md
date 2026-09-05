@@ -32,7 +32,7 @@ against your pushed HEAD and shows the plugin as **outdated** the moment they di
 
 | Check | Command | Expected |
 |---|---|---|
-| Tests | `./gradlew clean test` | all green (572) |
+| Tests | `./gradlew clean test` | all green (574) |
 | Every new placement walked in game | `docs/CITY-TOP-UP-CHECK.md` · `docs/CITY-LIVERY-CHECK.md` | 57 + 151 markers imported, all 33 + 127 boxes ticked — **still outstanding** |
 | Offline dataset audit | *(part of the above)* | green |
 | No filesystem API in `src/main` | *(part of the above — `ShippedSourceTest`)* | green; see [below](#no-filesystem-writes-in-the-shipped-jar) |
