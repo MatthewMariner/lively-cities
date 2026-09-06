@@ -87,7 +87,17 @@ class LivelyCitiesPanel extends PluginPanel
 
 	private static final Color BODY = ColorScheme.TEXT_COLOR;
 	private static final Color SUBTLE = ColorScheme.LIGHT_GRAY_COLOR;
-	private static final Color HELPER = ColorScheme.MEDIUM_GRAY_COLOR;
+
+	/**
+	 * The detail line under a heading, and anything greyed because it is off or empty.
+	 *
+	 * <p>{@code ColorScheme.MEDIUM_GRAY_COLOR} until it was measured: RGB(77,77,77) on
+	 * this panel's RGB(30,30,30) card is a contrast ratio under 2:1, against WCAG's 4.5:1
+	 * floor for body text — not dim, unreadable. {@code LIGHT_GRAY_COLOR} is the same
+	 * value {@link #SUBTLE} already used for a legible secondary tone, which is what
+	 * "helper" text actually needs to be to do its job.
+	 */
+	private static final Color HELPER = ColorScheme.LIGHT_GRAY_COLOR;
 	private static final Color CARD = ColorScheme.DARKER_GRAY_COLOR;
 	private static final Color CARD_HOVER = ColorScheme.DARKER_GRAY_HOVER_COLOR;
 	private static final Color BACKDROP = ColorScheme.DARK_GRAY_COLOR;
