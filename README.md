@@ -377,7 +377,7 @@ Built against RuneLite client **1.12.37**, targeting Java 11 bytecode. Requires 
 the Gradle wrapper handles the rest. The version is pinned in `build.gradle` rather than
 left as `latest.release`, so this number and the ones in `./gradlew test` stay true between
 builds; bump it deliberately after an OSRS update, alongside the [cache id
-audit](#after-an-osrs-update-checking-the-dataset-still-resolves).
+audit](docs/MAINTENANCE.md).
 
 ```bash
 ./gradlew build            # compile and run the 580 tests
@@ -388,6 +388,29 @@ audit](#after-an-osrs-update-checking-the-dataset-still-resolves).
 ./run-windows.sh --audit    # the same walk, on a Windows-side client
 ./run-windows.sh --timings  # the same measurement, on a Windows-side client
 ```
+
+### For reviewers
+
+- **What it touches.** `RuneLiteObject`s built from cache model data (`loadModelData`,
+  `mergeModels`, `loadAnimation`, `getNpcDefinition`); right-click entries created
+  through `client.getMenu().createMenuEntry`, typed `MenuAction.RUNELITE`,
+  deprioritised, and only while a menu is being opened over a citizen; one `Overlay`;
+  one `NavigationButton` with a `PluginPanel`; settings through `ConfigManager`; a
+  local `GAMEMESSAGE` through `addChatMessage` for what a citizen's own right-click
+  options print.
+- **What it does not do.** No network access; no file I/O in the shipped jar (a test
+  scans `src/main` for filesystem APIs; the dataset is read off the classpath); no
+  reflection; no threads of its own; no input events; no interaction with real NPCs,
+  objects or tiles — the test client throws on any real-action call. Nothing is read
+  about other players.
+- **Shutdown** deactivates every object and removes the overlay and the sidebar
+  button. Objects the client still reports as registered are retained and retried
+  rather than dropped.
+- **Config group** `livelycities`. Keys have moved into named constants with their string
+  values unchanged; none has been renamed.
+- **Dataset provenance.** The placements are the BSD-2 licensed Citizens plugin's, with
+  its notice retained and every modification listed in [NOTICE](NOTICE).
+- **Tests** run headless against a fake client; nothing in the suite needs a game.
 
 **On WSL, prefer the `run-windows.sh` forms.** The Gradle tasks launch a Linux-side client
 whose `user.home` is `~`, so they read `~/.runelite/credentials.properties` rather than the
@@ -416,115 +439,13 @@ checked by a test, is narrow and literal: **no class in `src/main` names a files
 The dataset is still read with `getResourceAsStream` off the classpath, which is not a
 filesystem access and which the plugin cannot ship without.
 
-### After an OSRS update: checking the dataset still resolves
+### After an OSRS update
 
-The predecessor to this plugin ("Citizens") died this way: an August 2024 OSRS
-update renumbered player-model cache ids, most of its citizens broke visually,
-the hub disabled the plugin over the resulting "who is this man with no legs"
-confusion, and — although a contributor quietly fixed the ids over a year
-later — the hub listing was never revived. The dataset here addresses game
-content the same way theirs did: by raw numeric cache id (`modelIds`) and by
-animation name resolved to a numeric id (`idleAnimation`/`moveAnimation` via
-`LivelyAnimation`). **Run this after every OSRS update that could renumber
-cache content** — new NPC/model/animation releases, and especially anything
-described as reworking existing models.
-
-There are two checks, because only one of them can run without a live client.
-
-#### 1. The offline dataset audit — runs on every `./gradlew test`
-
-No client needed. `ModelIdAuditTest`, `LivelyAnimationTest`, `CacheIdAuditTest`
-and `RegionDataLoaderTest` already assert, over the shipped JSON alone:
-
-- every `modelIds` entry is positive and not implausibly large (see
-  `CacheIdPlausibility` for where the ceiling comes from)
-- every entity has either a `modelIds` array or an `npcAppearanceId`, and never
-  neither — and never both, which would leave a hand-typed model list as dead
-  weight (the `npcAppearanceId` wins when a record carries both)
-- every `npcAppearanceId` is inside the same plausible range, which bites
-  harder there: `gameval.NpcID`'s highest constant in 1.12.36 is 16346
-- the dataset's distinct-model-id count is pinned (currently 324) and its
-  distinct-`npcAppearanceId` count is pinned (currently 7) — if either test
-  fails after you *intentionally* changed the dataset, update the pinned
-  number in `ModelIdAuditTest`; if you did not touch the dataset, something
-  else changed it. (The crowd at `Crowded` is 320 — 269 authored citizens
-  plus 51 derived ones. It read 326 until the 2026-08-29 quality pass and
-  briefly read 324 before that, which a note here once called a coincidence
-  with the model-id count; it is not even that any more. The two are unrelated
-  quantities and neither should ever be "corrected" to agree with the other:
-  one is a property of the game cache and the other of the echo derivation)
-- every animation name the dataset uses resolves in `LivelyAnimation`
-- the whole dataset loads with zero skipped records
-
-These catch authoring mistakes (a stray digit, an empty array, an unknown
-animation name), but **they cannot tell you whether an id still resolves in
-the current game cache** — that needs a live client, which the normal test
-suite deliberately never has.
-
-#### 2. The cache-backed validator — `./gradlew auditCacheIds`
-
-This is the real check, and the one to run after a suspected renumbering:
-
-```
-./gradlew auditCacheIds
-```
-
-This launches the same dev client `./gradlew run` does, with one extra system
-property set. On startup, `LivelyCitiesPlugin` walks every distinct model id,
-merged-object id, `npcAppearanceId` and animation id the shipped dataset
-references and asks the live client (`client.loadModelData(id)`,
-`client.getNpcDefinition(id)` and `client.loadAnimation(id)`) whether each one
-still resolves — these calls are the only real ground truth, which is why this
-cannot be a unit test.
-
-An `npcAppearanceId` is checked through `NpcAppearance.resolve`, i.e. the same
-code path the renderer uses, so "the lookup worked but the composition has no
-models" counts as a failure rather than as a green id in front of an invisible
-citizen.
-
-The client does not need to be logged into a world; the cache is loaded before
-the login screen. Watch the client log for a summary line
-(`Lively Cities cache id audit: N model id(s) checked (M failing), ...`), then
-open the full report:
-
-```
-~/.runelite/lively-cities/model-id-audit.txt
-```
-
-The report is a small, diffable, sorted plain-text file — commit it (or just
-compare it by eye against a previous run) to see exactly what changed. It has
-five sections: failing model ids, failing merged-object ids, failing NPC
-appearance ids, failing animation ids, and a **known-permanent-null** section
-for animation ids that are
-*expected* to fail — currently just `BeeIdle=0`, because
-`client.loadAnimation(0)` returns null by design (no frame lengths, not a Maya
-animation), not because of a broken cache entry. A real regression never shows
-up in that section; if `BeeIdle=0` starts appearing under failing ids instead,
-that would itself be worth a second look.
-
-**What a failure looks like:** one or more ids listed under "failing" that are
-not in the known-permanent-null section. That id no longer resolves in the
-current cache — the exact failure mode that killed Citizens.
-
-**What to do about it:**
-
-1. Note every failing id and which entities used it (grep `RegionData/*.json`
-   for the id).
-2. Work out the replacement id — usually by finding the equivalent NPC/object
-   in-game and checking what it uses now (the in-game examine/right-click
-   tools, or a cache browser, are the fastest way; this plugin does not ship
-   its own id-lookup tool).
-3. Update the affected `modelIds`/animation names in the region JSON.
-4. Re-run `./gradlew test` (the offline audit will catch anything now
-   implausible) and `./gradlew auditCacheIds` again to confirm the report is
-   clean.
-5. Commit the fix with the region files and a note of which ids changed and
-   why — this is exactly the historical record the predecessor's manifest
-   never got updated to reflect.
-
-Never ship a fix without re-running `auditCacheIds`: gc's own fix for Citizens
-was self-described as comprehensive only "for the most part," which is why
-that check exists at all rather than trusting a manual diff.
+The predecessor plugin died when a game update renumbered cache ids and nobody noticed.
+The offline dataset audit runs on every `./gradlew test`; the cache-backed one is
+`./gradlew auditCacheIds` against a live client. What each checks, how to read the
+report, and what to do about a failing id are in
+[docs/MAINTENANCE.md](docs/MAINTENANCE.md).
 
 ---
 
