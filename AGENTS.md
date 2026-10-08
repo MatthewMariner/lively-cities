@@ -6,8 +6,8 @@
   A change here eventually means a hub manifest bump, so treat `src/main` as
   production code: no speculative refactors, no drive-by reformatting, and
   nothing lands that has not been through `./gradlew build` green.
-- **The repo path contains a space** (`.../Mariner Digital Agency/Projects/osrs/lively-cities`).
-  Quote every path in shell commands and scripts.
+- **Quote every path in shell commands and scripts**; checkouts can live under directories
+  with spaces.
 - **A guard is proven by breaking it.** The discipline this project holds
   itself to is mutation testing in spirit even without a Gradle mutation
   plugin wired in: before trusting a test (or a whole suite) to mean what it
